@@ -184,7 +184,9 @@ public class SelfCheckTest {
                 JsonElement item = wave.get(index);
                 JsonObject zombie = item.getAsJsonObject();
                 int row = zombie.get("map_y").getAsInt();
-                check(row >= 0 && row < Layout.ROW_COUNT, "僵尸行号越界，关卡 " + level);
+                // -1 是编辑器写的"随机行"约定，表示这一只随便挑一行出场，不是越界。
+                boolean inRange = row >= 0 && row < Layout.ROW_COUNT;
+                check(inRange || row == ZombieSpawn.RANDOM_ROW, "僵尸行号越界，关卡 " + level);
 
                 String name = zombie.get("name").getAsString();
                 check(assets.count(name) > 0, "缺少僵尸动画：" + name);

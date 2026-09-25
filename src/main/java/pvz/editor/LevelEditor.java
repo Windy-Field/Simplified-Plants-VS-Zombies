@@ -33,19 +33,15 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
-import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import pvz.game.Game;
 import pvz.game.GameState;
@@ -125,13 +121,13 @@ public class LevelEditor extends JFrame implements EditorDragController {
     private final JComboBox<String> barBox;
 
     /** 传送带和保龄球模式的可出卡池。 */
-    private final JList<String> poolList;
+    private final CheckListPanel poolList;
 
     /** 本关禁用的植物。 */
-    private final JList<String> bannedList;
+    private final CheckListPanel bannedList;
 
     /** 本关强制携带的植物。 */
-    private final JList<String> requiredList;
+    private final CheckListPanel requiredList;
 
     /** 勾上表示当前选中的格子改成随机行出怪。 */
     private final JCheckBox randomRowBox = new JCheckBox("选中格子随机行出怪");
@@ -194,9 +190,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
             (int) design.spawnSpacing, (int) LevelDesign.MIN_SPAWN_SPACING, 5000, 50));
         backgroundBox = new JComboBox<String>(LevelDesign.BACKGROUND_LABELS);
         barBox = new JComboBox<String>(LevelDesign.BAR_LABELS);
-        poolList = new JList<String>(plantChoices());
-        bannedList = new JList<String>(chooserPlantChoices());
-        requiredList = new JList<String>(chooserPlantChoices());
+        poolList = new CheckListPanel(plantChoices());
+        bannedList = new CheckListPanel(chooserPlantChoices());
+        requiredList = new CheckListPanel(chooserPlantChoices());
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
@@ -389,7 +385,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
         side.add(palette, BorderLayout.NORTH);
 
         JLabel hint = new JLabel("<html><body style='width:130px;padding:6px;color:#555'>"
-            + "拖动僵尸放进格子<br>左键点格子：数量 +1<br>右键点格子：数量 -1<br>"
+            + "拖动僵尸放进格子<br>左右键点格子：选中<br>"
+            + "Ctrl + 左键：数量 -1<br>Ctrl + 右键：数量 +1<br>"
             + "滚轮：快速增减<br>拖出网格：删除<br>Delete：清空该格<br>"
             + "R：切换随机行</body></html>");
         hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 11f));
@@ -440,13 +437,6 @@ public class LevelEditor extends JFrame implements EditorDragController {
         gridRow = addField(panel, constraints, gridRow, "背景", backgroundBox);
         gridRow = addField(panel, constraints, gridRow, "卡槽模式", barBox);
 
-        poolList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        poolList.setVisibleRowCount(6);
-        bannedList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        bannedList.setVisibleRowCount(6);
-        requiredList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        requiredList.setVisibleRowCount(6);
-
         gridRow = addTallField(panel, constraints, gridRow, "传送带 / 保龄球卡池", poolList);
         gridRow = addTallField(panel, constraints, gridRow, "禁用植物（正常选卡）", bannedList);
         gridRow = addTallField(panel, constraints, gridRow, "必选植物（正常选卡）", requiredList);
@@ -454,16 +444,16 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 在参数面板上加一行"标签 + 滚动列表"。
+     * 在参数面板上加一行"标签 + 清单"。
      *
-     * 列表比普通控件高，所以单独一个方法，不和 addField 混在一起。
+     * 清单比普通控件高，所以单独一个方法，不和 addField 混在一起。
      *
      * 参数：panel 是参数面板；constraints 是摆放规则，会被改动后复用；
-     *       gridRow 是摆在第几行；label 是左边的说明文字；list 是要摆的列表。
+     *       gridRow 是摆在第几行；label 是左边的说明文字；list 是要摆的清单。
      * 返回：下一行的行号。
      */
     private static int addTallField(JPanel panel, GridBagConstraints constraints, int gridRow,
-            String label, JList<String> list) {
+            String label, CheckListPanel list) {
         constraints.gridx = 0;
         constraints.gridy = gridRow;
         constraints.gridwidth = 2;
@@ -472,11 +462,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
         constraints.fill = GridBagConstraints.HORIZONTAL;
         panel.add(new JLabel(label), constraints);
 
-        JScrollPane scroll = new JScrollPane(list);
-        scroll.setPreferredSize(new Dimension(230, 118));
         constraints.gridy = gridRow + 1;
         constraints.fill = GridBagConstraints.BOTH;
-        panel.add(scroll, constraints);
+        panel.add(list, constraints);
         return gridRow + 2;
     }
 
@@ -597,17 +585,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
         backgroundBox.addActionListener(onSelect);
         barBox.addActionListener(onSelect);
 
-        ListSelectionListener onListChange = new ListSelectionListener() {
-            /** 列表的选择变了；拖选过程中会连发很多次，等选完再处理。 */
-            public void valueChanged(ListSelectionEvent event) {
-                if (!event.getValueIsAdjusting()) {
-                    readFields();
-                }
-            }
-        };
-        poolList.addListSelectionListener(onListChange);
-        bannedList.addListSelectionListener(onListChange);
-        requiredList.addListSelectionListener(onListChange);
+        poolList.setOnChange(this::readFields);
+        bannedList.setOnChange(this::readFields);
+        requiredList.setOnChange(this::readFields);
 
         randomRowBox.addActionListener(new ActionListener() {
             /** 勾选框状态变了：改当前选中格子的随机行标记。 */
@@ -645,9 +625,12 @@ public class LevelEditor extends JFrame implements EditorDragController {
         design.barType = barBox.getSelectedIndex();
         design.setWaveCount(((Number) waveCountSpinner.getValue()).intValue());
 
-        readListSelection(poolList, design.cardPool);
-        readListSelection(bannedList, design.bannedPlants);
-        readListSelection(requiredList, design.requiredPlants);
+        design.cardPool.clear();
+        design.cardPool.addAll(poolList.checkedIndices());
+        design.bannedPlants.clear();
+        design.bannedPlants.addAll(bannedList.checkedIndices());
+        design.requiredPlants.clear();
+        design.requiredPlants.addAll(requiredList.checkedIndices());
         updateListAvailability();
 
         grid.refresh();
@@ -666,32 +649,6 @@ public class LevelEditor extends JFrame implements EditorDragController {
         poolList.setEnabled(!normal);
         bannedList.setEnabled(normal);
         requiredList.setEnabled(normal);
-    }
-
-    /**
-     * 把列表里选中的项收进一份清单。
-     *
-     * 参数：list 是界面上的列表；target 是要收进的清单，会先被清空。
-     */
-    private static void readListSelection(JList<String> list, List<Integer> target) {
-        target.clear();
-        int[] chosen = list.getSelectedIndices();
-        for (int index = 0; index < chosen.length; index++) {
-            target.add(Integer.valueOf(chosen[index]));
-        }
-    }
-
-    /**
-     * 把一份清单回填到列表上。
-     *
-     * 参数：source 是清单；list 是要回填的列表。
-     */
-    private static void writeListSelection(List<Integer> source, JList<String> list) {
-        int[] chosen = new int[source.size()];
-        for (int index = 0; index < chosen.length; index++) {
-            chosen[index] = source.get(index).intValue();
-        }
-        list.setSelectedIndices(chosen);
     }
 
     /**
@@ -740,9 +697,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
             clampIndex(design.backgroundIndex, LevelDesign.BACKGROUND_LABELS.length));
         barBox.setSelectedIndex(clampIndex(design.barType, LevelDesign.BAR_LABELS.length));
 
-        writeListSelection(design.cardPool, poolList);
-        writeListSelection(design.bannedPlants, bannedList);
-        writeListSelection(design.requiredPlants, requiredList);
+        poolList.setChecked(design.cardPool);
+        bannedList.setChecked(design.bannedPlants);
+        requiredList.setChecked(design.requiredPlants);
         updateListAvailability();
 
         updatingFields = false;

@@ -454,7 +454,7 @@ public class LevelDesign {
                     long at = waveTime(wave) + index * spawnSpacing;
                     int targetRow = row;
                     if (randomRows[row][wave]) {
-                        targetRow = -1;
+                        targetRow = ZombieSpawn.RANDOM_ROW;
                     }
                     result.add(new ZombieSpawn((int) at, targetRow, kind));
                 }

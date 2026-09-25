@@ -185,7 +185,10 @@ public class EditorGrid extends JPanel {
     }
 
     /**
-     * 按下鼠标：选中这个格子，右键顺便减一只。
+     * 按下鼠标：先选中这个格子，按住 Ctrl 时才动只数。
+     *
+     * 左右键都是选中，不会误改数量；要增减就按住 Ctrl：
+     * Ctrl + 左减一只，Ctrl + 右加一只（空格子上则放下当前选中的僵尸）。
      *
      * 此刻还看不出用户是想点一下还是想拖走，所以先把按下的位置记下来，
      * 等到松手或者移动够距离时再下结论。
@@ -209,15 +212,12 @@ public class EditorGrid extends JPanel {
         selectedWave = cell[1];
         // 选中格子变了，让主窗口把随机行复选框同步过来。
         controller.selectionChanged();
-        if (SwingUtilities.isRightMouseButton(event)) {
-            design.addCount(cell[0], cell[1], -1);
-            controller.designChanged();
-        }
         repaint();
     }
 
     /**
-     * 松开鼠标：拖起来了就交给主窗口放下，没拖起来就当成一次点击。
+     * 松开鼠标：拖起来了就交给主窗口放下；
+     * 没拖起来时，按住 Ctrl 才增减只数，否则只是一次纯粹的选中。
      *
      * 参数：event 是鼠标事件。
      */
@@ -229,11 +229,34 @@ public class EditorGrid extends JPanel {
             dragStarted = false;
             return;
         }
-        if (SwingUtilities.isLeftMouseButton(event) && pressRow >= 0) {
-            applyClick(pressRow, pressWave);
+        if (pressRow >= 0 && event.isControlDown()) {
+            if (SwingUtilities.isLeftMouseButton(event)) {
+                changeCount(pressRow, pressWave, -1);
+            } else if (SwingUtilities.isRightMouseButton(event)) {
+                changeCount(pressRow, pressWave, 1);
+            }
         }
         pressRow = -1;
         pressWave = -1;
+    }
+
+    /**
+     * 按 Ctrl 点击格子时增减只数。
+     *
+     * 空格子上加一只，意思是放下当前选中的僵尸；减则什么都不做。
+     *
+     * 参数：row 是行号；wave 是波号；delta 是增减的只数。
+     */
+    private void changeCount(int row, int wave, int delta) {
+        if (design.kindAt(row, wave) == null) {
+            if (delta > 0 && controller.selectedKind() != null) {
+                design.setCell(row, wave, controller.selectedKind(), 1);
+                controller.designChanged();
+            }
+            return;
+        }
+        design.addCount(row, wave, delta);
+        controller.designChanged();
     }
 
     /**
@@ -292,13 +315,13 @@ public class EditorGrid extends JPanel {
         controller.beginDrag(kind, count, pressRow, pressWave, event.getLocationOnScreen());
     }
 
-    /** 装上滚轮处理：停在僵尸格上就增减只数，其他地方照常滚动画面。 */
+    /** 装上滚轮处理：停在格子上就增减只数，其他地方照常滚动画面。 */
     private void installWheelHandler() {
         addMouseWheelListener(new MouseWheelListener() {
-            /** 滚轮在有僵尸的格子上就增减只数，其他地方照常滚动画面。 */
+            /** 滚轮在格子上就增减只数，空格子上往上滚会放下当前选中的僵尸。 */
             public void mouseWheelMoved(MouseWheelEvent event) {
                 int[] cell = cellAt(event.getPoint());
-                if (cell == null || design.kindAt(cell[0], cell[1]) == null) {
+                if (cell == null) {
                     passWheelToScrollPane(event);
                     return;
                 }
@@ -306,11 +329,11 @@ public class EditorGrid extends JPanel {
                 if (event.getWheelRotation() < 0) {
                     delta = 1;
                 }
-                design.addCount(cell[0], cell[1], delta);
+                // 先记住滚到哪一格，复选框才跟得上这次改动。
                 selectedRow = cell[0];
                 selectedWave = cell[1];
                 controller.selectionChanged();
-                controller.designChanged();
+                changeCount(cell[0], cell[1], delta);
                 repaint();
             }
         });
@@ -395,21 +418,6 @@ public class EditorGrid extends JPanel {
         }
         MouseEvent converted = SwingUtilities.convertMouseEvent(this, event, getParent());
         getParent().dispatchEvent(converted);
-    }
-
-    /**
-     * 处理一次左键点击：格子里有僵尸就加一只，空格子就放下当前选中的僵尸。
-     *
-     * 参数：row 是行号；wave 是波号。
-     */
-    private void applyClick(int row, int wave) {
-        if (design.kindAt(row, wave) != null) {
-            design.addCount(row, wave, 1);
-        } else if (controller.selectedKind() != null) {
-            design.setCell(row, wave, controller.selectedKind(), 1);
-        }
-        controller.designChanged();
-        repaint();
     }
 
     /**

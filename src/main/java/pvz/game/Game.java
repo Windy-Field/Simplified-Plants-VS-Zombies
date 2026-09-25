@@ -580,7 +580,7 @@ public class Game extends JPanel {
             return;
         }
         int targetRow = spawn.row;
-        if (spawn.row == -1) {
+        if (spawn.row == ZombieSpawn.RANDOM_ROW) {
             targetRow = random.nextInt(Layout.ROW_COUNT);
         }
         int bottom = 160 + targetRow * Layout.CELL_HEIGHT;
