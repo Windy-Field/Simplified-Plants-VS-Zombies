@@ -22,8 +22,12 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -39,6 +43,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -66,6 +71,21 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 界面文字的字号，和 Windows 自带程序差不多大。 */
     private static final int INTERFACE_FONT_SIZE = 12;
 
+    /**
+     * 时钟显示的时区，固定用北京时间。
+     *
+     * 这里不跟系统时区走：编辑器上的时间是用来对表、记开工时间的，
+     * 换到别的机器上也得是同一个时间，否则对不上。
+     */
+    private static final ZoneId CLOCK_ZONE = ZoneId.of("Asia/Shanghai");
+
+    /** 时钟的格式：年月日加星期，再跟时分秒。 */
+    private static final DateTimeFormatter CLOCK_FORMAT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd EEE HH:mm:ss", Locale.CHINA);
+
+    /** 时钟多久刷新一次，单位是毫秒。一秒一次，秒数就不会跳格。 */
+    private static final int CLOCK_REFRESH_INTERVAL = 1000;
+
     /** 参数面板右边那一列控件的宽度，要装得下"0 - 白天草坪"这种最长的选项。 */
     private static final int FIELD_WIDTH = 132;
 
@@ -92,6 +112,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
 
     /** 底部状态栏，显示统计和各种提示。 */
     private final JLabel statusLabel = new JLabel(" ");
+
+    /** 底部状态栏右侧的时钟，动态显示当前北京时间。 */
+    private final JLabel clockLabel = new JLabel(" ");
 
     /** 要读写第几关。 */
     private final JSpinner levelSpinner;
@@ -211,6 +234,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         hookListeners();
         writeFields();
         updateStatus();
+        startClock();
 
         // 编辑器多半是拿来改现成关卡的，开窗时就把这一关读进来，省一次点击。
         Path initial = assetRoot.resolve("levels/level_" + levelNumber + ".json");
@@ -499,14 +523,43 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /**
      * 拼出底部状态栏。
      *
-     * 返回：摆好状态文字的面板。
+     * 左边是状态文字，右边是当前北京时间，各占一头，中间留空。
+     *
+     * 返回：摆好状态文字和时钟的面板。
      */
     private JPanel buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
         statusBar.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        clockLabel.setFont(clockLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        // 时间数字宽度一直在变，固定成等宽数字，免得整行文字每秒左右晃。
+        clockLabel.setForeground(Color.GRAY);
         statusBar.add(statusLabel, BorderLayout.WEST);
+        statusBar.add(clockLabel, BorderLayout.EAST);
         return statusBar;
+    }
+
+    /**
+     * 启动状态栏右下角的时钟。
+     *
+     * 先立刻显示一次时间，再挂上定时器每秒刷新，这样窗口一打开就有时间，
+     * 不用等满一秒。
+     */
+    private void startClock() {
+        updateClock();
+        Timer clockTimer = new Timer(CLOCK_REFRESH_INTERVAL, new ActionListener() {
+            /** 每秒把状态栏上的时间换成最新的。 */
+            public void actionPerformed(ActionEvent event) {
+                updateClock();
+            }
+        });
+        clockTimer.start();
+    }
+
+    /** 把状态栏上的时间换成此刻的北京时间。 */
+    private void updateClock() {
+        ZonedDateTime now = ZonedDateTime.now(CLOCK_ZONE);
+        clockLabel.setText(CLOCK_FORMAT.format(now));
     }
 
     /**
