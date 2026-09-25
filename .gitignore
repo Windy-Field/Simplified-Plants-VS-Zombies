@@ -1,0 +1,35 @@
+# 编译输出
+build/
+out/
+target/
+*.class
+
+# 版权
+# 资源包不随代码分发，所以整个 assets 目录不进仓库。
+assets/
+
+# IDE 本地配置
+.idea/
+*.iws
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.bak
+*.tmp
+*.log
+.probe/
+
+# 打包文件
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 但保留依赖的 jar
+!build/gson-*.jar
