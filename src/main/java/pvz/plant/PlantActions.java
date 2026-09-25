@@ -459,6 +459,10 @@ public class PlantActions {
         if (state.time - plant.lastAction <= Layout.BOWLING_MOVE_INTERVAL) {
             return;
         }
+        // 红坚果已经炸开，就停在原地放爆炸动画，不能再往前挪。
+        if (plant.name.equals("RedWallNutBowling") && plant.triggered) {
+            return;
+        }
         plant.x = plant.x + Layout.BOWLING_MOVE_STEP;
 
         if (plant.name.equals("WallNutBowling") && plant.triggered) {

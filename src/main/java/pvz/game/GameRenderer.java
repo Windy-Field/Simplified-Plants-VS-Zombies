@@ -144,7 +144,7 @@ public class GameRenderer {
             card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
         }
 
-        if (state.selected.size() == 8) {
+        if (state.selected.size() == state.maxCards) {
             painter.drawImage(assets.image("StartButton"), 155, 547, null);
         }
     }
@@ -317,9 +317,10 @@ public class GameRenderer {
         double centerX = plant.x + image.getWidth() / 2.0;
         double centerY = plant.y + image.getHeight() / 2.0;
 
-        // 每滚一帧转 -30 度，看起来就像在地上滚。
+        // 每滚一帧转 30 度，看起来就像在地上滚。
+        // Java 的纵坐标向下，所以正角度在屏幕上看是顺时针；球往右滚就该顺时针转。
         long frames = (time - plant.placed) / Layout.BOWLING_MOVE_INTERVAL;
-        double angle = Math.toRadians(-30 * frames);
+        double angle = Math.toRadians(30 * frames);
 
         Graphics2D rotated = (Graphics2D) painter.create();
         rotated.rotate(angle, centerX, centerY);

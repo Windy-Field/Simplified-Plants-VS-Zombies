@@ -114,6 +114,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 同一格里的僵尸错开多久，单位是毫秒。 */
     private final JSpinner spacingSpinner;
 
+    /** 本关的卡槽数量，也就是玩家最多能带几张卡。 */
+    private final JSpinner cardSlotSpinner;
+
     /** 用第几张背景图。 */
     private final JComboBox<String> backgroundBox;
 
@@ -188,6 +191,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
             design.waveInterval / 1000.0, 1.0, 300.0, 1.0));
         spacingSpinner = new JSpinner(new SpinnerNumberModel(
             (int) design.spawnSpacing, (int) LevelDesign.MIN_SPAWN_SPACING, 5000, 50));
+        cardSlotSpinner = new JSpinner(new SpinnerNumberModel(design.maxCards,
+            Layout.MIN_CARD_SLOTS, Layout.MAX_CARD_SLOTS, 1));
         backgroundBox = new JComboBox<String>(LevelDesign.BACKGROUND_LABELS);
         barBox = new JComboBox<String>(LevelDesign.BAR_LABELS);
         poolList = new CheckListPanel(plantChoices());
@@ -434,6 +439,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         gridRow = addField(panel, constraints, gridRow, "出怪间隔（秒）", waveIntervalSpinner);
         gridRow = addField(panel, constraints, gridRow, "同格僵尸间隔（毫秒）", spacingSpinner);
         gridRow = addField(panel, constraints, gridRow, "波数", waveCountSpinner);
+        gridRow = addField(panel, constraints, gridRow, "卡槽数量（最多 8）", cardSlotSpinner);
         gridRow = addField(panel, constraints, gridRow, "背景", backgroundBox);
         gridRow = addField(panel, constraints, gridRow, "卡槽模式", barBox);
 
@@ -575,6 +581,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         waveIntervalSpinner.addChangeListener(onChange);
         spacingSpinner.addChangeListener(onChange);
         waveCountSpinner.addChangeListener(onChange);
+        cardSlotSpinner.addChangeListener(onChange);
 
         ActionListener onSelect = new ActionListener() {
             /** 下拉框选了别的项。 */
@@ -624,6 +631,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
         design.backgroundIndex = backgroundBox.getSelectedIndex();
         design.barType = barBox.getSelectedIndex();
         design.setWaveCount(((Number) waveCountSpinner.getValue()).intValue());
+        // 数字框本身把取值限制在 Layout.MIN_CARD_SLOTS ~ MAX_CARD_SLOTS 之间，这里不用再夹。
+        design.maxCards = ((Number) cardSlotSpinner.getValue()).intValue();
 
         design.cardPool.clear();
         design.cardPool.addAll(poolList.checkedIndices());
@@ -693,6 +702,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         waveIntervalSpinner.setValue(Double.valueOf(design.waveInterval / 1000.0));
         spacingSpinner.setValue(Integer.valueOf((int) design.spawnSpacing));
         waveCountSpinner.setValue(Integer.valueOf(design.waveCount()));
+        cardSlotSpinner.setValue(Integer.valueOf(design.maxCards));
         backgroundBox.setSelectedIndex(
             clampIndex(design.backgroundIndex, LevelDesign.BACKGROUND_LABELS.length));
         barBox.setSelectedIndex(clampIndex(design.barType, LevelDesign.BAR_LABELS.length));
@@ -939,7 +949,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
      * 判断某一关是否可以直接保存。
      *
      * 只有当关卡编号在现有关卡范围内（即文件已存在，或者是紧接着最后一关的下一关）时才能直接保存。
-     * 如果用户只有 0~5 关，那么可以编辑 0~6 关，但不能直接保存到第 7 关及以后。
+     * 判范围时是去翻 levels 目录，数出来最后一关是第几号，所以关卡数量变了这里也不用改。
      *
      * 参数：number 是关卡编号。
      * 返回：可以直接保存就返回真。

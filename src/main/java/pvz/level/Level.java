@@ -37,6 +37,14 @@ public class Level {
     /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效。 */
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
+    /**
+     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     *
+     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式生效。
+     * 关卡文件没写这一项时保持和原版一致的 8。
+     */
+    public int maxCards = 8;
+
     /** 这个关卡有没有阳光条（也就是正常选卡模式）。 */
     public boolean isNormalMode() {
         return barType == GameState.BAR_NORMAL;

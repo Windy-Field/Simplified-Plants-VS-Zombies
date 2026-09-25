@@ -189,13 +189,20 @@ public class Game extends JPanel {
         state.time = state.time + realElapsed * state.speedMultiplier;
     }
 
-    /** 通关时间到了：有下一关就接着打，没有了就回主菜单。 */
+    /**
+     * 通关时间到了：有下一关就接着打，没有了就回主菜单并退到第 1 关。
+     *
+     * 注意 levelNumber 在判定胜利时就已经加过了，所以这里判断的是"下一关"。
+     * 没有下一关时必须把它退回去：不然主菜单再点冒险模式会去读一个不存在的关卡文件，
+     * 游戏直接崩掉。
+     */
     private void goToNextLevelOrMenu() {
         if (Files.exists(assets.levelPath(state.levelNumber))) {
             loadLevel();
-        } else {
-            state.screen = GameScreen.MENU;
+            return;
         }
+        state.screen = GameScreen.MENU;
+        state.levelNumber = 0;
     }
 
     /**
@@ -246,6 +253,7 @@ public class Game extends JPanel {
         if (level.isNormalMode()) {
             state.bannedPlants.addAll(level.bannedPlants);
             state.requiredPlants.addAll(level.requiredPlants);
+            state.maxCards = level.maxCards;
         }
 
         // 每行开头的推车先摆好；保龄球模式最右边三列被占掉，球从那里滚出来。
@@ -270,9 +278,14 @@ public class Game extends JPanel {
      *
      * 和玩家自己点卡是同一套飞行动画，只不过这里同时起飞，
      * 而且落点按清单顺序排，飞完之后玩家就不能再取消它们了。
+     *
+     * 必选张数超过卡槽数量时只放得下前面几张。编辑器会在存档前拦下这种关卡，
+     * 但关卡文件是给人手改的，真被改坏了也得让玩家进得去、打得成，
+     * 所以这里截断而不是报错。
      */
     private void launchRequiredCards() {
-        for (int position = 0; position < state.requiredPlants.size(); position++) {
+        int limit = Math.min(state.requiredPlants.size(), state.maxCards);
+        for (int position = 0; position < limit; position++) {
             int plantIndex = state.requiredPlants.get(position).intValue();
             if (plantIndex >= Cards.CHOOSER_CARD_COUNT) {
                 continue;
@@ -361,10 +374,10 @@ public class Game extends JPanel {
     }
 
     /**
-     * 处理选卡界面的点击：可以取消已选的卡、选中新卡，选满八张后按开始。
+     * 处理选卡界面的点击：可以取消已选的卡、选中新卡，选满卡槽后按开始。
      */
     private void clickCardChooser(int x, int y) {
-        if (state.selected.size() == 8) {
+        if (state.selected.size() == state.maxCards) {
             BufferedImage button = assets.image("StartButton");
             Rectangle start = new Rectangle(155, 547, button.getWidth(), button.getHeight());
             if (start.contains(x, y)) {
@@ -402,7 +415,7 @@ public class Game extends JPanel {
             }
         }
 
-        if (state.selected.size() >= 8) {
+        if (state.selected.size() >= state.maxCards) {
             return;
         }
         // 再看是不是点在候选卡上；已经选过的卡不能再选一次。

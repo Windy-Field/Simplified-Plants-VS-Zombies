@@ -109,6 +109,13 @@ public class LevelDesign {
     /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效。 */
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
+    /**
+     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     *
+     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式生效。
+     */
+    public int maxCards = Layout.DEFAULT_CARD_SLOTS;
+
     /** 导入老关卡时如果做了近似处理，把说明记在这里给用户看。 */
     public String importNote = "";
 
@@ -509,6 +516,10 @@ public class LevelDesign {
         if (!requiredPlants.isEmpty()) {
             writePlantList(text, "required_plants", requiredPlants);
         }
+        // 卡槽数量等于默认值时不必写，这样不改它的关卡存档和以前一模一样。
+        if (maxCards != Layout.DEFAULT_CARD_SLOTS) {
+            text.append("    \"max_cards\":" + maxCards + ",\n");
+        }
 
         List<ZombieSpawn> spawns = buildSpawns();
         text.append("    \"zombie_list\":[\n");
@@ -658,6 +669,10 @@ public class LevelDesign {
         }
         if (json.has("required_plants")) {
             readPlantList(json.getAsJsonArray("required_plants"), design.requiredPlants);
+        }
+        // 老关卡文件没有这一项，留着默认值 8 就行。
+        if (json.has("max_cards")) {
+            design.maxCards = Layout.clampCardSlots(json.get("max_cards").getAsInt());
         }
 
         if (json.has("editor")) {
@@ -953,9 +968,16 @@ public class LevelDesign {
         if (barType == GameState.BAR_NORMAL && backgroundIndex != 0) {
             return "只有白天草坪（背景 0）的正常选卡关卡会从天上掉阳光，当前设置下阳光生成速度不起作用。";
         }
-        // 必选超过八张就塞不进卡槽了，开始按钮永远不会亮。
-        if (requiredPlants.size() > 8) {
-            return "必选植物最多八张，现在选了 " + requiredPlants.size() + " 张，进了关卡没法开始。";
+        // 必选超过卡槽数量就塞不进去，开始按钮永远不会亮。
+        if (requiredPlants.size() > maxCards) {
+            return "卡槽数量是 " + maxCards + " 张，必选植物却有 " + requiredPlants.size()
+                + " 张，进了关卡没法开始。";
+        }
+        // 除开禁用和必选，候选区剩下的植物不够填满卡槽，玩家照样凑不齐没法开始。
+        int usablePlants = Cards.CHOOSER_CARD_COUNT - bannedPlants.size() - requiredPlants.size();
+        if (usablePlants < maxCards) {
+            return "禁用和必选之后只剩 " + usablePlants + " 种植物可选，凑不满 " + maxCards
+                + " 张卡槽，进了关卡没法开始。";
         }
         // 同一植物既禁用又必选，游戏里必选优先，这里提醒一句免得用户以为禁掉了。
         for (int index = 0; index < bannedPlants.size(); index++) {

@@ -34,7 +34,7 @@ public class LevelLoader {
     /**
      * 读入指定关卡。
      *
-     * 参数：levelNumber 是关卡编号（0 到 5）。
+     * 参数：levelNumber 是关卡编号，从 0 开始。
      * 返回：读好的关卡数据。
      * 异常：文件读不了或格式不对时抛出 IllegalStateException。
      */
@@ -64,6 +64,7 @@ public class LevelLoader {
             readCardPool(json, level);
             readPlantList(json, "banned_plants", level.bannedPlants);
             readPlantList(json, "required_plants", level.requiredPlants);
+            readCardSlots(json, level);
             return level;
         } catch (IOException exception) {
             throw new IllegalStateException("无法读取第 " + (levelNumber + 1) + " 关的关卡文件", exception);
@@ -121,6 +122,20 @@ public class LevelLoader {
             }
             level.cardPool.add(Integer.valueOf(cardIndex));
         }
+    }
+
+    /**
+     * 读本关的卡槽数量。
+     *
+     * 老关卡文件没有这一项，那就保持默认的 8 张，和原版一样。
+     * 文件里的数字可能被手改到离谱的值，所以夹回游戏允许的范围再收下。
+     */
+    private static void readCardSlots(JsonObject json, Level level) {
+        if (!json.has("max_cards")) {
+            return;
+        }
+        int slots = json.get("max_cards").getAsInt();
+        level.maxCards = Layout.clampCardSlots(slots);
     }
 
     /**

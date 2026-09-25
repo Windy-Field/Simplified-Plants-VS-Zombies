@@ -88,12 +88,31 @@ public class SelfCheckTest {
         // 渲染各模式的静态画面，核对菜单和背景没有空白或裁错。
         renderMenu(assets, project);
         renderGallery(assets, project);
-        for (int level = 0; level <= 5; level++) {
+        // 关卡数量从 assets/levels 目录实际有哪些文件数出来，以后加第 7 关不用改自检。
+        int levelCount = countLevels(assets);
+        for (int level = 0; level < levelCount; level++) {
             renderLevel(assets, project, level);
         }
         checkInteraction(assets, project);
 
-        System.out.println("PASS：6 个关卡、菜单、背景、卡片、全部动画和关卡编辑器检查通过");
+        System.out.println("PASS：" + levelCount + " 个关卡、菜单、背景、卡片、全部动画和关卡编辑器检查通过");
+    }
+
+    /**
+     * 数一数 assets/levels 目录里一共有几个关卡文件。
+     *
+     * 数量由目录内容决定，加了新关卡自检会自动把新关一起检一遍。
+     *
+     * 参数：assets 提供关卡文件的位置。
+     * 返回：连续存在的关卡个数（从第 0 关开始数，遇到缺号就停）。
+     */
+    private static int countLevels(Assets assets) {
+        int count = 0;
+        while (Files.exists(assets.levelPath(count))) {
+            count = count + 1;
+        }
+        check(count > 0, "assets/levels 目录里一个关卡文件都没有");
+        return count;
     }
 
     /** 检查菜单、胜负画面这些整张的界面图片都在。 */
@@ -164,9 +183,10 @@ public class SelfCheckTest {
         return false;
     }
 
-    /** 检查 6 个关卡的 JSON：卡槽模式、僵尸行号、卡池里的卡都要认得出来。 */
+    /** 检查每个关卡的 JSON：卡槽模式、僵尸行号、卡池里的卡都要认得出来。 */
     private static void checkLevelData(Assets assets) throws Exception {
-        for (int level = 0; level <= 5; level++) {
+        int levelCount = countLevels(assets);
+        for (int level = 0; level < levelCount; level++) {
             JsonObject map = Assets.readObject(assets.levelPath(level));
             JsonArray wave = map.getAsJsonArray("zombie_list");
             check(wave.size() > 0, "僵尸列表为空，关卡 " + level);
@@ -345,7 +365,8 @@ public class SelfCheckTest {
      * 异常：读关卡文件失败时抛出异常。
      */
     private static int findLevelWithBar(Assets assets, int barType) throws Exception {
-        for (int level = 0; level <= 5; level++) {
+        int levelCount = countLevels(assets);
+        for (int level = 0; level < levelCount; level++) {
             JsonObject map = Assets.readObject(assets.levelPath(level));
             int mode = GameState.BAR_NORMAL;
             if (map.has("choosebar_type")) {
@@ -406,6 +427,7 @@ public class SelfCheckTest {
         design.firstWaveDelay = 10000;
         design.waveInterval = 15000;
         design.spawnSpacing = 500;
+        design.maxCards = 5;
         design.setWaveCount(3);
         design.setCell(0, 0, "Zombie", 2);
         design.setCell(4, 2, "BucketheadZombie", 3);
@@ -430,6 +452,7 @@ public class SelfCheckTest {
             check(reloaded.skySunInterval == 3500, "读回后阳光生成速度不对");
             check(reloaded.waveInterval == 15000, "读回后出怪间隔不对");
             check(reloaded.waveCount() == 3, "读回后波数不对");
+            check(reloaded.maxCards == 5, "读回后卡槽数量不对");
             check(reloaded.totalZombies() == 5, "读回后僵尸总数不对");
             check("Zombie".equals(reloaded.kindAt(0, 0)), "读回后第一格的僵尸品种不对");
             check(reloaded.countAt(0, 0) == 2, "读回后第一格的僵尸只数不对");
@@ -440,6 +463,7 @@ public class SelfCheckTest {
             Level level = new LevelLoader(assets).load(99);
             check(level.initialSun == 125, "游戏读到的初始阳光不对");
             check(level.skySunInterval == 3500, "游戏没有读到编辑器设置的阳光生成速度");
+            check(level.maxCards == 5, "游戏没有读到编辑器设置的卡槽数量");
             check(level.spawns.size() == 5, "游戏读到的出怪表长度不对");
         } finally {
             Files.deleteIfExists(temporary);

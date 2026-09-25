@@ -99,6 +99,39 @@ public final class Layout {
     /** 卡槽中卡片的纵坐标。 */
     public static final int CARD_BAR_TOP = 8;
 
+    /** 卡槽数量最少也得有 1 张，否则玩家一张卡都带不了。 */
+    public static final int MIN_CARD_SLOTS = 1;
+
+    /**
+     * 卡槽数量最多 8 张，和原版一致。
+     *
+     * 卡槽底板的宽度就是窗口宽度，一排正好排得下 8 张缩放后的卡片，
+     * 再多就会画到屏幕外面，所以卡槽数量只能往少里调。
+     */
+    public static final int MAX_CARD_SLOTS = 8;
+
+    /** 关卡没写卡槽数量时用这个值，和原版一致。 */
+    public static final int DEFAULT_CARD_SLOTS = MAX_CARD_SLOTS;
+
+    /**
+     * 把卡槽数量夹回允许范围。
+     *
+     * 关卡文件是给人手改的，写个 0 或者 999 都不奇怪，
+     * 统一从这里过一道，后面的代码就不用再担心。
+     *
+     * 参数：value 是想设置的卡槽数量。
+     * 返回：夹好之后的卡槽数量。
+     */
+    public static int clampCardSlots(int value) {
+        if (value < MIN_CARD_SLOTS) {
+            return MIN_CARD_SLOTS;
+        }
+        if (value > MAX_CARD_SLOTS) {
+            return MAX_CARD_SLOTS;
+        }
+        return value;
+    }
+
     /** 传送带区域的左边界。 */
     public static final int CONVEYOR_LEFT = 90;
 

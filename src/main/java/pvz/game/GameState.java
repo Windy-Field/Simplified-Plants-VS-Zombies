@@ -113,6 +113,13 @@ public class GameState {
     /** 本关必选的植物编号，进选卡界面时自动飞入卡槽。 */
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
+    /**
+     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     *
+     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式有影响。
+     */
+    public int maxCards = Layout.DEFAULT_CARD_SLOTS;
+
     /** 记录草坪上哪些格子已经种了东西。true 表示被占用。 */
     public final boolean[][] occupied = new boolean[Layout.ROW_COUNT][Layout.COLUMN_COUNT];
 
@@ -131,6 +138,8 @@ public class GameState {
         bannedPlants.clear();
         requiredPlants.clear();
         flyingCards.clear();
+        // 卡槽数量是每关自己的设置，换关时先退回默认值，免得上一关的小卡槽跟着带过来。
+        maxCards = Layout.DEFAULT_CARD_SLOTS;
         nextZombie = 0;
         held = null;
     }
