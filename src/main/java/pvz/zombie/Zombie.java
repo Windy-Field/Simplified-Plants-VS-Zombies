@@ -62,6 +62,7 @@ public class Zombie extends Sprite {
      *
      * 参数：kind 是品种名；lane 是所在行；bottom 是脚下的纵坐标；assets 提供图片。
      */
+    // TODO：【必做-9】新增僵尸时可以改变僵尸血量（默认是 10，有帽子/盔甲就在这里加判断设 helmet = true）
     public Zombie(String kind, int lane, int bottom, Assets assets) {
         super(kind, Layout.ZOMBIE_START_X, bottom, lane, 10, assets);
         BufferedImage image = picture(assets, 0);
@@ -93,6 +94,8 @@ public class Zombie extends Sprite {
      * 参数：fight 表示此刻是否正在啃植物或打僵尸。
      * 返回：对应的动画名。
      */
+    // TODO：【选做-6】新增僵尸时如果换装规则和默认不同（比如掉帽子后用特殊动画而非退化成普通僵尸），
+    //                需要在这里加判断返回正确的动画名
     public String stateAnimation(boolean fight) {
         // 还戴着帽子的僵尸，动图已经把帽子画进身体里了，不用换名字。
         if (helmet) {
@@ -126,6 +129,8 @@ public class Zombie extends Sprite {
      * 参数：assets 提供图片；time 是当前时刻；explosion 表示是不是被炸死的，
      *       被炸死要换成 BoomDie 那套灰烬图。
      */
+    // TODO：【选做-9】新增僵尸时如果有专属死亡动画（比如机器人断成两截、巨人倒地砸坑），
+    //                需要在这里加判断返回正确的死亡动画名
     public void die(Assets assets, long time, boolean explosion) {
         if (dying) {
             return;

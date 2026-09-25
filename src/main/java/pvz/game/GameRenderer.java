@@ -113,6 +113,7 @@ public class GameRenderer {
 
         // 候选卡按 8 张一行往下排；现在是 17 张，所以第 17 张单独占第三行第一个。
         // 已选中或正在飞行（飞往卡槽、飞回候选区）的卡，在原位显示为灰色锁定状态。
+        // 提示：选卡界面最多能放 24 张卡（3 行），超过需要改布局。
         for (int index = 0; index < Cards.CHOOSER_CARD_COUNT; index++) {
             int column = index % 8;
             int row = index / 8;
@@ -184,6 +185,26 @@ public class GameRenderer {
         }
         drawPreview(painter, time, state);
         drawSpeedButton(painter, state);
+        drawWatermark(painter);
+    }
+
+    /**
+     * 在右下角画作者水印。
+     *
+     * 画在草坪下方的石路条上，那里本来没有别的东西，所以不挡视线。
+     * 用半透明的浅色，位置和文字都写在 Layout 里，改起来只有一处。
+     *
+     * 参数：painter 是画笔。
+     */
+    private void drawWatermark(Graphics2D painter) {
+        painter.setFont(new Font("SansSerif", Font.BOLD, Layout.WATERMARK_FONT_SIZE));
+        // 半透明的浅灰：看得见，但不会抢走游戏画面的注意力。
+        painter.setColor(new Color(255, 255, 255, 130));
+
+        // 右对齐：先量出文字宽度，再从右边界往左退这么多。
+        int textWidth = painter.getFontMetrics().stringWidth(Layout.WATERMARK_TEXT);
+        int textX = Layout.WATERMARK_RIGHT - textWidth;
+        painter.drawString(Layout.WATERMARK_TEXT, textX, Layout.WATERMARK_BOTTOM);
     }
 
     /**
@@ -256,6 +277,7 @@ public class GameRenderer {
      * 有两种植物不用普通画法：樱桃炸弹用一张专门的爆炸图；
      * 保龄球要一边滚一边转，得先旋转画布。
      */
+    // TODO：【选做-4】新增植物时需要使用特殊画法
     private void drawPlant(Graphics2D painter, long time, Plant plant) {
         if (plant.name.equals("CherryBomb") && plant.triggered) {
             drawCherryBoom(painter, time, plant);

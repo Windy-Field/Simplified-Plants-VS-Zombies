@@ -18,14 +18,19 @@ public final class Cards {
     private static final int BOWLING_COUNT = 2;
 
     /** 全部植物的名字。 */
+    // TODO：【必做-2】新增植物时需要注册植物名（必须和 Assets.loadPlants() 中的植物名一致，
+    //                且四个数组必须在同一位置各插一项，都插在 "WallNutBowling" 之前）
     public static final String[] PLANTS = {
         "SunFlower", "Peashooter", "SnowPea", "WallNut", "CherryBomb",
         "Threepeater", "RepeaterPea", "Chomper", "PuffShroom", "PotatoMine",
         "Squash", "Spikeweed", "Jalapeno", "ScaredyShroom", "SunShroom",
-        "IceShroom", "HypnoShroom", "WallNutBowling", "RedWallNutBowling"
+        "IceShroom", "HypnoShroom",
+        "WallNutBowling", "RedWallNutBowling"
     };
 
     /** 和植物一一对应的卡片图片名。 */
+    // TODO：【必做-3】新增植物时需要添加植物卡片材质路径（即 assets/Cards/ 下的文件名（不含.png），
+    //                必须和 PLANTS 数组同一位置对应）
     public static final String[] PICTURES = {
         "card_sunflower", "card_peashooter", "card_snowpea", "card_wallnut",
         "card_cherrybomb", "card_threepeashooter", "card_repeaterpea", "card_chomper",
@@ -35,12 +40,14 @@ public final class Cards {
     };
 
     /** 每种植物要花多少阳光；传送带和保龄球植物是 0，因为不花阳光。 */
+    // TODO：【必做-4】新增植物时需要添加植物消耗阳光数（必须和 PLANTS 数组同一位置对应）
     public static final int[] COST = {
         50, 100, 175, 50, 150, 325, 200, 150, 0, 25,
         50, 100, 125, 25, 25, 75, 75, 0, 0
     };
 
     /** 每种植物用完之后要等多少毫秒；传送带和保龄球植物是 0，没有冷却。 */
+    // TODO：【必做-5】新增植物时需要添加植物种植冷却时长（必须和 PLANTS 数组同一位置对应）
     public static final int[] COOLDOWN = {
         7500, 7500, 7500, 30000, 50000, 7500, 7500, 7500, 7500,
         30000, 30000, 7500, 50000, 7500, 7500, 50000, 30000, 0, 0

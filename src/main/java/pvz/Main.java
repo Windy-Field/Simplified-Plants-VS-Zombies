@@ -37,7 +37,7 @@ public class Main {
         SwingUtilities.invokeLater(new Runnable() {
             /** 在 Swing 事件线程里创建并显示窗口。 */
             public void run() {
-                JFrame window = new JFrame("Plant VS Zombies Game");
+                JFrame window = new JFrame("植物大战僵尸（Java 版） - Windy-Field / Octorange");
                 window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 window.setContentPane(new Game(assets, startLevel));
                 window.pack();

@@ -129,6 +129,7 @@ public class Assets {
     }
 
     /** 植物、阳光以及植物相关的特效。 */
+    // TODO：【必做-1】新增植物时需要调用 animation() 登记植物动画（名字必须和 Cards.PLANTS 数组中的一致）
     private void loadPlants() throws IOException {
         animation("Sun", "Screen/Sun.gif");
 
@@ -189,6 +190,8 @@ public class Assets {
     }
 
     /** 僵尸的走路、啃食、掉头、死亡等动画。 */
+    // TODO：【必做-8】新增僵尸时需要调用 animation() 登记僵尸所有动画状态
+    //                （基础、啃食、死亡、被炸死、掉头、掉头啃食、飞出去的头等）
     private void loadZombies() throws IOException {
         animation("Zombie", "Zombies/Zombie/Zombie.gif");
         animation("ZombieAttack", "Zombies/Zombie/ZombieAttack.gif");
@@ -221,6 +224,8 @@ public class Assets {
     }
 
     /** 豌豆、冰豆、蘑菇孢子以及它们打中后的效果。 */
+    // TODO：【选做-2.5】新增植物时需要调用 animation()/sequence() 登记子弹材质
+    //                 （名字必须和 PlantActions.bulletNameFor() 中返回的字符串一致）
     private void loadBullets() throws IOException {
         sequence("PeaNormal", "bullets/PeaNormal/PeaNormal_0.png");
         sequence("PeaIce", "bullets/PeaIce/PeaIce_0.png");

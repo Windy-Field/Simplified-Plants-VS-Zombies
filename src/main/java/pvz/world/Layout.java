@@ -58,6 +58,8 @@ public final class Layout {
     /** 僵尸碰撞盒从后面去掉可见宽度的百分之几，把甩在身后的脚跟排除掉。 */
     public static final int ZOMBIE_BACK_TRIM_PERCENT = 20;
 
+    // TODO：【选做-1】新增射手植物时，如果嘴的高度和豌豆射手不同，需要在这里加一个常量，
+    //                再去 PlantActions.muzzleOffset() 里加对应的 if 分支返回这个常量
     /**
      * 各种射手的嘴（炮管开口）比身体可见范围的上沿低多少像素。
      *
@@ -147,6 +149,22 @@ public final class Layout {
 
     /** 加速按钮能切换的倍率，按一下就在这几个值之间轮换。 */
     public static final int[] SPEED_CHOICES = {1, 2, 3};
+
+    /**
+     * 游戏画面右下角作者水印的位置。
+     *
+     * 水印画在草坪下方的石路条上，那里本来没有别的东西，不挡视线；
+     * 而且每局游戏都看得见，别人截图或录屏时会跟着带上。
+     */
+    public static final int WATERMARK_RIGHT = 790;
+
+    public static final int WATERMARK_BOTTOM = 592;
+
+    /** 水印文字。 */
+    public static final String WATERMARK_TEXT = "Windy-Field / Octorange";
+
+    /** 水印字号。 */
+    public static final int WATERMARK_FONT_SIZE = 12;
 
     /** 通关或失败画面停留的毫秒数。 */
     public static final long ENDING_SCREEN_DURATION = 3000;

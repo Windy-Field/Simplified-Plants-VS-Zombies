@@ -6,6 +6,7 @@ package pvz.plant;
  * PlantActions 按这里的分类决定每株植物每一帧干什么。
  * 新植物如果和已有植物的套路一样，只要把名字加进对应名单就行。
  */
+// TODO：【必做-6】新增植物时需要添加植物类型（向日葵系单独在 PlantActions 中改）
 public final class PlantRules {
     /** 白天会睡觉的蘑菇类植物。 */
     private static final String[] NIGHT_PLANTS = {

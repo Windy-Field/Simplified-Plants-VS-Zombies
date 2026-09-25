@@ -651,6 +651,8 @@ public class Game extends JPanel {
     }
 
     /** 处理僵尸掉帽子和掉头这两个血量节点。 */
+    // TODO：【选做-7】新增僵尸时如果掉帽子/盔甲后有特殊效果（变快、反击、召唤小兵等），
+    //                需要在这里加判断触发效果
     private void updateZombieDamageState(Zombie zombie) {
         if (zombie.helmet && zombie.health <= 10) {
             zombie.helmet = false;
@@ -670,6 +672,8 @@ public class Game extends JPanel {
         Rectangle old = zombie.bounds(assets, state.time);
         int center = (int) old.getCenterX();
         int bottom = (int) old.getMaxY();
+        // TODO：【选做-8】新增僵尸时如果有专属的头部素材（比如旗帜僵尸、报纸僵尸），
+        //                需要在这里加判断返回正确的头部素材名（默认是 "ZombieHead"）
         Sprite head = new Sprite("ZombieHead", center, bottom, zombie.row, 0, assets);
         head.animationStart = state.time;
         state.heads.add(head);

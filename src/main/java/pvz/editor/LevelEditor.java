@@ -161,7 +161,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
      *       levelNumber 是一开始要编辑第几关。
      */
     public LevelEditor(Assets originalAssets, Path root, int levelNumber) {
-        super("植物大战僵尸 - 关卡编辑器");
+        super("植物大战僵尸 - 关卡编辑器 - Windy-Field / Octorange");
         assets = originalAssets;
         assetRoot = root;
         icons = new EditorIcons(originalAssets);
@@ -256,18 +256,39 @@ public class LevelEditor extends JFrame implements EditorDragController {
         toolbar.add(new JLabel("关卡编号"));
         levelSpinner.setPreferredSize(new Dimension(58, 26));
         toolbar.add(levelSpinner);
-        toolbar.add(button("读取关卡", new ActionListener() {
+
+        JButton loadButton = button("读取关卡", new ActionListener() {
             /** 把关卡编号对应的文件读进来。 */
             public void actionPerformed(ActionEvent event) {
                 openLevelByNumber();
             }
-        }));
-        toolbar.add(button("保存关卡", new ActionListener() {
+        });
+        toolbar.add(loadButton);
+
+        JButton saveButton = button("保存关卡", new ActionListener() {
             /** 写回关卡编号对应的文件。 */
             public void actionPerformed(ActionEvent event) {
                 saveLevelByNumber();
             }
-        }));
+        });
+        toolbar.add(saveButton);
+
+        // 监听关卡编号变化，超出现有关卡范围就禁用保存按钮
+        levelSpinner.addChangeListener(new ChangeListener() {
+            public void stateChanged(ChangeEvent event) {
+                int number = levelNumber();
+                boolean canSave = canEditLevel(number);
+                saveButton.setEnabled(canSave);
+                if (!canSave) {
+                    statusLabel.setText("关卡 " + number + " 超出现有范围，只能读取和另存为，不能直接保存");
+                } else {
+                    updateStatus();
+                }
+            }
+        });
+
+        // 初始状态也要检查一次
+        saveButton.setEnabled(canEditLevel(levelNumber()));
     }
 
     /**
@@ -807,6 +828,35 @@ public class LevelEditor extends JFrame implements EditorDragController {
      */
     private Path levelPath(int number) {
         return assetRoot.resolve("levels/level_" + number + ".json");
+    }
+
+    /**
+     * 判断某一关是否可以直接保存。
+     *
+     * 只有当关卡编号在现有关卡范围内（即文件已存在，或者是紧接着最后一关的下一关）时才能直接保存。
+     * 如果用户只有 0~5 关，那么可以编辑 0~6 关，但不能直接保存到第 7 关及以后。
+     *
+     * 参数：number 是关卡编号。
+     * 返回：可以直接保存就返回真。
+     */
+    private boolean canEditLevel(int number) {
+        // 找出现有关卡的最大编号
+        int maxExisting = -1;
+        try {
+            Path levelsDir = assetRoot.resolve("levels");
+            if (Files.isDirectory(levelsDir)) {
+                for (int i = 0; i <= 99; i++) {
+                    if (Files.exists(levelPath(i))) {
+                        maxExisting = i;
+                    }
+                }
+            }
+        } catch (Exception exception) {
+            // 出错就允许保存，不挡住用户
+            return true;
+        }
+        // 允许编辑现有关卡和紧接着的下一关
+        return number <= maxExisting + 1;
     }
 
     /** 弹出文件对话框，让用户自己挑一个关卡文件打开。 */

@@ -57,6 +57,7 @@ public class Plant extends Sprite {
             health = 30;
         }
         // 魅惑菇和保龄球一碰就碎，血量设成 1 就够了。
+        // TODO：【选做-3】新增植物时可以改变植物血量（默认是 5，需要改就在这里加判断）
         if (kind.equals("HypnoShroom") || PlantRules.isBowling(kind)) {
             health = 1;
         }
@@ -82,6 +83,7 @@ public class Plant extends Sprite {
      * 参数：kind 是植物名。
      * 返回：向右挪的像素数。
      */
+    // TODO：【选做-5】新增植物时植物根部不在网格正中（需要在这里加判断返回偏移量）
     public static int rootShift(String kind) {
         if (kind.equals("Chomper")) {
             return Layout.CHOMPER_ROOT_SHIFT;

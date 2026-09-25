@@ -255,6 +255,7 @@ public class PlantActions {
      * 参数：plant 是开火的射手。
      * 返回：嘴中心相对身体上沿的纵向偏移。
      */
+    // TODO：【选做-1】新增植物时可以调整子弹出射点
     private int muzzleOffset(Plant plant) {
         if (plant.name.equals("SnowPea")) {
             return Layout.SNOW_PEA_MUZZLE_OFFSET;
@@ -280,6 +281,7 @@ public class PlantActions {
      * 参数：plant 是开火的射手。
      * 返回：子弹的素材名。
      */
+    // TODO：【选做-2】新增植物时可以改变子弹类型
     private String bulletNameFor(Plant plant) {
         if (plant.name.equals("SnowPea")) {
             return "PeaIce";

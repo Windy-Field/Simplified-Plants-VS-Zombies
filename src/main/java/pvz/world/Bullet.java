@@ -25,13 +25,14 @@ public class Bullet extends Sprite {
      * 参数：kind 是子弹素材名；left 和 top 是子弹左上角坐标；
      *       lane 是所在行；target 是期望落到的纵坐标；assets 提供图片。
      */
+    // TODO：【选做-2.75（一）】新增植物时想让子弹有冰冻减速效果，需要把子弹名加进下面的判断里
     public Bullet(String kind, int left, int top, int lane, int target, Assets assets) {
         super(kind, left, top, lane, 1, assets);
         // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次。
         x = left;
         y = top;
         destination = target;
-        ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom");
+        ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom"); // 减速效果
     }
 
     /**
@@ -66,6 +67,7 @@ public class Bullet extends Sprite {
      *
      * 参数：assets 提供图片；time 是打中的时刻。
      */
+    // TODO：【选做-2.75】新增植物时植物子弹的特殊效果（二）（必须和 PlantActions 的 bulletNameFor() 中返回的字符串一致）
     public void explode(Assets assets, long time) {
         exploded = true;
         hitTime = time;

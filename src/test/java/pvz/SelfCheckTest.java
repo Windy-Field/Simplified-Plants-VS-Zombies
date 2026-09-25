@@ -32,8 +32,7 @@ import pvz.zombie.ZombieSpawn;
 /**
  * 自检程序：确认 assets 目录里的图片和关卡数据都能被游戏正确读取和使用。
  *
- * 它不打开窗口，而是把画面画到内存里的图片上，然后逐项检查：
- * 素材有没有缺、关卡数据对不对、选卡和种植能不能走通。
+ * 它不打开窗口，而是把画面画到内存里的图片上，然后逐项检查：素材有没有缺、关卡数据对不对、增改植物有无遗漏、选卡和种植能不能走通。
  * 全部通过时打印一行 PASS，任意一项不合格就抛异常并说明是哪一项。
  */
 public class SelfCheckTest {
@@ -44,6 +43,8 @@ public class SelfCheckTest {
     };
 
     /** 关卡里会用到的动画名单。 */
+    // TODO：【必做-7】新增植物时需要把植物的所有动画状态名加到这个数组里，否则自检不会检查它
+    // TODO：【必做-10】新增僵尸时需要把僵尸的所有动画状态名加到这个数组里，否则自检不会检查它
     private static final String[] ANIMATIONS = {
         "Sun", "SunFlower", "Peashooter", "SnowPea", "WallNut", "WallNut_cracked1",
         "WallNut_cracked2", "CherryBomb", "CherryBombExplode", "Threepeater", "RepeaterPea", "Chomper", "ChomperAttack",
