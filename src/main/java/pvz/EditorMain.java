@@ -15,12 +15,12 @@ public class EditorMain {
      * 打开关卡编辑器。
      *
      * 参数：arguments[0] 是素材目录（可以不传，默认是工作目录下的 assets）；
-     *       arguments[1] 是一开始编辑第几关（可以不传，默认第 1 关）。
+     *       arguments[1] 是一开始编辑第几关（可以不传，默认第 0 关）。
      * 异常：素材目录不存在或图片读不了时抛出异常。
      */
     public static void main(String[] arguments) throws Exception {
         Path project = Path.of("assets");
-        int level = 1;
+        int level = 0;
         if (arguments.length > 0) {
             project = Path.of(arguments[0]);
         }

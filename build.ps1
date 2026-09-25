@@ -1,7 +1,7 @@
 ﻿param(
     [switch] $Test,
     [switch] $Editor,
-    [int] $Level = 1
+    [int] $Level = 0
 )
 
 # 使用真正的 JDK，避免系统 javapath 启动器指向缺失的安装。

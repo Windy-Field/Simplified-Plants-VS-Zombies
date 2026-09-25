@@ -1061,7 +1061,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
             return;
         }
         final Game game = new Game(assets, levelNumber());
-        JFrame window = new JFrame("试玩：第 " + levelNumber() + " 关");
+        JFrame window = new JFrame("试玩：第 " + (levelNumber() + 1) + " 关");
         // 试玩窗口关掉只是收起这一局，编辑器还要继续用，所以不能设成退出程序。
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         window.setContentPane(game);

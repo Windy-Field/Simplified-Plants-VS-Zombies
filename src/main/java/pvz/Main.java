@@ -18,11 +18,11 @@ public class Main {
      * 启动植物大战僵尸。
      *
      * 参数：arguments[0] 是素材目录（可以不传，默认是工作目录下的 assets）；
-     *       arguments[1] 是起始关卡编号（可以不传，默认第 1 关）。
+     *       arguments[1] 是起始关卡编号（可以不传，默认第 0 关）。
      */
     public static void main(String[] arguments) throws Exception {
         Path project = Path.of("assets");
-        int level = 1;
+        int level = 0;
         if (arguments.length > 0) {
             project = Path.of(arguments[0]);
         }

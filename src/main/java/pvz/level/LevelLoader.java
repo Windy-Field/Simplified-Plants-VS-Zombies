@@ -66,7 +66,7 @@ public class LevelLoader {
             readPlantList(json, "required_plants", level.requiredPlants);
             return level;
         } catch (IOException exception) {
-            throw new IllegalStateException("无法读取第 " + levelNumber + " 关的关卡文件", exception);
+            throw new IllegalStateException("无法读取第 " + (levelNumber + 1) + " 关的关卡文件", exception);
         }
     }
 
