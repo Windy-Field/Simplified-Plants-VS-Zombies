@@ -121,7 +121,8 @@ public class GameRenderer {
             int top = Layout.CHOOSER_TOP + row * Layout.CHOOSER_ROW_SPACING;
             Card card = new Card(index, left, top);
             boolean available = !state.selected.contains(Integer.valueOf(index))
-                && !state.isFlying(index);
+                && !state.isFlying(index)
+                && !state.bannedPlants.contains(Integer.valueOf(index));
             // 选卡阶段不显示冷却，所以传一个很大的阳光数量。
             card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CHOOSER_CARD_SCALE, available);
         }

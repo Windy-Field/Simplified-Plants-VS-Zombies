@@ -62,6 +62,8 @@ public class LevelLoader {
             readSpawns(json, level);
             sortSpawnsByTime(level.spawns);
             readCardPool(json, level);
+            readPlantList(json, "banned_plants", level.bannedPlants);
+            readPlantList(json, "required_plants", level.requiredPlants);
             return level;
         } catch (IOException exception) {
             throw new IllegalStateException("无法读取第 " + levelNumber + " 关的关卡文件", exception);
@@ -118,6 +120,32 @@ public class LevelLoader {
                 throw new IllegalArgumentException("关卡里出现了未知的卡片：" + name);
             }
             level.cardPool.add(Integer.valueOf(cardIndex));
+        }
+    }
+
+    /**
+     * 读一份植物清单，比如禁用清单或必选清单。
+     *
+     * 没有这个字段就当清单是空的，老关卡文件照常能玩。
+     * 编辑器写进去的植物名一定认得出，认不出就是文件被手改坏了，
+     * 所以这里和卡池不一样：不跳过，直接报错，免得玩家莫名其妙少了一张卡。
+     *
+     * 参数：json 是关卡文件的根对象；field 是字段名；target 是读到哪个清单里。
+     */
+    private static void readPlantList(JsonObject json, String field, List<Integer> target) {
+        if (!json.has(field)) {
+            return;
+        }
+        JsonArray choices = json.getAsJsonArray(field);
+        for (int index = 0; index < choices.size(); index++) {
+            JsonElement item = choices.get(index);
+            JsonObject entry = item.getAsJsonObject();
+            String name = entry.get("name").getAsString();
+            int plantIndex = Cards.indexOf(name);
+            if (plantIndex < 0) {
+                throw new IllegalArgumentException("关卡里的 " + field + " 出现了未知的植物：" + name);
+            }
+            target.add(Integer.valueOf(plantIndex));
         }
     }
 }

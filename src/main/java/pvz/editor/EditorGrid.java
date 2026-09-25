@@ -23,6 +23,8 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import pvz.world.Layout;
 
+import static pvz.world.Layout.CELL_WIDTH;
+
 /**
  * 编辑器中间那张出怪网格。
  *
@@ -205,6 +207,8 @@ public class EditorGrid extends JPanel {
         pressWave = cell[1];
         selectedRow = cell[0];
         selectedWave = cell[1];
+        // 选中格子变了，让主窗口把随机行复选框同步过来。
+        controller.selectionChanged();
         if (SwingUtilities.isRightMouseButton(event)) {
             design.addCount(cell[0], cell[1], -1);
             controller.designChanged();
@@ -305,16 +309,17 @@ public class EditorGrid extends JPanel {
                 design.addCount(cell[0], cell[1], delta);
                 selectedRow = cell[0];
                 selectedWave = cell[1];
+                controller.selectionChanged();
                 controller.designChanged();
                 repaint();
             }
         });
     }
 
-    /** 装上键盘处理：Delete 清空选中的格子，加减号和上下键调只数。 */
+    /** 装上键盘处理：Delete 清空选中的格子，加减号和上下键调只数，R 键切换随机行。 */
     private void installKeyHandler() {
         addKeyListener(new KeyAdapter() {
-            /** Delete 清空选中的格子，加减号和上下键调整只数。 */
+            /** Delete 清空选中的格子，加减号和上下键调整只数，R 键切换随机行。 */
             public void keyPressed(KeyEvent event) {
                 if (selectedRow < 0) {
                     return;
@@ -332,6 +337,12 @@ public class EditorGrid extends JPanel {
                     design.addCount(selectedRow, selectedWave, -1);
                     controller.designChanged();
                     event.consume();
+                } else if (code == KeyEvent.VK_R) {
+                    if (design.kindAt(selectedRow, selectedWave) != null) {
+                        design.toggleRandomRow(selectedRow, selectedWave);
+                        controller.designChanged();
+                        event.consume();
+                    }
                 }
                 repaint();
             }
@@ -399,6 +410,34 @@ public class EditorGrid extends JPanel {
         }
         controller.designChanged();
         repaint();
+    }
+
+    /**
+     * 查询当前选中的是哪一行。
+     *
+     * 返回：行号；没有选中任何格子就返回 -1。
+     */
+    public int selectedRow() {
+        return selectedRow;
+    }
+
+    /**
+     * 查询当前选中的是哪一波。
+     *
+     * 返回：波号；没有选中任何格子就返回 -1。
+     */
+    public int selectedWave() {
+        return selectedWave;
+    }
+
+    /**
+     * 判断某个格子里有没有僵尸。
+     *
+     * 参数：row 是行号；wave 是波号。
+     * 返回：有僵尸就返回真；空格子或者坐标越界都返回假。
+     */
+    public boolean hasCell(int row, int wave) {
+        return design.kindAt(row, wave) != null;
     }
 
     /**
@@ -589,6 +628,9 @@ public class EditorGrid extends JPanel {
         if (kind != null) {
             drawZombie(painter, kind, row, wave, left, top);
             drawCountBadge(painter, left, top, design.countAt(row, wave));
+            if (design.randomRowAt(row, wave)) {
+                drawRandomRowMark(painter, left, top);
+            }
         }
 
         drawCellBorder(painter, row, wave, left, top);
@@ -642,6 +684,24 @@ public class EditorGrid extends JPanel {
         painter.fillRoundRect(badgeLeft, badgeTop, badgeWidth, 19, 9, 9);
         painter.setColor(Color.WHITE);
         painter.drawString(text, badgeLeft + 6, badgeTop + 14);
+    }
+
+    /**
+     * 在格子左上角画随机行标记。
+     *
+     * 参数：painter 是画笔；left、top 是格子的左上角。
+     */
+    private void drawRandomRowMark(Graphics2D painter, int left, int top) {
+        painter.setFont(getFont().deriveFont(Font.BOLD, 13f));
+        String text = "随机";
+        int markWidth = painter.getFontMetrics().stringWidth(text) + 10;
+        int markLeft = left + 5;
+        int markTop = top + 5;
+
+        painter.setColor(new Color(255, 140, 0));
+        painter.fillRoundRect(markLeft, markTop, markWidth, 18, 8, 8);
+        painter.setColor(Color.WHITE);
+        painter.drawString(text, markLeft + 5, markTop + 13);
     }
 
     /**

@@ -103,6 +103,12 @@ public class LevelDesign {
     /** 传送带和保龄球模式可以出的卡片编号，正常选卡模式用不到。 */
     public final List<Integer> cardPool = new ArrayList<Integer>();
 
+    /** 本关禁止使用的植物编号；只对正常选卡模式生效。 */
+    public final List<Integer> bannedPlants = new ArrayList<Integer>();
+
+    /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效。 */
+    public final List<Integer> requiredPlants = new ArrayList<Integer>();
+
     /** 导入老关卡时如果做了近似处理，把说明记在这里给用户看。 */
     public String importNote = "";
 
@@ -111,6 +117,9 @@ public class LevelDesign {
 
     /** 表格里每个格子放了几只僵尸，和 kinds 一一对应。 */
     private int[][] counts = new int[Layout.ROW_COUNT][DEFAULT_WAVE_COUNT];
+
+    /** 每个格子是否随机行出怪，和 kinds 一一对应。 */
+    private boolean[][] randomRows = new boolean[Layout.ROW_COUNT][DEFAULT_WAVE_COUNT];
 
     /** 当前一共有几波，也就是表格有几列。 */
     private int waveCount = DEFAULT_WAVE_COUNT;
@@ -146,15 +155,18 @@ public class LevelDesign {
         // 换成新尺寸的表格，再把两者都有的那部分内容搬过去。
         String[][] newKinds = new String[Layout.ROW_COUNT][target];
         int[][] newCounts = new int[Layout.ROW_COUNT][target];
+        boolean[][] newRandomRows = new boolean[Layout.ROW_COUNT][target];
         int sharedWaves = Math.min(target, waveCount);
         for (int row = 0; row < Layout.ROW_COUNT; row++) {
             for (int wave = 0; wave < sharedWaves; wave++) {
                 newKinds[row][wave] = kinds[row][wave];
                 newCounts[row][wave] = counts[row][wave];
+                newRandomRows[row][wave] = randomRows[row][wave];
             }
         }
         kinds = newKinds;
         counts = newCounts;
+        randomRows = newRandomRows;
         waveCount = target;
     }
 
@@ -201,6 +213,31 @@ public class LevelDesign {
     }
 
     /**
+     * 查某个格子是否随机行出怪。
+     *
+     * 参数：row 是行号；wave 是波号。
+     * 返回：随机行就返回真；格子是空的或者坐标越界都返回假。
+     */
+    public boolean randomRowAt(int row, int wave) {
+        if (!insideGrid(row, wave)) {
+            return false;
+        }
+        return randomRows[row][wave];
+    }
+
+    /**
+     * 设置某个格子是否随机行出怪。
+     *
+     * 参数：row 是行号；wave 是波号；random 是否随机行。
+     */
+    public void setRandomRow(int row, int wave, boolean random) {
+        if (!insideGrid(row, wave)) {
+            return;
+        }
+        randomRows[row][wave] = random;
+    }
+
+    /**
      * 往某个格子里放僵尸。
      *
      * 参数：row 是行号；wave 是波号；kind 是僵尸品种名；count 是数量。
@@ -213,6 +250,7 @@ public class LevelDesign {
         if (kind == null || count <= 0) {
             kinds[row][wave] = null;
             counts[row][wave] = 0;
+            randomRows[row][wave] = false;
             return;
         }
         kinds[row][wave] = kind;
@@ -249,6 +287,54 @@ public class LevelDesign {
     }
 
     /**
+     * 拼出一个格子的文字摘要，比如"路障僵尸 × 2"。
+     *
+     * 编辑器用它来提示当前选中的是哪个格子。
+     *
+     * 参数：row 是行号；wave 是波号。
+     * 返回：摘要文字；格子是空的或者坐标越界都返回 null。
+     */
+    public String cellSummary(int row, int wave) {
+        String kind = kindAt(row, wave);
+        if (kind == null) {
+            return null;
+        }
+        int position = kindIndex(kind);
+        String label = kind;
+        if (position >= 0) {
+            label = ZOMBIE_LABELS[position];
+        }
+        return label + " × " + countAt(row, wave);
+    }
+
+    /**
+     * 查一种僵尸在 ZOMBIE_KINDS 里排第几。
+     *
+     * 参数：kind 是僵尸品种名。
+     * 返回：找到就返回下标；找不到返回 -1。
+     */
+    private static int kindIndex(String kind) {
+        for (int index = 0; index < ZOMBIE_KINDS.length; index++) {
+            if (ZOMBIE_KINDS[index].equals(kind)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 切换某个格子的随机行状态。
+     *
+     * 参数：row 是行号；wave 是波号。
+     */
+    public void toggleRandomRow(int row, int wave) {
+        if (!insideGrid(row, wave)) {
+            return;
+        }
+        randomRows[row][wave] = !randomRows[row][wave];
+    }
+
+    /**
      * 把一个格子的内容整个搬到另一个格子，源格子清空。
      *
      * 参数：fromRow、fromWave 是源格子的坐标；toRow、toWave 是目标格子的坐标。
@@ -262,8 +348,10 @@ public class LevelDesign {
         }
         String kind = kinds[fromRow][fromWave];
         int count = counts[fromRow][fromWave];
+        boolean random = randomRows[fromRow][fromWave];
         clearCell(fromRow, fromWave);
         setCell(toRow, toWave, kind, count);
+        randomRows[toRow][toWave] = random;
     }
 
     /**
@@ -279,10 +367,13 @@ public class LevelDesign {
         }
         String keptKind = kinds[firstRow][firstWave];
         int keptCount = counts[firstRow][firstWave];
+        boolean keptRandom = randomRows[firstRow][firstWave];
         kinds[firstRow][firstWave] = kinds[secondRow][secondWave];
         counts[firstRow][firstWave] = counts[secondRow][secondWave];
+        randomRows[firstRow][firstWave] = randomRows[secondRow][secondWave];
         kinds[secondRow][secondWave] = keptKind;
         counts[secondRow][secondWave] = keptCount;
+        randomRows[secondRow][secondWave] = keptRandom;
     }
 
     /** 把整张表格清空，但保留波数和各项参数。 */
@@ -326,12 +417,7 @@ public class LevelDesign {
      * 返回：支持就返回真。
      */
     public static boolean isKnownKind(String kind) {
-        for (int index = 0; index < ZOMBIE_KINDS.length; index++) {
-            if (ZOMBIE_KINDS[index].equals(kind)) {
-                return true;
-            }
-        }
-        return false;
+        return kindIndex(kind) >= 0;
     }
 
     /**
@@ -352,6 +438,7 @@ public class LevelDesign {
      *
      * 一个格子里写着几只，就展开成几条记录，彼此按 spawnSpacing 错开，
      * 免得同一毫秒挤出来一堆僵尸。
+     * 如果格子标记了随机行，僵尸会随机出现在任意一行而非固定行。
      *
      * 返回：按出场时间排好序的僵尸出场表。
      */
@@ -365,7 +452,11 @@ public class LevelDesign {
                 }
                 for (int index = 0; index < counts[row][wave]; index++) {
                     long at = waveTime(wave) + index * spawnSpacing;
-                    result.add(new ZombieSpawn((int) at, row, kind));
+                    int targetRow = row;
+                    if (randomRows[row][wave]) {
+                        targetRow = -1;
+                    }
+                    result.add(new ZombieSpawn((int) at, targetRow, kind));
                 }
             }
         }
@@ -409,13 +500,14 @@ public class LevelDesign {
 
         // 只有传送带和保龄球模式才有卡池，正常选卡模式写了反而多余。
         if (barType != GameState.BAR_NORMAL) {
-            text.append("    \"card_pool\":[\n");
-            for (int index = 0; index < cardPool.size(); index++) {
-                int plantIndex = cardPool.get(index).intValue();
-                text.append("        {\"name\":\"" + Cards.PLANTS[plantIndex] + "\"}");
-                text.append(lineEnd(index, cardPool.size()));
-            }
-            text.append("    ],\n");
+            writePlantList(text, "card_pool", cardPool);
+        }
+        // 两份清单只对正常选卡模式有意义，空着就不写，免得老关卡文件平白多两行。
+        if (!bannedPlants.isEmpty()) {
+            writePlantList(text, "banned_plants", bannedPlants);
+        }
+        if (!requiredPlants.isEmpty()) {
+            writePlantList(text, "required_plants", requiredPlants);
         }
 
         List<ZombieSpawn> spawns = buildSpawns();
@@ -435,6 +527,25 @@ public class LevelDesign {
     }
 
     /**
+     * 往 JSON 里写一段植物清单。
+     *
+     * 卡池、禁用清单、必选清单的格式完全一样，都是"一行一种植物"，
+     * 所以共用这一个方法，改动格式时只要改一处。
+     *
+     * 参数：text 是正在拼的 JSON 文本；field 是字段名；
+     *       plants 是植物编号列表。
+     */
+    private static void writePlantList(StringBuilder text, String field, List<Integer> plants) {
+        text.append("    \"" + field + "\":[\n");
+        for (int index = 0; index < plants.size(); index++) {
+            int plantIndex = plants.get(index).intValue();
+            text.append("        {\"name\":\"" + Cards.PLANTS[plantIndex] + "\"}");
+            text.append(lineEnd(index, plants.size()));
+        }
+        text.append("    ],\n");
+    }
+
+    /**
      * 拼出 editor 那一段文本，也就是表格本身的存档。
      *
      * 返回：editor 段的 JSON 文本。
@@ -450,7 +561,11 @@ public class LevelDesign {
                 String line = "            {\"wave\":" + wave
                     + ", \"row\":" + row
                     + ", \"name\":\"" + kinds[row][wave] + "\""
-                    + ", \"count\":" + counts[row][wave] + "}";
+                    + ", \"count\":" + counts[row][wave];
+                if (randomRows[row][wave]) {
+                    line = line + ", \"random_row\":true";
+                }
+                line = line + "}";
                 cellLines.add(line);
             }
         }
@@ -536,7 +651,13 @@ public class LevelDesign {
             design.skySunInterval = Math.max(Layout.MIN_SKY_SUN_INTERVAL, interval);
         }
         if (json.has("card_pool")) {
-            design.readCardPool(json.getAsJsonArray("card_pool"));
+            readPlantList(json.getAsJsonArray("card_pool"), design.cardPool);
+        }
+        if (json.has("banned_plants")) {
+            readPlantList(json.getAsJsonArray("banned_plants"), design.bannedPlants);
+        }
+        if (json.has("required_plants")) {
+            readPlantList(json.getAsJsonArray("required_plants"), design.requiredPlants);
         }
 
         if (json.has("editor")) {
@@ -550,18 +671,20 @@ public class LevelDesign {
     }
 
     /**
-     * 读传送带或保龄球模式的可出卡列表。
+     * 读一段植物清单。
      *
-     * 参数：pool 是关卡文件里的 card_pool 数组。
+     * 卡池、禁用清单、必选清单的格式一样，所以共用这一个方法。
+     * 认不出的植物直接跳过，总比让整个关卡打不开强。
+     *
+     * 参数：array 是关卡文件里的清单数组；target 是读到哪个列表里。
      */
-    private void readCardPool(JsonArray pool) {
-        for (int index = 0; index < pool.size(); index++) {
-            JsonObject entry = pool.get(index).getAsJsonObject();
+    private static void readPlantList(JsonArray array, List<Integer> target) {
+        for (int index = 0; index < array.size(); index++) {
+            JsonObject entry = array.get(index).getAsJsonObject();
             String name = entry.get("name").getAsString();
             int cardIndex = Cards.indexOf(name);
-            // 认不出的植物直接跳过，总比让整个关卡打不开强。
             if (cardIndex >= 0) {
-                cardPool.add(Integer.valueOf(cardIndex));
+                target.add(Integer.valueOf(cardIndex));
             }
         }
     }
@@ -597,12 +720,17 @@ public class LevelDesign {
             int row = cell.get("row").getAsInt();
             String name = cell.get("name").getAsString();
             int count = cell.get("count").getAsInt();
+            boolean random = false;
+            if (cell.has("random_row")) {
+                random = cell.get("random_row").getAsBoolean();
+            }
             // 万一文件里的波号比 wave_count 还大，就把表格撑大，免得内容读丢。
             if (wave >= waveCount) {
                 setWaveCount(wave + 1);
             }
             if (isKnownKind(name)) {
                 setCell(row, wave, name, count);
+                randomRows[row][wave] = random;
             }
         }
     }
@@ -824,6 +952,17 @@ public class LevelDesign {
         }
         if (barType == GameState.BAR_NORMAL && backgroundIndex != 0) {
             return "只有白天草坪（背景 0）的正常选卡关卡会从天上掉阳光，当前设置下阳光生成速度不起作用。";
+        }
+        // 必选超过八张就塞不进卡槽了，开始按钮永远不会亮。
+        if (requiredPlants.size() > 8) {
+            return "必选植物最多八张，现在选了 " + requiredPlants.size() + " 张，进了关卡没法开始。";
+        }
+        // 同一植物既禁用又必选，游戏里必选优先，这里提醒一句免得用户以为禁掉了。
+        for (int index = 0; index < bannedPlants.size(); index++) {
+            int plant = bannedPlants.get(index).intValue();
+            if (requiredPlants.contains(Integer.valueOf(plant))) {
+                return Cards.PLANTS[plant] + " 同时出现在禁用和必选清单里，游戏里会按必选处理。";
+            }
         }
         return "";
     }

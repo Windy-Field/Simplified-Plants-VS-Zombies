@@ -242,6 +242,11 @@ public class Game extends JPanel {
         state.clearField();
         state.schedule.addAll(level.spawns);
         state.pool.addAll(level.cardPool);
+        // 两份清单只对正常选卡模式生效，别的模式读进来也没用，索性不拷。
+        if (level.isNormalMode()) {
+            state.bannedPlants.addAll(level.bannedPlants);
+            state.requiredPlants.addAll(level.requiredPlants);
+        }
 
         // 每行开头的推车先摆好；保龄球模式最右边三列被占掉，球从那里滚出来。
         for (int row = 0; row < Layout.ROW_COUNT; row++) {
@@ -254,9 +259,50 @@ public class Game extends JPanel {
 
         if (level.isNormalMode()) {
             state.screen = GameScreen.CHOOSE;
+            launchRequiredCards();
         } else {
             startPlay();
         }
+    }
+
+    /**
+     * 开出关卡时，让必选植物一起飞进卡槽。
+     *
+     * 和玩家自己点卡是同一套飞行动画，只不过这里同时起飞，
+     * 而且落点按清单顺序排，飞完之后玩家就不能再取消它们了。
+     */
+    private void launchRequiredCards() {
+        for (int position = 0; position < state.requiredPlants.size(); position++) {
+            int plantIndex = state.requiredPlants.get(position).intValue();
+            if (plantIndex >= Cards.CHOOSER_CARD_COUNT) {
+                continue;
+            }
+            if (testMode) {
+                // 测试模式不跑动画，直接占好卡槽。
+                state.selected.add(Integer.valueOf(plantIndex));
+                continue;
+            }
+            Card card = chooserCard(plantIndex);
+            int targetLeft = 78 + position * Layout.CARD_BAR_SPACING;
+            card.startFly(targetLeft, Layout.CARD_BAR_TOP, state.time, true);
+            state.flyingCards.add(card);
+        }
+    }
+
+    /**
+     * 按植物编号在候选区里摆一张卡。
+     *
+     * 候选区是一行八张往下排，画卡片和判断点击都要用同一套位置，所以抽出来共用。
+     *
+     * 参数：plantIndex 是植物编号。
+     * 返回：摆在候选区对应位置上的卡片。
+     */
+    private static Card chooserCard(int plantIndex) {
+        int column = plantIndex % 8;
+        int row = plantIndex / 8;
+        int left = Layout.CHOOSER_LEFT + column * Layout.CHOOSER_COLUMN_SPACING;
+        int top = Layout.CHOOSER_TOP + row * Layout.CHOOSER_ROW_SPACING;
+        return new Card(plantIndex, left, top);
     }
 
     /** 真正开始打关卡：正常模式先按选好的卡摆出卡槽，然后切到游戏画面。 */
@@ -333,6 +379,10 @@ public class Game extends JPanel {
             int left = 78 + position * Layout.CARD_BAR_SPACING;
             Card card = new Card(plantIndex, left, Layout.CARD_BAR_TOP);
             if (card.bounds(assets, Layout.CARD_SCALE).contains(x, y)) {
+                // 必选植物是关卡强加的，玩家点不掉。
+                if (state.requiredPlants.contains(Integer.valueOf(plantIndex))) {
+                    return;
+                }
                 if (testMode) {
                     state.selected.remove(position);
                     return;
@@ -357,11 +407,11 @@ public class Game extends JPanel {
         }
         // 再看是不是点在候选卡上；已经选过的卡不能再选一次。
         for (int index = 0; index < Cards.CHOOSER_CARD_COUNT; index++) {
-            int column = index % 8;
-            int row = index / 8;
-            int left = Layout.CHOOSER_LEFT + column * Layout.CHOOSER_COLUMN_SPACING;
-            int top = Layout.CHOOSER_TOP + row * Layout.CHOOSER_ROW_SPACING;
-            Card card = new Card(index, left, top);
+            // 被本关禁掉的植物画成灰色锁定，点了也不该有反应。
+            if (state.bannedPlants.contains(Integer.valueOf(index))) {
+                continue;
+            }
+            Card card = chooserCard(index);
             boolean alreadyChosen = state.selected.contains(Integer.valueOf(index));
             if (card.bounds(assets, Layout.CHOOSER_CARD_SCALE).contains(x, y) && !alreadyChosen) {
                 if (testMode) {
@@ -529,8 +579,12 @@ public class Game extends JPanel {
         if (state.time - state.playStart < spawn.at) {
             return;
         }
-        int bottom = 160 + spawn.row * Layout.CELL_HEIGHT;
-        state.zombies.add(new Zombie(spawn.name, spawn.row, bottom, assets));
+        int targetRow = spawn.row;
+        if (spawn.row == -1) {
+            targetRow = random.nextInt(Layout.ROW_COUNT);
+        }
+        int bottom = 160 + targetRow * Layout.CELL_HEIGHT;
+        state.zombies.add(new Zombie(spawn.name, targetRow, bottom, assets));
         state.nextZombie = state.nextZombie + 1;
     }
 

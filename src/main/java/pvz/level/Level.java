@@ -31,6 +31,12 @@ public class Level {
     /** 传送带或保龄球模式可以出的卡片编号，正常关卡是空的。 */
     public final List<Integer> cardPool = new ArrayList<Integer>();
 
+    /** 本关禁止使用的植物编号；只对正常选卡模式生效。 */
+    public final List<Integer> bannedPlants = new ArrayList<Integer>();
+
+    /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效。 */
+    public final List<Integer> requiredPlants = new ArrayList<Integer>();
+
     /** 这个关卡有没有阳光条（也就是正常选卡模式）。 */
     public boolean isNormalMode() {
         return barType == GameState.BAR_NORMAL;

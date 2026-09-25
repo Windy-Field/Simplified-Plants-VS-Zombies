@@ -56,4 +56,7 @@ public interface EditorDragController {
 
     /** 报告网格内容被改动了，主窗口据此刷新画面和底部的统计。 */
     void designChanged();
+
+    /** 报告用户换了选中的格子，主窗口据此把随机行复选框同步过来。 */
+    void selectionChanged();
 }

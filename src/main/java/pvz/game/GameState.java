@@ -107,6 +107,12 @@ public class GameState {
     /** 传送带和保龄球模式可出的卡片编号。 */
     public final List<Integer> pool = new ArrayList<Integer>();
 
+    /** 本关禁用的植物编号，选卡界面里画成灰色锁定。 */
+    public final List<Integer> bannedPlants = new ArrayList<Integer>();
+
+    /** 本关必选的植物编号，进选卡界面时自动飞入卡槽。 */
+    public final List<Integer> requiredPlants = new ArrayList<Integer>();
+
     /** 记录草坪上哪些格子已经种了东西。true 表示被占用。 */
     public final boolean[][] occupied = new boolean[Layout.ROW_COUNT][Layout.COLUMN_COUNT];
 
@@ -122,6 +128,8 @@ public class GameState {
         schedule.clear();
         selected.clear();
         pool.clear();
+        bannedPlants.clear();
+        requiredPlants.clear();
         flyingCards.clear();
         nextZombie = 0;
         held = null;

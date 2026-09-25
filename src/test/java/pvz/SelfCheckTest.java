@@ -607,6 +607,10 @@ public class SelfCheckTest {
         /** 自检里没有要刷新的界面。 */
         public void designChanged() {
         }
+
+        /** 自检里没有要同步的复选框。 */
+        public void selectionChanged() {
+        }
     }
 
     /** 遇到缺失素材时立即说明具体是哪一项。 */
