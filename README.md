@@ -90,8 +90,7 @@ run.bat editor 3   :: 打开关卡编辑器并载入第 4 关
 
 ## 关卡编辑器
 
-
-![](https://files.mdnice.com/user/160415/df7c3a68-6f08-4390-8f10-521c5e901dc8.png)
+![](screenshots/editor.png)
 
 窗口网格横向是波次，纵向是草坪的 5 行；格子可表示"这一波、这一行"出哪种僵尸、出几只。
 
