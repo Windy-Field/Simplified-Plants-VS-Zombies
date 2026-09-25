@@ -19,6 +19,14 @@ import pvz.zombie.Zombie;
  * 它只需要两样东西：素材（取图和帧数）和这一局的数据（场上有哪些僵尸、子弹加到哪去）。
  */
 public class PlantActions {
+    /**
+     * 樱桃炸弹的爆炸半径，按"身体中心到身体中心"的横向距离算。
+     *
+     * 相邻一格的中心相距正好 CELL_WIDTH（80），取 1.5 倍就是 120：
+     * 左右各一列都稳稳炸得到，容差留出半格，够不着再远一列。
+     */
+    private static final int CHERRY_BLAST_RADIUS = Layout.CELL_WIDTH * 3 / 2;
+
     /** 提供图片和动画帧数。 */
     private final Assets assets;
 
@@ -326,11 +334,18 @@ public class PlantActions {
         if (plant.name.equals("CherryBomb")) {
             // 炸伤判定要用樱桃自己的位置算，所以必须赶在换成火球之前做完；
             // 换动画会把坐标挪到火球上去，先换的话炸的就不是这一片了。
+            //
+            // 距离要按"身体中心"比，不能拿精灵的 x 直接相减：x 是整张图片的左上角，
+            // 动图四周留着大片透明边距，而且樱桃和僵尸的图宽不同（89 对 85），
+            // 相减的话左边一列会被算得特别远，炸不到，右边一列却没问题。
+            Rectangle cherryBody = plant.collisionBox(assets, state.time);
             for (Zombie zombie : state.zombies) {
                 if (zombie.hypno) {
                     continue;
                 }
-                if (Math.abs(zombie.row - plant.row) <= 1 && Math.abs(zombie.x - plant.x) <= 120) {
+                Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+                double distanceX = Math.abs(zombieBody.getCenterX() - cherryBody.getCenterX());
+                if (Math.abs(zombie.row - plant.row) <= 1 && distanceX <= CHERRY_BLAST_RADIUS) {
                     zombie.die(assets, state.time, true);
                 }
             }
