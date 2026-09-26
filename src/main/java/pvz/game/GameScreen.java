@@ -3,7 +3,7 @@ package pvz.game;
 /**
  * 游戏一共有几种画面。
  *
- * 如果把编号（0、1、2、3、4）直接写在代码里，读者看到 screen == 2
+ * 如果把编号（0、1、2……）直接写在代码里，读者看到 screen == 3
  * 根本不知道是哪个画面；写成 screen == GameScreen.PLAY 就一目了然了。
  */
 public final class GameScreen {

@@ -40,17 +40,42 @@ public final class Layout {
     /** 开局演出：镜头回来后"准备-安放-开始"倒计时的毫秒数，三张图各占三分之一。 */
     public static final long INTRO_COUNTDOWN_TIME = 3000;
 
-    /** 开局演出的总时长；走完这一段才真正开打。 */
-    public static final long INTRO_TOTAL_TIME = INTRO_PAN_OUT_TIME + INTRO_HOLD_TIME
-        + INTRO_PAN_BACK_TIME + INTRO_COUNTDOWN_TIME;
+    /**
+     * 开局演出第一段的总时长：镜头推过去 + 停在僵尸那边。
+     *
+     * 正常选卡关卡到点就切到选卡界面，玩家在镜头对着僵尸的时候挑卡。
+     */
+    public static final long INTRO_CHOOSE_PHASE_TIME = INTRO_PAN_OUT_TIME + INTRO_HOLD_TIME;
 
     /**
-     * 卡槽从上方滑进位的毫秒数。
-     *
-     * 滑动从镜头移回来的那一刻开始，所以"镜头回来了、卡槽跟着落下"，
-     * 而不是还没看见草坪就先摆好了卡。
+     * 玩家点完开始之后那一段的总时长：镜头移回草坪 + 倒计时三秒。
      */
-    public static final long INTRO_CARD_SLIDE_TIME = 800;
+    public static final long INTRO_RETURN_PHASE_TIME = INTRO_PAN_BACK_TIME
+        + INTRO_COUNTDOWN_TIME;
+
+    /**
+     * 选卡界面（背包）从画面下方升进位的毫秒数。
+     *
+     * 它升起来的时候镜头正停在最右、对着那排僵尸，
+     * 玩家一眼就能看到"这关有哪些僵尸"再决定带什么卡。
+     */
+    public static final long CHOOSER_RISE_TIME = 500;
+
+    /**
+     * 选卡界面收回去的毫秒数。
+     *
+     * 玩家点了"开始战斗"，背包先照着来路沉回画面下方，
+     * 沉完之后镜头才开始往草坪移。这样不会出现"面板啪一下消失"的突兀感。
+     */
+    public static final long CHOOSER_EXIT_TIME = 500;
+
+    /**
+     * 选卡界面升降时的滑动距离。
+     *
+     * 取窗口高度，开始时整个界面停在窗口下沿之外，一点都看不见，
+     * 升到位才完全露出来；收回去时反向走完这一段。
+     */
+    public static final int CHOOSER_RISE_DISTANCE = WINDOW_HEIGHT;
 
     /**
      * 开局演出里，展示用僵尸的第一个横坐标。

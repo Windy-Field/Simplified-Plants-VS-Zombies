@@ -56,6 +56,10 @@ public class GameRenderer {
         } else {
             drawBackground(painter, state);
             if (screen == GameScreen.CHOOSE) {
+                // 演出里的选卡界面：镜头正对着僵尸，所以展示僵尸也要一起画。
+                if (state.introChooser) {
+                    drawIntroZombies(painter, time, state);
+                }
                 drawSelection(painter, time, state);
             } else if (screen == GameScreen.INTRO) {
                 drawIntro(painter, time, state);
@@ -114,28 +118,44 @@ public class GameRenderer {
     }
 
     /**
-     * 画开局演出：扫视用的僵尸、倒计时，以及从上方滑进位的卡槽。
+     * 画开局演出：扫视用的僵尸、顶端常驻的卡槽，以及倒计时。
+     *
+     * 演出分两段：第一段只有镜头和僵尸，第二段是镜头移回 + 倒计时。
+     * 卡槽从头到尾都停在顶端、不做进出动画——它要是等镜头移回来才出现，
+     * 就会"啪"地凭空冒出来，反倒比原来的下落动画更突兀。
      *
      * 参数：painter 是画笔；time 是当前时刻；state 里装着演出进度。
      */
     private void drawIntro(Graphics2D painter, long time, GameState state) {
-        long elapsed = time - state.introStart;
+        drawIntroZombies(painter, time, state);
+        drawPlayBar(painter, time, state);
 
-        // 展示用的僵尸。镜头在草坪上时它们大多在屏幕外面，推过去才看得见。
+        if (!state.introReturning) {
+            // 第一段：镜头还在往右推或停在僵尸那边，到此为止。
+            return;
+        }
+
+        // 镜头移回草坪之后才开始显示倒计时。
+        long afterPan = time - state.introReturnStart - Layout.INTRO_PAN_BACK_TIME;
+        if (afterPan < 0) {
+            return;
+        }
+        drawCountdown(painter, afterPan);
+    }
+
+    /**
+     * 画演出里摆出来给玩家看的僵尸。
+     *
+     * 镜头在草坪上时它们大多在屏幕外面，推过去才看得见；
+     * 选卡界面也用这个方法画，玩家挑卡时能看到它们。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着展示僵尸。
+     */
+    private void drawIntroZombies(Graphics2D painter, long time, GameState state) {
         int shift = Layout.CAMERA_LEFT_OFFSET - state.cameraOffset;
         for (Zombie zombie : state.introZombies) {
             movedDraw(painter, time, zombie, shift);
         }
-
-        // 镜头移回草坪之后才开始显示倒计时和卡槽。
-        long afterPan = elapsed - Layout.INTRO_PAN_OUT_TIME - Layout.INTRO_HOLD_TIME
-            - Layout.INTRO_PAN_BACK_TIME;
-        if (afterPan < 0) {
-            return;
-        }
-
-        drawCountdown(painter, afterPan);
-        drawIntroCards(painter, time, state, afterPan);
     }
 
     /**
@@ -160,63 +180,16 @@ public class GameRenderer {
     }
 
     /**
-     * 画开局演出里的卡槽：从画面上方滑进位。
+     * 画顶端常驻的卡槽：底板、卡片，正常模式下还有阳光数。
      *
-     * 之前是"卡槽一直摆在上面"，现在改成等镜头回来了才落下来，
-     * 玩家的注意力先被僵尸吸引，看完再看到自己带的卡。
+     * 游戏中和演出第二段都画它，位置固定在 CARD_BAR_TOP，不做进出动画。
      *
-     * 参数：painter 是画笔；time 是当前时刻；state 里装着卡槽数据；
-     *       afterPan 是镜头移回来之后过了多久。
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着卡槽数据。
      */
-    private void drawIntroCards(Graphics2D painter, long time, GameState state, long afterPan) {
-        double progress = (double) afterPan / Layout.INTRO_CARD_SLIDE_TIME;
-        if (progress > 1.0) {
-            progress = 1.0;
-        }
-
-        // 底板上沿在 y=0，卡片正常就停在 CARD_BAR_TOP；滑动期间整体从负位置落下来。
-        int cardTop = (int) (Layout.CARD_BAR_TOP - (1.0 - progress) * slideDistance());
-        drawCardBar(painter, time, state, cardTop);
-    }
-
-    /**
-     * 卡槽从上方滑进来时要多滑的距离。
-     *
-     * 取卡片高度的两倍差不多，能让它从完全看不见的地方出现，
-     * 不至于"半张卡已经露在上面"。
-     */
-    private int slideDistance() {
-        return Layout.PLAY_CARD_BAR_BOTTOM * 2;
-    }
-
-    /**
-     * 原样画一遍卡槽，但整体纵向平移 cardTop - CARD_BAR_TOP。
-     *
-     * 参数：painter 是画笔；time 是当前时刻；state 里装着卡片；
-     *       cardTop 是卡片这次要画在的纵坐标。
-     */
-    private void drawCardBar(Graphics2D painter, long time, GameState state, int cardTop) {
-        int shift = cardTop - Layout.CARD_BAR_TOP;
-        if (shift == 0) {
-            drawCardsAt(painter, time, state);
-            return;
-        }
-
-        // 整体平移：把画布往下挪，画完再恢复，卡片就不用各自算位置了。
-        Graphics2D moved = (Graphics2D) painter.create();
-        moved.translate(0, shift);
-        drawCardsAt(moved, time, state);
-        moved.dispose();
-    }
-
-    /**
-     * 画卡槽底板和卡片。
-     *
-     * 参数：painter 是画笔；time 是当前时刻；state 里装着卡片。
-     */
-    private void drawCardsAt(Graphics2D painter, long time, GameState state) {
+    private void drawPlayBar(Graphics2D painter, long time, GameState state) {
         if (state.barType == GameState.BAR_NORMAL) {
             painter.drawImage(assets.image("ChooserBackground"), 10, 0, null);
+            drawSunNumber(painter, state.sunValue, 31, 66);
         } else {
             painter.drawImage(assets.image("MoveBackground"), Layout.CONVEYOR_LEFT, 0, null);
         }
@@ -241,8 +214,64 @@ public class GameRenderer {
         moved.dispose();
     }
 
-    /** 画选卡界面：底板、候选卡、已选的卡和开始按钮。 */
+    /**
+     * 画选卡界面：底板、候选卡、已选的卡和开始按钮。
+     *
+     * 开局演出里的那一次，整个界面从画面下方升上来、收起时再沉回去：
+     * 升起的时候镜头正对着僵尸，玩家等它升稳了再挑卡；
+     * 点完"开始战斗"它先沉下去，然后镜头才移回草坪。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
+     */
     private void drawSelection(Graphics2D painter, long time, GameState state) {
+        if (!state.introChooser) {
+            drawChooserContent(painter, time, state);
+            return;
+        }
+
+        int shift = chooserShift(time, state);
+        if (shift == 0) {
+            drawChooserContent(painter, time, state);
+            return;
+        }
+
+        // 整体平移：界面的进出都靠挪画布，里面的元素位置不用各自算。
+        Graphics2D moved = (Graphics2D) painter.create();
+        moved.translate(0, shift);
+        drawChooserContent(moved, time, state);
+        moved.dispose();
+    }
+
+    /**
+     * 算出选卡界面此刻该纵向平移多少像素。
+     *
+     * 0 表示停在正常位置；正数表示还没升上来或正在沉下去。
+     *
+     * 参数：time 是当前时刻；state 里装着进出动画的进度。
+     * 返回：纵向偏移量。
+     */
+    private int chooserShift(long time, GameState state) {
+        if (state.introChooserExiting) {
+            double progress = (double) (time - state.chooserExitStart) / Layout.CHOOSER_EXIT_TIME;
+            if (progress >= 1.0) {
+                return Layout.CHOOSER_RISE_DISTANCE;
+            }
+            return (int) (progress * Layout.CHOOSER_RISE_DISTANCE);
+        }
+
+        double progress = (double) (time - state.screenStart) / Layout.CHOOSER_RISE_TIME;
+        if (progress >= 1.0) {
+            return 0;
+        }
+        return (int) ((1.0 - progress) * Layout.CHOOSER_RISE_DISTANCE);
+    }
+
+    /**
+     * 画选卡界面的全部内容，按正常位置画（升起动画由调用方平移画布）。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
+     */
+    private void drawChooserContent(Graphics2D painter, long time, GameState state) {
         painter.drawImage(assets.image("ChooserBackground"), 0, 0, null);
         painter.drawImage(assets.image("PanelBackground"), 0, 87, null);
         drawSunNumber(painter, state.sunValue, 21, 66);
@@ -287,11 +316,8 @@ public class GameRenderer {
 
     /** 画游戏中的画面：卡槽、植物、僵尸、子弹、小推车、僵尸头和阳光。 */
     private void drawPlay(Graphics2D painter, long time, GameState state) {
-        // 开打之后卡槽已经落到位，按正常位置画。
-        drawCardBar(painter, time, state, Layout.CARD_BAR_TOP);
-        if (state.barType == GameState.BAR_NORMAL) {
-            drawSunNumber(painter, state.sunValue, 31, 66);
-        }
+        // 卡槽常驻顶端，演出和开打之后都是同一个画法。
+        drawPlayBar(painter, time, state);
 
         // 按行绘制，这样同一行的东西前后顺序才正确（植物在僵尸后面）。
         for (int row = 0; row < Layout.ROW_COUNT; row++) {

@@ -85,8 +85,39 @@ public class GameState {
      */
     public int cameraOffset = Layout.CAMERA_LEFT_OFFSET;
 
-    /** 开局演出的起始时刻，用来算镜头推到了哪儿、倒计时该显示第几张图。 */
+    /** 开局演出的起始时刻，用来算镜头推到了哪儿。 */
     public long introStart;
+
+    /**
+     * 开局演出是不是已经进到第二段（镜头移回草坪 + 倒计时）。
+     *
+     * 演出分两段，中间隔着玩家的操作：
+     * 正常选卡关卡第一段推完就切到选卡界面，等玩家点开始才进第二段；
+     * 传送带和保龄球没有选卡环节，第一段推完立刻进第二段。
+     */
+    public boolean introReturning;
+
+    /** 第二段的起始时刻，用来算镜头移回到哪儿、倒计时该显示第几张图。 */
+    public long introReturnStart;
+
+    /**
+     * 当前的选卡界面是不是开局演出里的那一个。
+     *
+     * 是的话，选卡界面要演"背包从下方升起"，而且升降期间不接受点击；
+     * 关卡载入就直接进选卡的老路子（比如自检）不走这个动画。
+     */
+    public boolean introChooser;
+
+    /**
+     * 演出里的选卡界面是不是正在收回去。
+     *
+     * 玩家点了"开始战斗"就把这个打开：背包先照来路沉回画面下方，
+     * 沉完之后才轮到镜头移回草坪。判定为真的这段时间里不再接受点击。
+     */
+    public boolean introChooserExiting;
+
+    /** 背包开始回收的时刻，用来算它沉到了哪儿。 */
+    public long chooserExitStart;
 
     /**
      * 开局演出里摆出来给玩家看的僵尸。

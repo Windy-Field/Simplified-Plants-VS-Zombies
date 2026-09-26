@@ -154,6 +154,7 @@ public class Game extends JPanel {
         }
         if (state.screen == GameScreen.CHOOSE) {
             updateFlyingCards();
+            updateChooserExit();
         }
         if (state.screen == GameScreen.INTRO) {
             updateIntro();
@@ -270,14 +271,9 @@ public class Game extends JPanel {
             }
         }
 
-        if (level.isNormalMode()) {
-            // 正常选卡：先让玩家选卡，选完点开始才进开局演出。
-            state.screen = GameScreen.CHOOSE;
-            launchRequiredCards();
-        } else {
-            // 传送带和保龄球没有选卡环节，载入关卡直接进演出。
-            startIntro();
-        }
+        // 三种卡槽模式都从开局演出第一段走起：
+        // 正常选卡关卡推到位之后切到选卡界面，传送带和保龄球推完直接移回草坪。
+        startIntro();
     }
 
     /**
@@ -333,6 +329,9 @@ public class Game extends JPanel {
         }
         // 演出用的展示僵尸只在开场露个脸，真正开打前清掉，免得混进战斗里。
         state.introZombies.clear();
+        state.introChooser = false;
+        state.introChooserExiting = false;
+        state.introReturning = false;
         state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
         state.screen = GameScreen.PLAY;
         state.playStart = state.time;
@@ -342,29 +341,52 @@ public class Game extends JPanel {
     }
 
     /**
-     * 开始开局演出：把镜头推到右边扫一遍僵尸，再移回来倒计时三秒。
+     * 开始开局演出第一段：把镜头推到右边扫一遍僵尸。
      *
-     * 三种卡槽模式（选卡、传送带、保龄球）走的都是这一条路，
-     * 所以它们开场的表现完全一致。
+     * 正常选卡关卡推到位之后切到选卡界面，玩家对着僵尸挑卡；
+     * 传送带和保龄球没有选卡环节，推完直接进第二段移回草坪。
      *
-     * 测试模式直接跳过：自检是按"载入关卡就能打"写的，
-     * 让它真等七秒演出，每个用例都得手动推帧，反而更容易写错。
+     * 测试模式不跑演出：自检是按"载入关卡就能打"写的，
+     * 让它真等几秒演出，每个用例都得手动推帧，反而更容易写错。
      */
     private void startIntro() {
         if (testMode) {
-            startPlay();
+            if (state.barType == GameState.BAR_NORMAL) {
+                // 正常关卡还是要过一遍选卡界面，自检要点卡槽。
+                state.screen = GameScreen.CHOOSE;
+                launchRequiredCards();
+            } else {
+                startPlay();
+            }
             return;
         }
 
-        // 卡槽的卡先摆好，但先不画，等镜头移回来再让它们从上往下滑进位。
+        // 卡槽的卡先清空：正常关卡等玩家挑完卡才由 beginIntroReturn 摆好；
+        // 传送带和保龄球的卡由游戏逻辑自己发，演出期间先空着。
+        state.cards.clear();
+        buildIntroZombies();
+        state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
+        state.introStart = state.time;
+        state.introReturning = false;
+        state.introChooser = false;
+        state.screen = GameScreen.INTRO;
+    }
+
+    /**
+     * 开始开局演出第二段：镜头移回草坪，然后倒计时三秒。
+     *
+     * 正常关卡是玩家点完"开始"才走到这里；传送带和保龄球在扫视结束时自动进来。
+     */
+    private void beginIntroReturn() {
+        // 镜头移回草坪时卡槽要已经摆好，所以这里先把玩家挑的卡放进卡槽。
         state.cards.clear();
         if (state.barType == GameState.BAR_NORMAL) {
             state.cards.addAll(Cards.staticBar(state.selected));
         }
-
-        buildIntroZombies();
-        state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
-        state.introStart = state.time;
+        state.introChooser = false;
+        state.introChooserExiting = false;
+        state.introReturning = true;
+        state.introReturnStart = state.time;
         state.screen = GameScreen.INTRO;
     }
 
@@ -399,33 +421,67 @@ public class Game extends JPanel {
     }
 
     /**
-     * 推进开局演出：先把镜头挪到该在的位置，走完就正式开打。
+     * 推进开局演出。演出分两段，这里按段分派。
      *
-     * 这个阶段不动机器人任何东西——僵尸不出场、阳光不掉、卡片不冷却，
+     * 这个阶段不动关卡里的任何东西——僵尸不出场、阳光不掉、卡片不冷却，
      * 玩家看到的就是一段纯演出。
      */
     private void updateIntro() {
-        long elapsed = state.time - state.introStart;
-
-        if (elapsed >= Layout.INTRO_TOTAL_TIME) {
-            startPlay();
+        if (state.introReturning) {
+            updateIntroReturn();
             return;
         }
+        updateIntroOpening();
+    }
+
+    /**
+     * 第一段：镜头从草坪往右推，停在最右让玩家看清僵尸。
+     *
+     * 正常选卡关卡推到时间就切到选卡界面；传送带和保龄球没有选卡环节，
+     * 直接接着进第二段。
+     */
+    private void updateIntroOpening() {
+        long elapsed = state.time - state.introStart;
+
         if (elapsed < Layout.INTRO_PAN_OUT_TIME) {
-            // 第一段：镜头从草坪往右推。
             double progress = (double) elapsed / Layout.INTRO_PAN_OUT_TIME;
             state.cameraOffset = interpolateCamera(progress);
             return;
         }
-        if (elapsed < Layout.INTRO_PAN_OUT_TIME + Layout.INTRO_HOLD_TIME) {
-            // 第二段：停在最右，让玩家看清僵尸。
+        if (elapsed < Layout.INTRO_CHOOSE_PHASE_TIME) {
             state.cameraOffset = Layout.CAMERA_RIGHT_OFFSET;
             return;
         }
-        // 第三段：镜头移回草坪。移回之后停在草坪上，开始倒计时。
-        long backElapsed = elapsed - Layout.INTRO_PAN_OUT_TIME - Layout.INTRO_HOLD_TIME;
-        if (backElapsed < Layout.INTRO_PAN_BACK_TIME) {
-            double progress = 1.0 - (double) backElapsed / Layout.INTRO_PAN_BACK_TIME;
+
+        // 推到位了。正常关卡切到选卡界面，玩家对着僵尸挑卡。
+        state.cameraOffset = Layout.CAMERA_RIGHT_OFFSET;
+        if (state.barType == GameState.BAR_NORMAL) {
+            state.introChooser = true;
+            state.screenStart = state.time;
+            state.screen = GameScreen.CHOOSE;
+            launchRequiredCards();
+            return;
+        }
+        beginIntroReturn();
+    }
+
+    /**
+     * 第二段：镜头从最右移回草坪，移回之后停在草坪上，倒计时三秒。
+     *
+     * 背包如果没有收回去（比如传送带关卡压根没有背包），这里也要兜一下。
+     */
+    private void updateIntroReturn() {
+        state.introChooser = false;
+        state.introChooserExiting = false;
+
+        long elapsed = state.time - state.introReturnStart;
+
+        if (elapsed >= Layout.INTRO_RETURN_PHASE_TIME) {
+            startPlay();
+            return;
+        }
+        if (elapsed < Layout.INTRO_PAN_BACK_TIME) {
+            double progress = 1.0 - (double) elapsed / Layout.INTRO_PAN_BACK_TIME;
             state.cameraOffset = interpolateCamera(progress);
             return;
         }
@@ -473,6 +529,21 @@ public class Game extends JPanel {
     }
 
     /**
+     * 推进背包的收纳动画。
+     *
+     * 玩家点了"开始战斗"之后，背包先照着来路沉回画面下方，
+     * 沉完了才轮到镜头移回草坪——两段动画依次播，不会同时挤在一起。
+     */
+    private void updateChooserExit() {
+        if (!state.introChooserExiting) {
+            return;
+        }
+        if (state.time - state.chooserExitStart >= Layout.CHOOSER_EXIT_TIME) {
+            beginIntroReturn();
+        }
+    }
+
+    /**
      * 推进一帧到指定的游戏时间，不依赖真实时钟。
      *
      * 参数：elapsed 是距离本关开始的毫秒数。
@@ -489,12 +560,26 @@ public class Game extends JPanel {
      * 处理选卡界面的点击：可以取消已选的卡、选中新卡，选满卡槽后按开始。
      */
     private void clickCardChooser(int x, int y) {
+        // 演出里的选卡界面正在升起或收起时不接受点击：
+        // 这段时间里画的位置和点击判定的位置对不上，点下去会误触。
+        if (state.introChooserExiting) {
+            return;
+        }
+        if (state.introChooser && state.time - state.screenStart < Layout.CHOOSER_RISE_TIME) {
+            return;
+        }
         if (state.selected.size() == state.maxCards) {
             BufferedImage button = assets.image("StartButton");
             Rectangle start = new Rectangle(155, 547, button.getWidth(), button.getHeight());
             if (start.contains(x, y)) {
-                // 选完卡不直接开打，先进开局演出，和传送带、保龄球一致。
-                startIntro();
+                // 演出里的选卡界面：先让背包沉回画面下方，沉完才轮到镜头移回草坪。
+                // 直接载入选卡界面的老路子（自检）没有演出，点开始就是直接开打。
+                if (state.introChooser) {
+                    state.introChooserExiting = true;
+                    state.chooserExitStart = state.time;
+                } else {
+                    startPlay();
+                }
                 return;
             }
         }
