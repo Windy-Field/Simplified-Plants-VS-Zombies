@@ -450,7 +450,6 @@ public class PlantActions {
     /**
      * 算出某个横坐标落在第几列。
      *
-     * 两个地方都要从横坐标反推列号，抽出来共用，免得改一处漏一处。
      * 用 floorDiv 而不是普通除法：草坪左边外面一点点会用普通除法被算成第 0 列，
      * floorDiv 向下取整得到 -1，才能判成越界。
      *
@@ -459,6 +458,25 @@ public class PlantActions {
      */
     private static int columnOf(double x) {
         return Math.floorDiv((int) x - Layout.GRID_LEFT, Layout.CELL_WIDTH);
+    }
+
+    /**
+     * 算出僵尸站在第几列。
+     *
+     * 不能拿 zombie.x 直接换算：那是整张图的左沿，而僵尸的图画布很宽（166 像素），
+     * 身体只占靠右的一截，普通僵尸的身体中心比画布左沿靠右 106 像素，超过一整格。
+     * 用画布左沿算出来的列号会比僵尸实际站的位置偏左一格多，
+     * 窝瓜就会在僵尸离得还远的时候就扑上去。
+     *
+     * 这里改用碰撞盒（躯干）的中心：躯干中心就是僵尸"站在哪儿"最贴近的位置，
+     * 而且和 Sprite.touches 用的是同一个盒子，两套判定不会各说各话。
+     *
+     * 参数：zombie 是要换算的僵尸。
+     * 返回：僵尸所在的列号，可能在草坪范围之外。
+     */
+    private int columnOfZombie(Zombie zombie) {
+        Rectangle body = zombie.collisionBox(assets, state.time);
+        return columnOf(body.getCenterX());
     }
 
     /**
@@ -474,8 +492,7 @@ public class PlantActions {
             }
             // 窝瓜的格子用种下去时记下的列号，不用它的横坐标反推：
             // 触发后它的 x 会被挪到目标僵尸身上，那时候再反推就不准了。
-            // 僵尸的格子只能靠横坐标算，所以用统一的 columnOf。
-            int zombieColumn = columnOf(zombie.x);
+            int zombieColumn = columnOfZombie(zombie);
             // 左中右三格都在范围内。
             if (Math.abs(zombieColumn - plant.column) <= 1) {
                 return zombie;
@@ -605,7 +622,7 @@ public class PlantActions {
                     // 窝瓜的格子始终用种下去时记下的列号。
                     // 触发时 plant.x 已经被挪到目标僵尸身上，拿它反推列号会算出旁边一格，
                     // 砸下去的范围就会和当初索敌的范围对不上，忽大忽小。
-                    int zombieColumn = columnOf(zombie.x);
+                    int zombieColumn = columnOfZombie(zombie);
                     // 同一格、左一格、右一格都在窝瓜攻击范围内。
                     if (Math.abs(zombieColumn - plant.column) <= 1) {
                         zombie.die(assets, state.time, false);
