@@ -28,10 +28,13 @@ import pvz.plant.PlantRules;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Car;
+import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
+import pvz.zombie.ZombieAbility;
+import pvz.zombie.ZombieEffects;
 import pvz.zombie.ZombieSpawn;
 
 /**
@@ -805,6 +808,7 @@ public class Game extends JPanel {
         updateZombies();
         updateBullets();
         updateSunsAndCars();
+        updateEffects();
         updateHeads();
 
         checkVictory();
@@ -913,7 +917,7 @@ public class Game extends JPanel {
                 continue;
             }
             if (zombie.health <= 0) {
-                zombie.die(assets, state.time, false);
+                ZombieEffects.die(zombie, assets, state, state.time, false);
                 continue;
             }
             updateZombieDamageState(zombie);
@@ -947,7 +951,11 @@ public class Game extends JPanel {
     // TODO：【选做-7】新增僵尸时如果掉帽子/盔甲后有特殊效果（变快、反击、召唤小兵等），
     //                需要在这里加判断触发效果
     private void updateZombieDamageState(Zombie zombie) {
-        if (zombie.helmet && zombie.health <= 10) {
+        if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+            return;
+        }
+        if (zombie.helmet
+                && zombie.health <= CombatValues.ZOMBIE_HELMET_LOST_HEALTH) {
             zombie.helmet = false;
             // 报纸僵尸掉了报纸之后会加快脚步。
             zombie.speed = zombie.speedAfterHelmet;
@@ -992,12 +1000,23 @@ public class Game extends JPanel {
         if (state.time - zombie.lastBleed <= Layout.ZOMBIE_BLEED_INTERVAL) {
             return;
         }
-        zombie.health = zombie.health - 1;
+        zombie.health = zombie.health - CombatValues.ZOMBIE_BLEED_DAMAGE;
         zombie.lastBleed = state.time;
     }
 
     /** 僵尸这一帧的主动行为：找到要咬的东西，然后决定是咬还是走。 */
     private void updateZombieActions(Zombie zombie) {
+        if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+            Plant target = findExplodingZombiePlant(zombie);
+            if (target != null) {
+                ZombieEffects.die(zombie, assets, state, state.time, false);
+                return;
+            }
+            if (hasTouchingProtectedPlant(zombie)) {
+                return;
+            }
+        }
+
         Plant prey = null;
         Zombie opponent = null;
         if (zombie.hypno) {
@@ -1019,6 +1038,67 @@ public class Game extends JPanel {
             walk(zombie);
         }
         checkZombieOutOfScreen(zombie);
+    }
+
+    /**
+     * 找到爆炸僵尸接触到的第一株会触发爆炸的植物。
+     *
+     * 攻击中的大嘴花和窝瓜不算触发目标，它们需要继续完成自己的攻击动作。
+     * 参数：zombie 是正在寻找目标的僵尸。
+     * 返回：找到目标时返回植物，否则返回 null。
+     */
+    private Plant findExplodingZombiePlant(Zombie zombie) {
+        Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+        Plant firstPlant = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        for (Plant plant : state.plants) {
+            if (!plant.alive || plant.health <= 0) {
+                continue;
+            }
+            if (plant.row != zombie.row) {
+                continue;
+            }
+            if (PlantRules.isProtectedFromExplodingZombie(plant)) {
+                continue;
+            }
+            if (!Sprite.touches(zombie, plant, assets, state.time)) {
+                continue;
+            }
+
+            Rectangle plantBody = plant.collisionBox(assets, state.time);
+            double distance = Math.abs(
+                zombieBody.getCenterX() - plantBody.getCenterX());
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                firstPlant = plant;
+            }
+        }
+        return firstPlant;
+    }
+
+    /**
+     * 判断爆炸僵尸是否正接触攻击中的大嘴花或窝瓜。
+     *
+     * 参数：zombie 是要检查的僵尸。
+     * 返回：接触到保护植物时返回真。
+     */
+    private boolean hasTouchingProtectedPlant(Zombie zombie) {
+        for (Plant plant : state.plants) {
+            if (!plant.alive || plant.health <= 0) {
+                continue;
+            }
+            if (plant.row != zombie.row) {
+                continue;
+            }
+            if (!PlantRules.isProtectedFromExplodingZombie(plant)) {
+                continue;
+            }
+            if (Sprite.touches(zombie, plant, assets, state.time)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 被魅惑的僵尸找同一行里的敌方僵尸下手。 */
@@ -1106,14 +1186,14 @@ public class Game extends JPanel {
         }
 
         if (prey != null) {
-            prey.health = prey.health - 1;
+            prey.health = prey.health - CombatValues.ZOMBIE_BITE_DAMAGE;
             boolean isHypnoShroom = prey.name.equals("HypnoShroom");
             if (prey.health <= 0 && isHypnoShroom && !prey.sleeping) {
                 zombie.hypno = true;
             }
         }
         if (opponent != null) {
-            opponent.health = opponent.health - 1;
+            opponent.health = opponent.health - CombatValues.ZOMBIE_BITE_DAMAGE;
         }
         zombie.lastAttack = state.time;
     }
@@ -1170,7 +1250,7 @@ public class Game extends JPanel {
             if (!Sprite.touches(bullet, zombie, assets, state.time)) {
                 continue;
             }
-            zombie.health = zombie.health - 1;
+            zombie.health = zombie.health - CombatValues.BULLET_DAMAGE;
             if (bullet.ice) {
                 zombie.slowedUntil = state.time + Layout.ZOMBIE_SLOW_DURATION;
             }
@@ -1230,7 +1310,7 @@ public class Game extends JPanel {
                     continue;
                 }
                 car.moving = true;
-                zombie.die(assets, state.time, false);
+                ZombieEffects.die(zombie, assets, state, state.time, false);
             }
         }
     }
@@ -1279,6 +1359,16 @@ public class Game extends JPanel {
     /** 返回已经出场的僵尸数量，供测试核对。 */
     public int getZombieCount() {
         return state.zombies.size();
+    }
+
+    /** 爆炸等短时特效播完后从场上移除。 */
+    private void updateEffects() {
+        for (Sprite effect : state.effects) {
+            long duration = assets.count(effect.animation) * effect.frameInterval;
+            if (state.time - effect.animationStart > duration) {
+                effect.alive = false;
+            }
+        }
     }
 
     /**

@@ -37,4 +37,22 @@ public final class PlantRules {
     public static boolean canBeEaten(String plantName) {
         return PlantCatalog.canBeEaten(plantName);
     }
+
+    /**
+     * 判断植物当前是否处于可以躲过爆炸僵尸的攻击动作。
+     *
+     * 参数：plant 是要检查的植物。
+     * 返回：正在攻击中的大嘴花或窝瓜返回真。
+     */
+    public static boolean isProtectedFromExplodingZombie(Plant plant) {
+        if (plant.name.equals("Chomper")
+                && plant.animation.equals("ChomperAttack")) {
+            return true;
+        }
+        if (plant.name.equals("Squash")
+                && plant.animation.equals("SquashAttack")) {
+            return true;
+        }
+        return false;
+    }
 }

@@ -237,6 +237,10 @@ public class Assets {
         animation("NewspaperZombieDie", "Zombies/NewspaperZombie/Die.gif");
         animation("NewspaperZombieHead", "Zombies/NewspaperZombie/Head.gif");
         animation("NewspaperZombieBoomDie", "Zombies/NewspaperZombie/BoomDie.gif");
+
+        animation("JokerZombie", "new_assets/joker/joker_walking.gif");
+        animation("JokerZombieExplode", "new_assets/joker/joker_exploding.gif");
+        animation("JokerBoom", "new_assets/joker/Boom.gif");
     }
 
     /** 豌豆、冰豆、蘑菇孢子以及它们打中后的效果。 */

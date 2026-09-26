@@ -1,5 +1,7 @@
 package pvz.plant;
 
+import pvz.world.CombatValues;
+
 /**
  * 全部植物的固定资料表。
  *
@@ -9,43 +11,43 @@ public final class PlantCatalog {
     /** 全部植物，最后两种是保龄球植物。 */
     public static final PlantDefinition[] DEFINITIONS = {
         new PlantDefinition("SunFlower", "card_sunflower", 50, 7500,
-            5, false, true, PlantActionType.SUN_PRODUCER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SUN_PRODUCER, false),
         new PlantDefinition("Peashooter", "card_peashooter", 100, 7500,
-            5, false, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("SnowPea", "card_snowpea", 175, 7500,
-            5, false, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("WallNut", "card_wallnut", 50, 30000,
-            30, false, true, PlantActionType.WALL_NUT, false),
+            CombatValues.WALL_NUT_HEALTH, false, true, PlantActionType.WALL_NUT, false),
         new PlantDefinition("CherryBomb", "card_cherrybomb", 150, 50000,
-            5, false, true, PlantActionType.INSTANT, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.INSTANT, false),
         new PlantDefinition("Threepeater", "card_threepeashooter", 325, 7500,
-            5, false, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("RepeaterPea", "card_repeaterpea", 200, 7500,
-            5, false, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("Chomper", "card_chomper", 150, 7500,
-            5, false, true, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("PuffShroom", "card_puffshroom", 0, 7500,
-            5, true, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, true, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("PotatoMine", "card_potatomine", 25, 30000,
-            5, false, true, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("Squash", "card_squash", 50, 30000,
-            5, false, true, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("Spikeweed", "card_spikeweed", 100, 7500,
-            5, false, false, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, false, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("Jalapeno", "card_jalapeno", 125, 50000,
-            5, false, true, PlantActionType.INSTANT, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.INSTANT, false),
         new PlantDefinition("ScaredyShroom", "card_scaredyshroom", 25, 7500,
-            5, true, true, PlantActionType.SHOOTER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, true, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("SunShroom", "card_sunshroom", 25, 7500,
-            5, true, true, PlantActionType.SUN_PRODUCER, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, true, true, PlantActionType.SUN_PRODUCER, false),
         new PlantDefinition("IceShroom", "card_iceshroom", 75, 50000,
-            5, true, true, PlantActionType.INSTANT, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, true, true, PlantActionType.INSTANT, false),
         new PlantDefinition("HypnoShroom", "card_hypnoshroom", 75, 30000,
-            1, true, true, PlantActionType.NONE, false),
+            CombatValues.FRAGILE_PLANT_HEALTH, true, true, PlantActionType.NONE, false),
         new PlantDefinition("WallNutBowling", "card_wallnut", 0, 0,
-            1, false, false, PlantActionType.CLOSE_ATTACK, true),
+            CombatValues.FRAGILE_PLANT_HEALTH, false, false, PlantActionType.CLOSE_ATTACK, true),
         new PlantDefinition("RedWallNutBowling", "card_redwallnut_move", 0, 0,
-            1, false, false, PlantActionType.CLOSE_ATTACK, true)
+            CombatValues.FRAGILE_PLANT_HEALTH, false, false, PlantActionType.CLOSE_ATTACK, true)
     };
 
     /** 选卡界面中不包含保龄球植物。 */

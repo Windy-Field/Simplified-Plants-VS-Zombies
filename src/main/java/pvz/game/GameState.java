@@ -137,10 +137,11 @@ public class GameState {
     /** 本关的背景图。 */
     public BufferedImage background;
 
-    /** 场上所有植物、僵尸、子弹、掉落的僵尸头、阳光、小推车和卡片。 */
+    /** 场上所有植物、僵尸、子弹、特效、掉落的僵尸头、阳光、小推车和卡片。 */
     public final List<Plant> plants = new ArrayList<Plant>();
     public final List<Zombie> zombies = new ArrayList<Zombie>();
     public final List<Bullet> bullets = new ArrayList<Bullet>();
+    public final List<Sprite> effects = new ArrayList<Sprite>();
     public final List<Sprite> heads = new ArrayList<Sprite>();
     public final List<Sun> suns = new ArrayList<Sun>();
     public final List<Car> cars = new ArrayList<Car>();
@@ -179,6 +180,7 @@ public class GameState {
         plants.clear();
         zombies.clear();
         bullets.clear();
+        effects.clear();
         heads.clear();
         suns.clear();
         cars.clear();

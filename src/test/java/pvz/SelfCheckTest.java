@@ -27,9 +27,13 @@ import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
 import pvz.world.Bullet;
+import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
+import pvz.zombie.ZombieAbility;
+import pvz.zombie.ZombieCatalog;
+import pvz.zombie.ZombieDefinition;
 import pvz.zombie.ZombieSpawn;
 
 /**
@@ -63,7 +67,8 @@ public class SelfCheckTest {
         "ZombieNoArmLostHead", "ZombieNoArmLostHeadAttack", "FlagZombie", "FlagZombieAttack", "FlagZombieLostHead",
         "FlagZombieLostHeadAttack", "NewspaperZombie", "NewspaperZombieAttack", "NewspaperZombieNoPaper",
         "NewspaperZombieNoPaperAttack", "NewspaperZombieLostHead", "NewspaperZombieLostHeadAttack",
-        "NewspaperZombieDie", "NewspaperZombieHead", "NewspaperZombieBoomDie"
+        "NewspaperZombieDie", "NewspaperZombieHead", "NewspaperZombieBoomDie",
+        "JokerZombie", "JokerZombieExplode", "JokerBoom"
     };
 
     /** 传送带模式专用卡片的图片名。 */
@@ -236,7 +241,7 @@ public class SelfCheckTest {
         checkConveyorLevel(assets, project);
         checkBowlingLevel(assets, project);
     }
-
+    
     /**
      * 检查游戏速度选项正好是新的 1 倍、1.5 倍和 2 倍。
      */

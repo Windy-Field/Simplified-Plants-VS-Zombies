@@ -77,6 +77,12 @@ public final class Layout {
      */
     public static final int CHOOSER_RISE_DISTANCE = WINDOW_HEIGHT;
 
+    /** 开局演出中传送带或保龄球卡槽从屏幕上方落下的毫秒数。 */
+    public static final long INTRO_BAR_DROP_TIME = 500;
+
+    /** 开局演出中传送带或保龄球卡槽的下落距离。 */
+    public static final int INTRO_BAR_DROP_DISTANCE = WINDOW_HEIGHT;
+
     /**
      * 开局演出里，展示用僵尸的第一个横坐标。
      *
@@ -414,7 +420,7 @@ public final class Layout {
      * 普通僵尸、路障和铁桶的本体血量都是 10，所以这就是"本体掉到一半"。
      * 比掉头（见下）早，玩家能先看到它变成独臂，再看到它掉头。
      */
-    public static final int ZOMBIE_ARM_LOST_HEALTH = 5;
+    public static final int ZOMBIE_ARM_LOST_HEALTH = 5 * CombatValues.HEALTH_MULTIPLIER;
 
     /**
      * 僵尸掉头的血量。
@@ -422,7 +428,7 @@ public final class Layout {
      * 以前和掉臂一样是 5，那样两者会在同一帧触发，独臂动画根本来不及看清，
      * 所以把掉头往后挪到 3，让它比掉臂晚一步。
      */
-    public static final int ZOMBIE_HEAD_LOST_HEALTH = 3;
+    public static final int ZOMBIE_HEAD_LOST_HEALTH = 3 * CombatValues.HEALTH_MULTIPLIER;
 
     /**
      * 独臂素材的帧间隔。
@@ -472,9 +478,6 @@ public final class Layout {
 
     /** 坚果保龄球撞到僵尸后造成伤害的间隔。 */
     public static final long BOWLING_HIT_INTERVAL = 700;
-
-    /** 坚果保龄球每次撞击造成的伤害。 */
-    public static final int BOWLING_DAMAGE = 10;
 
     /** 红坚果保龄球撞到僵尸后多久炸开。 */
     public static final long RED_BOWLING_EXPLODE_DELAY = 500;

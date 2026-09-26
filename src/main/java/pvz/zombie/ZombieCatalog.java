@@ -1,5 +1,7 @@
 package pvz.zombie;
 
+import pvz.world.CombatValues;
+
 /**
  * 游戏中已经实现的僵尸固定资料表。
  *
@@ -8,16 +10,18 @@ package pvz.zombie;
 public final class ZombieCatalog {
     /** 编辑器目前支持的僵尸资料。 */
     public static final ZombieDefinition[] DEFINITIONS = {
-        new ZombieDefinition("Zombie", 10, false, true, 1, 1),
-        new ZombieDefinition("ConeheadZombie", 20, true, true, 1, 1),
-        new ZombieDefinition("BucketheadZombie", 30, true, true, 1, 1),
-        new ZombieDefinition("FlagZombie", 15, false, false, 1, 1),
-        new ZombieDefinition("NewspaperZombie", 15, true, false, 1, 2)
+        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, ZombieAbility.NONE),
+        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE),
+        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE),
+        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, ZombieAbility.NONE),
+        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 2, ZombieAbility.NONE),
+        new ZombieDefinition("JokerZombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
+            ZombieAbility.EXPLODES_ON_PLANT)
     };
 
     /** 和 DEFINITIONS 一一对应的编辑器中文名。 */
     public static final String[] LABELS = {
-        "普通僵尸", "路障僵尸", "铁桶僵尸", "旗帜僵尸", "读报僵尸"
+        "普通僵尸", "路障僵尸", "铁桶僵尸", "旗帜僵尸", "读报僵尸", "小丑僵尸"
     };
 
     /** 这个类只提供固定资料，不允许创建对象。 */

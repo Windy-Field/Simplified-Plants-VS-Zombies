@@ -6,6 +6,7 @@ import pvz.game.GameState;
 import pvz.world.Assets;
 import pvz.world.Layout;
 import pvz.zombie.Zombie;
+import pvz.zombie.ZombieEffects;
 
 /**
  * InstantPlantActions 负责这一类植物每一帧的行为。
@@ -77,7 +78,7 @@ public class InstantPlantActions {
                 Rectangle zombieBody = zombie.collisionBox(assets, state.time);
                 double distanceX = Math.abs(zombieBody.getCenterX() - cherryBody.getCenterX());
                 if (Math.abs(zombie.row - plant.row) <= 1 && distanceX <= CHERRY_BLAST_RADIUS) {
-                    zombie.die(assets, state.time, true);
+                    ZombieEffects.die(zombie, assets, state, state.time, true);
                 }
             }
             // 再换成爆炸的火球。不换的话樱桃只是原地闪两下就凭空没了，看不出炸过。
@@ -90,7 +91,7 @@ public class InstantPlantActions {
             plant.x = Layout.GRID_LEFT;
             for (Zombie zombie : state.zombies) {
                 if (!zombie.hypno && zombie.row == plant.row) {
-                    zombie.die(assets, state.time, true);
+                    ZombieEffects.die(zombie, assets, state, state.time, true);
                 }
             }
             return;

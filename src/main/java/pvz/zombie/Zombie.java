@@ -68,6 +68,12 @@ public class Zombie extends Sprite {
     /** 失去头盔或报纸后每走一步前进的像素。 */
     public int speedAfterHelmet = 1;
 
+    /** 是否正在播放小丑爆炸动画。 */
+    public boolean exploding;
+
+    /** 是否已经执行过小丑爆炸效果，防止重复爆炸。 */
+    public boolean explosionTriggered;
+
     /**
      * 创建一只僵尸，从屏幕右侧进场。
      *
@@ -96,6 +102,13 @@ public class Zombie extends Sprite {
     // TODO：【选做-6】新增僵尸时如果换装规则和默认不同（比如掉帽子后用特殊动画而非退化成普通僵尸），
     //                需要在这里加判断返回正确的动画名
     public String stateAnimation(boolean fight) {
+        if (hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+            if (exploding) {
+                return "JokerZombieExplode";
+            }
+            return "JokerZombie";
+        }
+
         // 还戴着帽子的僵尸，动图已经把帽子画进身体里了，不用换名字。
         if (helmet) {
             if (fight) {
@@ -167,6 +180,14 @@ public class Zombie extends Sprite {
         attacking = false;
         deathTime = time;
 
+        // 小丑无论因为什么死亡，都使用自己的爆炸动画。
+        if (hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+            exploding = true;
+            frameInterval = animationIntervalFor("JokerZombieExplode");
+            change("JokerZombieExplode", assets, time);
+            return;
+        }
+
         String next = "ZombieDie";
         if (name.equals("NewspaperZombie")) {
             next = "NewspaperZombieDie";
@@ -189,6 +210,17 @@ public class Zombie extends Sprite {
     }
 
     /**
+     * 判断这只僵尸是否拥有指定能力。
+     *
+     * 参数：ability 是要查询的能力。
+     * 返回：拥有该能力时返回真。
+     */
+    public boolean hasAbility(ZombieAbility ability) {
+        ZombieDefinition definition = ZombieCatalog.definitionOf(name);
+        return definition.ability == ability;
+    }
+
+    /**
      * 算出某段动画该用多少毫秒一帧。
      *
      * 独臂那套素材是按 80 毫秒一帧导出的（掉头后啃那张更快，40 毫秒），
@@ -199,6 +231,10 @@ public class Zombie extends Sprite {
      * 返回：该动画的帧间隔毫秒数。
      */
     public static int animationIntervalFor(String animation) {
+        if (animation.equals("JokerZombieExplode")) {
+            return (int) Layout.DEFAULT_ANIMATION_INTERVAL;
+        }
+
         // 独臂素材：只有"掉头后啃"那张是 40 毫秒，别的都是 80。
         if (animation.equals("ZombieNoArmLostHeadAttack")) {
             return Layout.ZOMBIE_NO_ARM_FAST_INTERVAL;

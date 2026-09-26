@@ -3,9 +3,11 @@ package pvz.plant;
 import java.awt.Rectangle;
 import pvz.game.GameState;
 import pvz.world.Assets;
+import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.zombie.Zombie;
+import pvz.zombie.ZombieEffects;
 
 /**
  * CloseAttackActions 负责这一类植物每一帧的行为。
@@ -239,11 +241,11 @@ public class CloseAttackActions {
             plant.target = zombie;
         }
         if (name.equals("Spikeweed") && state.time - plant.lastAction > Layout.SPIKEWEED_DAMAGE_INTERVAL) {
-            zombie.health = zombie.health - 1;
+            zombie.health = zombie.health - CombatValues.SPIKEWEED_DAMAGE;
             plant.lastAction = state.time;
         }
         if (name.equals("WallNutBowling") && state.time - plant.stateStart > Layout.BOWLING_HIT_INTERVAL) {
-            zombie.health = zombie.health - Layout.BOWLING_DAMAGE;
+            zombie.health = zombie.health - CombatValues.BOWLING_DAMAGE;
             plant.triggered = true;
             plant.stateStart = state.time;
         }
@@ -277,7 +279,7 @@ public class CloseAttackActions {
                     int zombieColumn = columnOfZombie(zombie);
                     // 同一格、左一格、右一格都在窝瓜攻击范围内。
                     if (Math.abs(zombieColumn - plant.column) <= 1) {
-                        zombie.die(assets, state.time, false);
+                        ZombieEffects.die(zombie, assets, state, state.time, false);
                     }
                 }
                 plant.health = 0;
@@ -307,7 +309,7 @@ public class CloseAttackActions {
         if (plant.triggered && attacking) {
             if (state.time - plant.stateStart > Layout.CHOMPER_SWALLOW_DELAY) {
                 if (plant.target != null) {
-                    plant.target.alive = false;
+                    ZombieEffects.die(plant.target, assets, state, state.time, false);
                 }
                 plant.change("ChomperDigest", assets, state.time);
             }
@@ -333,7 +335,7 @@ public class CloseAttackActions {
             if (Math.abs(zombie.x - plant.x) > xRange) {
                 continue;
             }
-            zombie.die(assets, state.time, true);
+            ZombieEffects.die(zombie, assets, state, state.time, true);
         }
     }
 }

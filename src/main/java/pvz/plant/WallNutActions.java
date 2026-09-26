@@ -2,6 +2,7 @@ package pvz.plant;
 
 import pvz.game.GameState;
 import pvz.world.Assets;
+import pvz.world.CombatValues;
 
 /**
  * WallNutActions 负责这一类植物每一帧的行为。
@@ -31,12 +32,14 @@ public class WallNutActions {
      */
     public void update(Plant plant) {
         boolean cracked2 = plant.animation.equals("WallNut_cracked2");
-        if (plant.health <= 10 && !cracked2) {
+        if (plant.health <= CombatValues.WALL_NUT_SECOND_CRACK_HEALTH
+                && !cracked2) {
             plant.change("WallNut_cracked2", assets, state.time);
             return;
         }
         boolean fresh = plant.animation.equals("WallNut");
-        if (plant.health <= 20 && fresh) {
+        if (plant.health <= CombatValues.WALL_NUT_FIRST_CRACK_HEALTH
+                && fresh) {
             plant.change("WallNut_cracked1", assets, state.time);
         }
     }

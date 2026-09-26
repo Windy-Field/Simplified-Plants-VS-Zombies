@@ -152,8 +152,8 @@ public class GameRenderer {
      * 画第二段里出现的卡槽。
      *
      * 正常选卡关卡：卡槽在选卡界面就已经摆好并留在顶端了，这里直接画。
-     * 传送带和保龄球：没有选卡环节，这里让它从画面下方升上来，
-     * 免得"啪"地凭空冒出。
+     * 传送带和保龄球：没有选卡环节，这里让卡槽从画面上方落下来，
+     * 免得"啪"地凭空出现。
      *
      * 参数：painter 是画笔；time 是当前时刻；state 里装着演出进度。
      */
@@ -163,13 +163,14 @@ public class GameRenderer {
             return;
         }
 
-        double progress = (double) (time - state.introReturnStart) / Layout.CHOOSER_RISE_TIME;
+        double progress = (double) (time - state.introReturnStart) / Layout.INTRO_BAR_DROP_TIME;
         if (progress >= 1.0) {
             drawPlayBar(painter, time, state);
             return;
         }
 
-        int shift = (int) ((1.0 - progress) * Layout.CHOOSER_RISE_DISTANCE);
+        // 动画开始时卡槽在窗口上方，随着时间增加向下移动到正常位置。
+        int shift = (int) ((progress - 1.0) * Layout.INTRO_BAR_DROP_DISTANCE);
         Graphics2D moved = (Graphics2D) painter.create();
         moved.translate(0, shift);
         drawPlayBar(moved, time, state);
@@ -396,7 +397,7 @@ public class GameRenderer {
         }
     }
 
-    /** 画游戏中的画面：卡槽、植物、僵尸、子弹、小推车、僵尸头和阳光。 */
+    /** 画游戏中的画面：卡槽、植物、僵尸、子弹、特效、小推车、僵尸头和阳光。 */
     private void drawPlay(Graphics2D painter, long time, GameState state) {
         // 卡槽常驻顶端，演出和开打之后都是同一个画法。
         drawPlayBar(painter, time, state);
@@ -411,6 +412,11 @@ public class GameRenderer {
         for (Car car : state.cars) {
             if (car.alive) {
                 car.draw(painter, assets);
+            }
+        }
+        for (Sprite effect : state.effects) {
+            if (effect.alive) {
+                effect.draw(painter, assets, time);
             }
         }
         for (Sprite head : state.heads) {
