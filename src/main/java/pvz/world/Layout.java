@@ -52,6 +52,12 @@ public final class Layout {
      */
     public static final int CHOMPER_ROOT_SHIFT = 28;
 
+    /**
+     * 窝瓜的图要往上挪多少像素。
+     * 窝瓜的图比其他植物高，用默认的 PLANT_BOTTOM_OFFSET 会让它底部超出格子。
+     */
+    public static final int SQUASH_VERTICAL_SHIFT = -20;
+
     /** 僵尸碰撞盒从前面（脸朝的那一边）去掉可见宽度的百分之几，把探出去的脑袋和手臂排除掉。 */
     public static final int ZOMBIE_FRONT_TRIM_PERCENT = 30;
 

@@ -364,13 +364,19 @@ public class GameRenderer {
             int center = Layout.columnCenter(column);
             int bottom = Layout.rowBottom(row);
             int left = center - preview.getWidth() / 2 + Plant.rootShift(name);
-            int top = bottom - preview.getHeight();
+            int top = bottom - preview.getHeight() + Plant.verticalShift(name);
             painter.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
             painter.drawImage(preview, left, top, null);
             painter.setComposite(AlphaComposite.SrcOver);
         }
 
-        painter.drawImage(preview, state.mouseX - preview.getWidth() / 2,
-            state.mouseY - preview.getHeight() / 2, null);
+        // 跟着鼠标的那张图要按"看得见的身体"居中，不能按整张画布居中。
+        // 动图四周留了大片透明边距，窝瓜的图高 226 像素，上面 141 像素全是空白，
+        // 按画布居中会让图整体沉到鼠标下方，看着像没对准。
+        int[] visible = assets.animationBounds(name);
+        int bodyCenterX = (visible[0] + visible[2]) / 2;
+        int bodyCenterY = (visible[1] + visible[3]) / 2;
+        painter.drawImage(preview, state.mouseX - bodyCenterX + Plant.rootShift(name),
+            state.mouseY - bodyCenterY + Plant.verticalShift(name), null);
     }
 }

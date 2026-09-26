@@ -48,6 +48,7 @@ public class Plant extends Sprite {
         super(kind, center, bottom, lane, 5, assets);
         // 父类是按整张图的正中对准格子中心的，根部不在正中的植物要再挪一下。
         x = x + rootShift(kind);
+        y = y + verticalShift(kind);
         column = gridColumn;
         placed = time;
         stateStart = time;
@@ -87,6 +88,22 @@ public class Plant extends Sprite {
     public static int rootShift(String kind) {
         if (kind.equals("Chomper")) {
             return Layout.CHOMPER_ROOT_SHIFT;
+        }
+        return 0;
+    }
+
+    /**
+     * 这种植物的图要往上挪多少，底部才正好落在合适位置。
+     *
+     * 大多数植物用默认的 PLANT_BOTTOM_OFFSET 就行。
+     * 窝瓜的图比其他植物高，用默认值会让它底部超出格子。
+     *
+     * 参数：kind 是植物名。
+     * 返回：向上挪的像素数（负数表示向上）。
+     */
+    public static int verticalShift(String kind) {
+        if (kind.equals("Squash")) {
+            return Layout.SQUASH_VERTICAL_SHIFT;
         }
         return 0;
     }

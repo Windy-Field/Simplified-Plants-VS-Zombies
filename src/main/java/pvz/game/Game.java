@@ -771,6 +771,10 @@ public class Game extends JPanel {
             opponent = findZombieOpponent(zombie);
         } else {
             prey = findPrey(zombie);
+            // 普通僵尸没找到植物时，找被魅惑的僵尸攻击。
+            if (prey == null) {
+                opponent = findHypnotizedOpponent(zombie);
+            }
         }
 
         boolean fighting = prey != null || opponent != null;
@@ -800,8 +804,29 @@ public class Game extends JPanel {
         return null;
     }
 
-    /** 找同一行里挨着的第一株能吃的植物。 */
+    /** 普通僵尸找同一行里被魅惑的僵尸攻击。 */
+    private Zombie findHypnotizedOpponent(Zombie zombie) {
+        for (Zombie other : state.zombies) {
+            if (other == zombie || !other.alive || other.dying || !other.hypno) {
+                continue;
+            }
+            if (other.row != zombie.row) {
+                continue;
+            }
+            if (Sprite.touches(zombie, other, assets, state.time)) {
+                return other;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 找同一行里挨着的第一个目标：优先找植物，没有植物就找被魅惑的僵尸。
+     *
+     * 普通僵尸会攻击植物和被魅惑的僵尸，但优先咬植物（植物是主要威胁）。
+     */
     private Plant findPrey(Zombie zombie) {
+        // 先找植物。
         for (Plant plant : state.plants) {
             if (!plant.alive || plant.health <= 0) {
                 continue;
@@ -816,6 +841,9 @@ public class Game extends JPanel {
                 return plant;
             }
         }
+        // 没有植物时，找被魅惑的僵尸下手。
+        // 注意：这里不能直接调用 findZombieOpponent，因为那个方法是给魅惑僵尸用的，
+        // 会跳过所有 hypno 僵尸。普通僵尸要找的恰恰是 hypno 僵尸。
         return null;
     }
 

@@ -418,6 +418,20 @@ public class PlantActions {
             rollBowling(plant);
         }
 
+        // 窝瓜检测左中右三格的僵尸，不需要碰撞判定。
+        if (name.equals("Squash") && !plant.triggered) {
+            Zombie target = findSquashTarget(plant);
+            if (target != null) {
+                plant.change("SquashAttack", assets, state.time);
+                plant.triggered = true;
+                plant.stateStart = state.time;
+                plant.target = target;
+                // 窝瓜跳起前先平移到目标僵尸的横坐标。
+                plant.x = target.x;
+                return;
+            }
+        }
+
         for (Zombie zombie : state.zombies) {
             if (!zombie.alive || zombie.dying || zombie.hypno || zombie.row != plant.row) {
                 continue;
@@ -431,6 +445,43 @@ public class PlantActions {
         }
 
         resolveCloseAttackTimeout(plant);
+    }
+
+    /**
+     * 算出某个横坐标落在第几列。
+     *
+     * 两个地方都要从横坐标反推列号，抽出来共用，免得改一处漏一处。
+     * 用 floorDiv 而不是普通除法：草坪左边外面一点点会用普通除法被算成第 0 列，
+     * floorDiv 向下取整得到 -1，才能判成越界。
+     *
+     * 参数：x 是要换算的横坐标。
+     * 返回：格子的列号，可能在草坪范围之外。
+     */
+    private static int columnOf(double x) {
+        return Math.floorDiv((int) x - Layout.GRID_LEFT, Layout.CELL_WIDTH);
+    }
+
+    /**
+     * 窝瓜检测左中右三格内的僵尸。
+     *
+     * 参数：plant 是那株窝瓜。
+     * 返回：找到的第一个目标僵尸，没找到返回 null。
+     */
+    private Zombie findSquashTarget(Plant plant) {
+        for (Zombie zombie : state.zombies) {
+            if (!zombie.alive || zombie.dying || zombie.hypno || zombie.row != plant.row) {
+                continue;
+            }
+            // 窝瓜的格子用种下去时记下的列号，不用它的横坐标反推：
+            // 触发后它的 x 会被挪到目标僵尸身上，那时候再反推就不准了。
+            // 僵尸的格子只能靠横坐标算，所以用统一的 columnOf。
+            int zombieColumn = columnOf(zombie.x);
+            // 左中右三格都在范围内。
+            if (Math.abs(zombieColumn - plant.column) <= 1) {
+                return zombie;
+            }
+        }
+        return null;
     }
 
     /**
@@ -546,8 +597,19 @@ public class PlantActions {
 
         if (name.equals("Squash") && plant.triggered) {
             if (state.time - plant.stateStart > Layout.SQUASH_HIT_DELAY) {
-                if (plant.target != null) {
-                    plant.target.die(assets, state.time, false);
+                // 窝瓜砸下时秒杀范围内所有僵尸（左中右三列都算在攻击范围内）。
+                for (Zombie zombie : state.zombies) {
+                    if (!zombie.alive || zombie.dying || zombie.row != plant.row) {
+                        continue;
+                    }
+                    // 窝瓜的格子始终用种下去时记下的列号。
+                    // 触发时 plant.x 已经被挪到目标僵尸身上，拿它反推列号会算出旁边一格，
+                    // 砸下去的范围就会和当初索敌的范围对不上，忽大忽小。
+                    int zombieColumn = columnOf(zombie.x);
+                    // 同一格、左一格、右一格都在窝瓜攻击范围内。
+                    if (Math.abs(zombieColumn - plant.column) <= 1) {
+                        zombie.die(assets, state.time, false);
+                    }
                 }
                 plant.health = 0;
             }
