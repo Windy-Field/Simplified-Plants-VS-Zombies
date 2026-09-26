@@ -77,6 +77,26 @@ public class GameState {
     /** 当前时刻。它不是墙上时间，而是按加速倍率累加出来的游戏时间。 */
     public long time;
 
+    /**
+     * 相机当前截取到背景图的哪一横坐标。
+     *
+     * 平时就是 CAMERA_LEFT_OFFSET（房子右侧那片草坪）；
+     * 开局演出时会先推到最右再移回来，于是整个草坪跟着平移。
+     */
+    public int cameraOffset = Layout.CAMERA_LEFT_OFFSET;
+
+    /** 开局演出的起始时刻，用来算镜头推到了哪儿、倒计时该显示第几张图。 */
+    public long introStart;
+
+    /**
+     * 开局演出里摆出来给玩家看的僵尸。
+     *
+     * 它们只负责"让玩家知道这关有哪些僵尸"，不参与任何逻辑：
+     * 既不移动、不啃植物，也不算通关判定。演出结束就整批清掉。
+     * 所以特意和 state.zombies 分开存，免得被僵尸的更新逻辑碰到。
+     */
+    public final List<Zombie> introZombies = new ArrayList<Zombie>();
+
     /** 游戏速度倍率，1 是正常速度，2 是两倍速。 */
     public int speedMultiplier = 1;
 

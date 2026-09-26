@@ -83,7 +83,9 @@ public class Assets {
     private void loadScreens() throws IOException {
         String[] names = {
             "MainMenu", "Adventure_0", "Adventure_1", "ChooserBackground", "MoveBackground",
-            "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom"
+            "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom",
+            // 开局倒计时用的"准备-安放-开始"三张图，镜头移回草坪后按顺序显示。
+            "ReadySetPlant1", "ReadySetPlant2", "ReadySetPlant3"
         };
         for (int index = 0; index < names.length; index++) {
             single(names[index], "Screen/" + names[index] + ".png");

@@ -11,6 +11,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import javax.swing.JPanel;
 import javax.swing.Timer;
@@ -153,6 +155,9 @@ public class Game extends JPanel {
         if (state.screen == GameScreen.CHOOSE) {
             updateFlyingCards();
         }
+        if (state.screen == GameScreen.INTRO) {
+            updateIntro();
+        }
         if (state.screen == GameScreen.PLAY) {
             updateLevel();
         }
@@ -266,10 +271,12 @@ public class Game extends JPanel {
         }
 
         if (level.isNormalMode()) {
+            // 正常选卡：先让玩家选卡，选完点开始才进开局演出。
             state.screen = GameScreen.CHOOSE;
             launchRequiredCards();
         } else {
-            startPlay();
+            // 传送带和保龄球没有选卡环节，载入关卡直接进演出。
+            startIntro();
         }
     }
 
@@ -324,11 +331,116 @@ public class Game extends JPanel {
         if (state.barType == GameState.BAR_NORMAL) {
             state.cards.addAll(Cards.staticBar(state.selected));
         }
+        // 演出用的展示僵尸只在开场露个脸，真正开打前清掉，免得混进战斗里。
+        state.introZombies.clear();
+        state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
         state.screen = GameScreen.PLAY;
         state.playStart = state.time;
         state.lastSkySun = state.time;
         // 让第一张传送带卡片立即就能出，所以故意往前挪一点。
         state.lastCard = state.time - Layout.CONVEYOR_CARD_INTERVAL - 1;
+    }
+
+    /**
+     * 开始开局演出：把镜头推到右边扫一遍僵尸，再移回来倒计时三秒。
+     *
+     * 三种卡槽模式（选卡、传送带、保龄球）走的都是这一条路，
+     * 所以它们开场的表现完全一致。
+     *
+     * 测试模式直接跳过：自检是按"载入关卡就能打"写的，
+     * 让它真等七秒演出，每个用例都得手动推帧，反而更容易写错。
+     */
+    private void startIntro() {
+        if (testMode) {
+            startPlay();
+            return;
+        }
+
+        // 卡槽的卡先摆好，但先不画，等镜头移回来再让它们从上往下滑进位。
+        state.cards.clear();
+        if (state.barType == GameState.BAR_NORMAL) {
+            state.cards.addAll(Cards.staticBar(state.selected));
+        }
+
+        buildIntroZombies();
+        state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
+        state.introStart = state.time;
+        state.screen = GameScreen.INTRO;
+    }
+
+    /**
+     * 把本关会出现的僵尸各摆一只在草坪右侧，供镜头扫视时展示。
+     *
+     * 同一品种只摆一只：玩家需要知道的是"这关有哪几种"，不是"有多少只"。
+     * 按行的顺序往下摆，一种一行；种类比行数还多时，从右边另起一批继续摆。
+     */
+    private void buildIntroZombies() {
+        state.introZombies.clear();
+
+        List<String> kinds = new ArrayList<String>();
+        for (ZombieSpawn spawn : state.schedule) {
+            if (!kinds.contains(spawn.name)) {
+                kinds.add(spawn.name);
+            }
+        }
+
+        for (int index = 0; index < kinds.size(); index++) {
+            int row = index % Layout.ROW_COUNT;
+            int bank = index / Layout.ROW_COUNT;
+            int x = Layout.INTRO_ZOMBIE_X + bank * Layout.INTRO_ZOMBIE_BANK_SPACING;
+            int bottom = 160 + row * Layout.CELL_HEIGHT;
+
+            Zombie zombie = new Zombie(kinds.get(index), row, bottom, assets);
+            // 僵尸是"从右边走进来"的，构造时横坐标固定在 ZOMBIE_START_X，
+            // 这里挪到展示位；用画布左沿对齐，和它出场时的摆法保持一致。
+            zombie.x = x;
+            state.introZombies.add(zombie);
+        }
+    }
+
+    /**
+     * 推进开局演出：先把镜头挪到该在的位置，走完就正式开打。
+     *
+     * 这个阶段不动机器人任何东西——僵尸不出场、阳光不掉、卡片不冷却，
+     * 玩家看到的就是一段纯演出。
+     */
+    private void updateIntro() {
+        long elapsed = state.time - state.introStart;
+
+        if (elapsed >= Layout.INTRO_TOTAL_TIME) {
+            startPlay();
+            return;
+        }
+        if (elapsed < Layout.INTRO_PAN_OUT_TIME) {
+            // 第一段：镜头从草坪往右推。
+            double progress = (double) elapsed / Layout.INTRO_PAN_OUT_TIME;
+            state.cameraOffset = interpolateCamera(progress);
+            return;
+        }
+        if (elapsed < Layout.INTRO_PAN_OUT_TIME + Layout.INTRO_HOLD_TIME) {
+            // 第二段：停在最右，让玩家看清僵尸。
+            state.cameraOffset = Layout.CAMERA_RIGHT_OFFSET;
+            return;
+        }
+        // 第三段：镜头移回草坪。移回之后停在草坪上，开始倒计时。
+        long backElapsed = elapsed - Layout.INTRO_PAN_OUT_TIME - Layout.INTRO_HOLD_TIME;
+        if (backElapsed < Layout.INTRO_PAN_BACK_TIME) {
+            double progress = 1.0 - (double) backElapsed / Layout.INTRO_PAN_BACK_TIME;
+            state.cameraOffset = interpolateCamera(progress);
+            return;
+        }
+        state.cameraOffset = Layout.CAMERA_LEFT_OFFSET;
+    }
+
+    /**
+     * 按进度算出相机该在的横坐标。
+     *
+     * 参数：progress 是进度，0 表示在最左（平时那片草坪），1 表示推到最右。
+     * 返回：相机截取背景图的横坐标。
+     */
+    private static int interpolateCamera(double progress) {
+        int span = Layout.CAMERA_RIGHT_OFFSET - Layout.CAMERA_LEFT_OFFSET;
+        return Layout.CAMERA_LEFT_OFFSET + (int) (span * progress);
     }
 
     /**
@@ -381,7 +493,8 @@ public class Game extends JPanel {
             BufferedImage button = assets.image("StartButton");
             Rectangle start = new Rectangle(155, 547, button.getWidth(), button.getHeight());
             if (start.contains(x, y)) {
-                startPlay();
+                // 选完卡不直接开打，先进开局演出，和传送带、保龄球一致。
+                startIntro();
                 return;
             }
         }

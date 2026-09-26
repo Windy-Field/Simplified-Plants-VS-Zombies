@@ -13,6 +13,61 @@ public final class Layout {
     /** 窗口高度，和背景图的高度一致（都是 600 像素）。 */
     public static final int WINDOW_HEIGHT = 600;
 
+    /**
+     * 平时背景图从这一横坐标开始截取，也就是房子右侧草坪所在的那一段。
+     *
+     * 开局演出时镜头会从这个位置往右推，推完再回来，所以它同时也是相机的起始位置。
+     */
+    public static final int CAMERA_LEFT_OFFSET = 220;
+
+    /**
+     * 开局演出时镜头推到的最右位置。
+     *
+     * 背景图宽 1400，窗口宽 800，所以最多只能推到 1400 - 800 = 600，
+     * 再往右就没有图了，会露出空白。
+     */
+    public static final int CAMERA_RIGHT_OFFSET = 1400 - WINDOW_WIDTH;
+
+    /** 开局演出：镜头往右推、扫一遍僵尸用的毫秒数。 */
+    public static final long INTRO_PAN_OUT_TIME = 1500;
+
+    /** 开局演出：推到最右之后停住、让玩家看清有哪些僵尸的毫秒数。 */
+    public static final long INTRO_HOLD_TIME = 1000;
+
+    /** 开局演出：镜头移回草坪的毫秒数。 */
+    public static final long INTRO_PAN_BACK_TIME = 1500;
+
+    /** 开局演出：镜头回来后"准备-安放-开始"倒计时的毫秒数，三张图各占三分之一。 */
+    public static final long INTRO_COUNTDOWN_TIME = 3000;
+
+    /** 开局演出的总时长；走完这一段才真正开打。 */
+    public static final long INTRO_TOTAL_TIME = INTRO_PAN_OUT_TIME + INTRO_HOLD_TIME
+        + INTRO_PAN_BACK_TIME + INTRO_COUNTDOWN_TIME;
+
+    /**
+     * 卡槽从上方滑进位的毫秒数。
+     *
+     * 滑动从镜头移回来的那一刻开始，所以"镜头回来了、卡槽跟着落下"，
+     * 而不是还没看见草坪就先摆好了卡。
+     */
+    public static final long INTRO_CARD_SLIDE_TIME = 800;
+
+    /**
+     * 开局演出里，展示用僵尸的第一个横坐标。
+     *
+     * 这些僵尸只是摆出来给玩家看的，站在草坪右侧外面；
+     * 镜头推到最右时，它们会出现在屏幕中部偏右的位置。
+     */
+    public static final int INTRO_ZOMBIE_X = 860;
+
+    /**
+     * 展示用僵尸分几批摆时，批次之间隔多少像素。
+     *
+     * 关卡里的僵尸种类多于 5 种时，多出来的种类从右边另起一批，
+     * 同一行的两批之间就靠这个间距分开，不会叠在一起。
+     */
+    public static final int INTRO_ZOMBIE_BANK_SPACING = 100;
+
     /** 草坪一共 5 行。 */
     public static final int ROW_COUNT = 5;
 

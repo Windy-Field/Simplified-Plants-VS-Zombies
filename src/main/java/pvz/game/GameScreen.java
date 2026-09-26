@@ -13,14 +13,22 @@ public final class GameScreen {
     /** 选卡界面。 */
     public static final int CHOOSE = 1;
 
+    /**
+     * 开局演出：镜头往右扫一遍僵尸、移回来，再倒数三秒。
+     *
+     * 这个阶段不推进关卡逻辑，僵尸不会提前走、阳光也不会掉，
+     * 演出走完才切到 PLAY，玩家正好从"准备"状态开始打。
+     */
+    public static final int INTRO = 2;
+
     /** 正在打关卡。 */
-    public static final int PLAY = 2;
+    public static final int PLAY = 3;
 
     /** 过关画面。 */
-    public static final int VICTORY = 3;
+    public static final int VICTORY = 4;
 
     /** 失败画面。 */
-    public static final int LOSS = 4;
+    public static final int LOSS = 5;
 
     /** 这个类只提供常量，不允许创建对象。 */
     private GameScreen() {
