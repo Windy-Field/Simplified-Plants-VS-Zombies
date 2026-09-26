@@ -426,8 +426,8 @@ public class PlantActions {
                 plant.triggered = true;
                 plant.stateStart = state.time;
                 plant.target = target;
-                // 窝瓜跳起前先平移到目标僵尸的横坐标。
-                plant.x = target.x;
+                // 换完动画再挪位置：change 会因为画布大小不同而调整 x、y。
+                placeSquashOnTarget(plant, target);
                 return;
             }
         }
@@ -499,6 +499,29 @@ public class PlantActions {
             }
         }
         return null;
+    }
+
+    /**
+     * 把窝瓜挪到目标僵尸身上，让它正好砸在僵尸站着的位置。
+     *
+     * 不能直接把 plant.x 赋成 zombie.x：那是两张图的画布左沿。
+     * 窝瓜的画布 100 像素宽、僵尸的 166 像素宽，身体在各自画布里的位置也不一样
+     * （僵尸的身体只占画布靠右的一截），按画布左沿对齐会让瓜身停在僵尸左边大半格，
+     * 向左砸、向右砸都偏。
+     *
+     * 这里改成"窝瓜身体中心对准僵尸躯干中心"：
+     * 躯干中心就是 columnOfZombie 用来判断僵尸在哪一列的那个点，
+     * 索敌和落点用同一个参照，砸下去才不会偏。
+     *
+     * 参数：plant 是那株窝瓜；zombie 是它盯上的僵尸。
+     */
+    private void placeSquashOnTarget(Plant plant, Zombie zombie) {
+        Rectangle preyBody = zombie.collisionBox(assets, state.time);
+        int[] ownBody = assets.animationBounds(plant.animation);
+        // 窝瓜身体中心在它自己画布里的横坐标。
+        double ownCenterInImage = (ownBody[0] + ownBody[2]) / 2.0;
+        // 让"窝瓜身体中心"落在"僵尸躯干中心"上，反推出窝瓜画布左沿该放哪。
+        plant.x = preyBody.getCenterX() - ownCenterInImage;
     }
 
     /**
@@ -579,6 +602,10 @@ public class PlantActions {
             plant.triggered = true;
             plant.stateStart = state.time;
             plant.target = zombie;
+            // 这条分支虽然少见（僵尸躯干边缘搭上来、中心还在隔壁列时才会走到），
+            // 但触发后的落点必须和 findSquashTarget 那条路一致，否则会出现
+            // "扑过去却砸在僵尸旁边"的情况。
+            placeSquashOnTarget(plant, zombie);
         }
         if (name.equals("Chomper") && !plant.triggered) {
             plant.change("ChomperAttack", assets, state.time);
