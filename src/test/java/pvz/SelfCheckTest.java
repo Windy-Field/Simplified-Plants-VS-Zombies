@@ -56,7 +56,8 @@ public class SelfCheckTest {
         "RedWallNutBowlingExplode", "PeaNormal", "PeaIce", "BulletMushRoom", "PeaNormalExplode",
         "BulletMushRoomExplode", "Zombie", "ZombieAttack", "ZombieLostHead", "ZombieLostHeadAttack",
         "ZombieDie", "ZombieHead", "BoomDie", "ConeheadZombie", "ConeheadZombieAttack", "BucketheadZombie",
-        "BucketheadZombieAttack", "FlagZombie", "FlagZombieAttack", "FlagZombieLostHead",
+        "BucketheadZombieAttack", "ZombieNoArm", "ZombieNoArmAttack", "ZombieNoArmDie",
+        "ZombieNoArmLostHead", "ZombieNoArmLostHeadAttack", "FlagZombie", "FlagZombieAttack", "FlagZombieLostHead",
         "FlagZombieLostHeadAttack", "NewspaperZombie", "NewspaperZombieAttack", "NewspaperZombieNoPaper",
         "NewspaperZombieNoPaperAttack", "NewspaperZombieLostHead", "NewspaperZombieLostHeadAttack",
         "NewspaperZombieDie", "NewspaperZombieHead", "NewspaperZombieBoomDie"

@@ -118,22 +118,26 @@ public class GameRenderer {
     }
 
     /**
-     * 画开局演出：扫视用的僵尸、顶端常驻的卡槽，以及倒计时。
+     * 画开局演出：扫视用的僵尸、卡槽，以及倒计时。
      *
-     * 演出分两段：第一段只有镜头和僵尸，第二段是镜头移回 + 倒计时。
-     * 卡槽从头到尾都停在顶端、不做进出动画——它要是等镜头移回来才出现，
-     * 就会"啪"地凭空冒出来，反倒比原来的下落动画更突兀。
+     * 演出分两段。第一段镜头往右推、停在僵尸那边，这时画面上只有草坪和僵尸，
+     * **不画卡槽**——玩家先专心看清这关有哪些僵尸，卡槽晚点再登场。
+     *
+     * 第二段镜头移回草坪，卡槽在这时候出现，然后才显示倒计时。
+     * 正常选卡关卡进第二段之前已经过了一次选卡界面，卡槽在那儿就摆好了；
+     * 传送带和保龄球没有选卡环节，到这里才补一个从下方升起的动画。
      *
      * 参数：painter 是画笔；time 是当前时刻；state 里装着演出进度。
      */
     private void drawIntro(Graphics2D painter, long time, GameState state) {
         drawIntroZombies(painter, time, state);
-        drawPlayBar(painter, time, state);
 
         if (!state.introReturning) {
-            // 第一段：镜头还在往右推或停在僵尸那边，到此为止。
+            // 第一段：镜头还在往右推或停在僵尸那边，只有背景和僵尸。
             return;
         }
+
+        drawIntroBar(painter, time, state);
 
         // 镜头移回草坪之后才开始显示倒计时。
         long afterPan = time - state.introReturnStart - Layout.INTRO_PAN_BACK_TIME;
@@ -141,6 +145,34 @@ public class GameRenderer {
             return;
         }
         drawCountdown(painter, afterPan);
+    }
+
+    /**
+     * 画第二段里出现的卡槽。
+     *
+     * 正常选卡关卡：卡槽在选卡界面就已经摆好并留在顶端了，这里直接画。
+     * 传送带和保龄球：没有选卡环节，这里让它从画面下方升上来，
+     * 免得"啪"地凭空冒出。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着演出进度。
+     */
+    private void drawIntroBar(Graphics2D painter, long time, GameState state) {
+        if (state.barType == GameState.BAR_NORMAL) {
+            drawPlayBar(painter, time, state);
+            return;
+        }
+
+        double progress = (double) (time - state.introReturnStart) / Layout.CHOOSER_RISE_TIME;
+        if (progress >= 1.0) {
+            drawPlayBar(painter, time, state);
+            return;
+        }
+
+        int shift = (int) ((1.0 - progress) * Layout.CHOOSER_RISE_DISTANCE);
+        Graphics2D moved = (Graphics2D) painter.create();
+        moved.translate(0, shift);
+        drawPlayBar(moved, time, state);
+        moved.dispose();
     }
 
     /**
@@ -188,8 +220,9 @@ public class GameRenderer {
      */
     private void drawPlayBar(Graphics2D painter, long time, GameState state) {
         if (state.barType == GameState.BAR_NORMAL) {
-            painter.drawImage(assets.image("ChooserBackground"), 10, 0, null);
-            drawSunNumber(painter, state.sunValue, 31, 66);
+            painter.drawImage(assets.image("ChooserBackground"), Layout.CARD_BAR_LEFT, 0, null);
+            drawSunNumber(painter, state.sunValue,
+                Layout.CARD_BAR_SUN_LEFT, Layout.CARD_BAR_SUN_TOP);
         } else {
             painter.drawImage(assets.image("MoveBackground"), Layout.CONVEYOR_LEFT, 0, null);
         }
@@ -215,11 +248,14 @@ public class GameRenderer {
     }
 
     /**
-     * 画选卡界面：底板、候选卡、已选的卡和开始按钮。
+     * 画选卡界面：顶端卡槽、背包面板、候选卡、已选的卡和开始按钮。
      *
-     * 开局演出里的那一次，整个界面从画面下方升上来、收起时再沉回去：
+     * 开局演出里的那一次，背包从画面下方升上来、收起时再沉回去：
      * 升起的时候镜头正对着僵尸，玩家等它升稳了再挑卡；
-     * 点完"开始战斗"它先沉下去，然后镜头才移回草坪。
+     * 点完"开始战斗"背包先沉下去，然后镜头才移回草坪。
+     *
+     * 注意退场时只沉背包，**顶端卡槽留在原地**：卡槽在接下来打关卡时还要一直用，
+     * 跟着背包一起退走会显得它"没了"，等镜头移回草坪又冒出来一次。
      *
      * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
      */
@@ -235,7 +271,18 @@ public class GameRenderer {
             return;
         }
 
-        // 整体平移：界面的进出都靠挪画布，里面的元素位置不用各自算。
+        // 退场：卡槽留在原地，只有背包往下挪。飞行中的卡属于卡槽那一层，也不动。
+        if (state.introChooserExiting) {
+            drawChooserTopBar(painter, time, state);
+            Graphics2D moved = (Graphics2D) painter.create();
+            moved.translate(0, shift);
+            drawChooserPanel(moved, time, state);
+            moved.dispose();
+            drawFlyingCards(painter, time, state);
+            return;
+        }
+
+        // 进场：整个界面（含卡槽）一起从画面下方升上来。
         Graphics2D moved = (Graphics2D) painter.create();
         moved.translate(0, shift);
         drawChooserContent(moved, time, state);
@@ -267,14 +314,65 @@ public class GameRenderer {
     }
 
     /**
-     * 画选卡界面的全部内容，按正常位置画（升起动画由调用方平移画布）。
+     * 画选卡界面的全部内容，按正常位置画（进出动画由调用方平移画布）。
+     *
+     * 绘制顺序就是图层顺序：顶端卡槽 → 背包面板 → 飞行中的卡。
+     * 飞行卡必须最后画，它正从候选区飞向卡槽，要压在背包面板上面才看得见。
      *
      * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
      */
     private void drawChooserContent(Graphics2D painter, long time, GameState state) {
-        painter.drawImage(assets.image("ChooserBackground"), 0, 0, null);
+        drawChooserTopBar(painter, time, state);
+        drawChooserPanel(painter, time, state);
+        drawFlyingCards(painter, time, state);
+    }
+
+    /**
+     * 画选卡界面顶端那一条卡槽：底板、阳光数，以及已经挑好的卡。
+     *
+     * 它和背包面板分开画，是因为退场时只沉背包、卡槽要留在原地。
+     * 飞行中的卡不在这里画——它们要盖在背包面板上面，由 drawFlyingCards 最后画。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
+     */
+    private void drawChooserTopBar(Graphics2D painter, long time, GameState state) {
+        painter.drawImage(assets.image("ChooserBackground"), Layout.CARD_BAR_LEFT, 0, null);
+        drawSunNumber(painter, state.sunValue,
+            Layout.CARD_BAR_SUN_LEFT, Layout.CARD_BAR_SUN_TOP);
+
+        // 卡槽里的卡：正在飞的已经由 drawFlyingCards 统一画了，这里跳过。
+        for (int position = 0; position < state.selected.size(); position++) {
+            int plantIndex = state.selected.get(position).intValue();
+            if (state.isFlying(plantIndex)) {
+                continue;
+            }
+            int left = Layout.cardSlotLeft(position);
+            Card card = new Card(plantIndex, left, Layout.CARD_BAR_TOP);
+            card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
+        }
+    }
+
+    /**
+     * 画正在飞行的卡片（从候选区飞向卡槽，或从卡槽飞回候选区）。
+     *
+     * 放在最后画，保证它盖在背包面板上面。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着飞行中的卡。
+     */
+    private void drawFlyingCards(Graphics2D painter, long time, GameState state) {
+        for (int position = 0; position < state.flyingCards.size(); position++) {
+            Card card = state.flyingCards.get(position);
+            card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
+        }
+    }
+
+    /**
+     * 画背包面板：底板、候选卡和开始按钮。
+     *
+     * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
+     */
+    private void drawChooserPanel(Graphics2D painter, long time, GameState state) {
         painter.drawImage(assets.image("PanelBackground"), 0, 87, null);
-        drawSunNumber(painter, state.sunValue, 21, 66);
 
         // 候选卡按 8 张一行往下排；现在是 17 张，所以第 17 张单独占第三行第一个。
         // 已选中或正在飞行（飞往卡槽、飞回候选区）的卡，在原位显示为灰色锁定状态。
@@ -290,23 +388,6 @@ public class GameRenderer {
                 && !state.bannedPlants.contains(Integer.valueOf(index));
             // 选卡阶段不显示冷却，所以传一个很大的阳光数量。
             card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CHOOSER_CARD_SCALE, available);
-        }
-
-        // 卡槽里的卡：正在飞的已经由下面统一画了，这里跳过。
-        for (int position = 0; position < state.selected.size(); position++) {
-            int plantIndex = state.selected.get(position).intValue();
-            if (state.isFlying(plantIndex)) {
-                continue;
-            }
-            int left = 78 + position * Layout.CARD_BAR_SPACING;
-            Card card = new Card(plantIndex, left, Layout.CARD_BAR_TOP);
-            card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
-        }
-
-        // 飞行中的卡片最后画，保证盖在其它卡上面。
-        for (int position = 0; position < state.flyingCards.size(); position++) {
-            Card card = state.flyingCards.get(position);
-            card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
         }
 
         if (state.selected.size() == state.maxCards) {

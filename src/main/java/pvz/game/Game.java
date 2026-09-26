@@ -299,7 +299,7 @@ public class Game extends JPanel {
                 continue;
             }
             Card card = chooserCard(plantIndex);
-            int targetLeft = 78 + position * Layout.CARD_BAR_SPACING;
+            int targetLeft = Layout.cardSlotLeft(position);
             card.startFly(targetLeft, Layout.CARD_BAR_TOP, state.time, true);
             state.flyingCards.add(card);
         }
@@ -587,7 +587,7 @@ public class Game extends JPanel {
         // 先看是不是点在已经选中的卡上，是的话就取消选择。
         for (int position = 0; position < state.selected.size(); position++) {
             int plantIndex = state.selected.get(position).intValue();
-            int left = 78 + position * Layout.CARD_BAR_SPACING;
+            int left = Layout.cardSlotLeft(position);
             Card card = new Card(plantIndex, left, Layout.CARD_BAR_TOP);
             if (card.bounds(assets, Layout.CARD_SCALE).contains(x, y)) {
                 // 必选植物是关卡强加的，玩家点不掉。
@@ -635,7 +635,7 @@ public class Game extends JPanel {
                     return;
                 }
                 // 目标位置要空出正在飞过来的卡所占的槽位，否则两张卡会飞到同一格。
-                int targetLeft = 78 + state.nextBarSlot() * Layout.CARD_BAR_SPACING;
+                int targetLeft = Layout.cardSlotLeft(state.nextBarSlot());
                 card.startFly(targetLeft, Layout.CARD_BAR_TOP, state.time, true);
                 state.flyingCards.add(card);
                 return;
@@ -915,7 +915,7 @@ public class Game extends JPanel {
         return true;
     }
 
-    /** 处理僵尸掉帽子和掉头这两个血量节点。 */
+    /** 处理僵尸掉帽子、掉臂和掉头这几个血量节点。 */
     // TODO：【选做-7】新增僵尸时如果掉帽子/盔甲后有特殊效果（变快、反击、召唤小兵等），
     //                需要在这里加判断触发效果
     private void updateZombieDamageState(Zombie zombie) {
@@ -928,7 +928,16 @@ public class Game extends JPanel {
             zombie.change(zombie.stateAnimation(zombie.attacking), assets, state.time);
         }
 
-        if (zombie.headLost || zombie.health > 5) {
+        // 本体掉到一半：手臂被打断，换成独臂那套动画。
+        // 比掉头早一步，玩家能先看到它变成独臂，再看到它掉头。
+        if (!zombie.armLost && zombie.health <= Layout.ZOMBIE_ARM_LOST_HEALTH) {
+            zombie.armLost = true;
+            String next = zombie.stateAnimation(zombie.attacking);
+            zombie.interval = Zombie.animationIntervalFor(next);
+            zombie.change(next, assets, state.time);
+        }
+
+        if (zombie.headLost || zombie.health > Layout.ZOMBIE_HEAD_LOST_HEALTH) {
             return;
         }
         zombie.headLost = true;
@@ -1051,12 +1060,11 @@ public class Game extends JPanel {
             return;
         }
         zombie.attacking = fighting;
-        if (fighting) {
-            zombie.interval = (int) Layout.ZOMBIE_ATTACK_ANIMATION_INTERVAL;
-        } else {
-            zombie.interval = (int) Layout.ZOMBIE_ANIMATION_INTERVAL;
-        }
-        zombie.change(zombie.stateAnimation(fighting), assets, state.time);
+        // 帧间隔交给动画名统一决定：独臂那套素材是 80 毫秒一帧，
+        // 比原版的 150/100 快，硬套原版常量会让独臂僵尸看起来在慢放。
+        String next = zombie.stateAnimation(fighting);
+        zombie.interval = Zombie.animationIntervalFor(next);
+        zombie.change(next, assets, state.time);
         zombie.lastAttack = state.time;
     }
 

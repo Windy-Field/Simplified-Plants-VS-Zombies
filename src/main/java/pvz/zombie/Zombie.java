@@ -18,6 +18,14 @@ public class Zombie extends Sprite {
     /** 是否还戴着帽子（铁桶、路障或报纸）。 */
     public boolean helmet;
 
+    /**
+     * 手臂是否已经被打断。
+     *
+     * 普通僵尸、路障和铁桶的本体掉到一半血时会掉臂，之后换成独臂那套动画。
+     * 报纸僵尸和旗帜僵尸没有独臂素材，这个标记对它们始终是假。
+     */
+    public boolean armLost;
+
     /** 头是否已经被打掉；掉头后换成 LostHead 系列动画，并开始持续流血。 */
     public boolean headLost;
 
@@ -105,6 +113,20 @@ public class Zombie extends Sprite {
             return name;
         }
 
+        // 掉了臂的普通僵尸、路障和铁桶换成独臂那套图。
+        // 注意放在 helmet 判断之后：还戴着帽子时用的是把帽子画进身体的那套图，
+        // 那时还没有独臂素材可用。
+        if (hasNoArmArt()) {
+            String base = "ZombieNoArm";
+            if (headLost) {
+                base = base + "LostHead";
+            }
+            if (fight) {
+                base = base + "Attack";
+            }
+            return base;
+        }
+
         String base = name;
         // 帽子和身体是分开的图，掉了帽子之后就退化成普通僵尸。
         if (name.equals("ConeheadZombie") || name.equals("BucketheadZombie")) {
@@ -124,6 +146,22 @@ public class Zombie extends Sprite {
     }
 
     /**
+     * 这只僵尸有没有独臂素材可用。
+     *
+     * 只有普通僵尸、路障和铁桶做了独臂图；旗帜僵尸和报纸僵尸没有，
+     * 它们掉臂后只能继续用原来的动画。
+     *
+     * 返回：掉了臂并且有独臂图时返回真。
+     */
+    private boolean hasNoArmArt() {
+        if (!armLost) {
+            return false;
+        }
+        return name.equals("Zombie") || name.equals("ConeheadZombie")
+            || name.equals("BucketheadZombie");
+    }
+
+    /**
      * 让僵尸开始播放死亡动画，动画放完才真正消失。
      *
      * 参数：assets 提供图片；time 是当前时刻；explosion 表示是不是被炸死的，
@@ -138,7 +176,6 @@ public class Zombie extends Sprite {
         dying = true;
         attacking = false;
         deathTime = time;
-        interval = (int) Layout.ZOMBIE_DIE_ANIMATION_INTERVAL;
 
         String next = "ZombieDie";
         if (name.equals("NewspaperZombie")) {
@@ -151,7 +188,44 @@ public class Zombie extends Sprite {
                 next = "NewspaperZombieBoomDie";
             }
         }
+        // 独臂僵尸有自己的一套倒地动作；被炸死时仍然用通用的灰烬图，
+        // 因为那套图是所有僵尸共用的。
+        if (!explosion && hasNoArmArt()) {
+            next = "ZombieNoArmDie";
+        }
+
+        interval = animationIntervalFor(next);
         change(next, assets, time);
+    }
+
+    /**
+     * 算出某段动画该用多少毫秒一帧。
+     *
+     * 独臂那套素材是按 80 毫秒一帧导出的（掉头后啃那张更快，40 毫秒），
+     * 而原版僵尸走路是 150、啃食是 100、倒地是 200。统一成一个值会让
+     * 独臂僵尸比原版慢一倍，所以这里按动画名分别给值。
+     *
+     * 参数：animation 是动画名。
+     * 返回：该动画的帧间隔毫秒数。
+     */
+    public static int animationIntervalFor(String animation) {
+        // 独臂素材：只有"掉头后啃"那张是 40 毫秒，别的都是 80。
+        if (animation.equals("ZombieNoArmLostHeadAttack")) {
+            return Layout.ZOMBIE_NO_ARM_FAST_INTERVAL;
+        }
+        if (animation.startsWith("ZombieNoArm")) {
+            return Layout.ZOMBIE_NO_ARM_ANIMATION_INTERVAL;
+        }
+        // 倒地那几段（含被炸死的灰烬图）播得慢一些。
+        if (animation.equals("ZombieDie") || animation.equals("NewspaperZombieDie")
+                || animation.equals("BoomDie") || animation.equals("NewspaperZombieBoomDie")) {
+            return (int) Layout.ZOMBIE_DIE_ANIMATION_INTERVAL;
+        }
+        // 剩下的"啃食"那几段统一是 Attack 结尾。
+        if (animation.endsWith("Attack")) {
+            return (int) Layout.ZOMBIE_ATTACK_ANIMATION_INTERVAL;
+        }
+        return (int) Layout.ZOMBIE_ANIMATION_INTERVAL;
     }
 
     /**

@@ -86,11 +86,10 @@ public final class Cards {
      */
     public static List<Card> staticBar(List<Integer> indices) {
         List<Card> result = new ArrayList<Card>();
-        int left = Layout.CARD_BAR_START;
         for (int position = 0; position < indices.size(); position++) {
             int plantIndex = indices.get(position).intValue();
-            left = left + Layout.CARD_BAR_SPACING;
-            result.add(new Card(plantIndex, left, Layout.CARD_BAR_TOP));
+            // 位置统一由 Layout 算，选卡界面、飞行落点和这里的摆法才不会各走一套。
+            result.add(new Card(plantIndex, Layout.cardSlotLeft(position), Layout.CARD_BAR_TOP));
         }
         return result;
     }

@@ -203,6 +203,20 @@ public class Assets {
         animation("ZombieHead", "Zombies/Zombie/ZombieHead.gif");
         animation("BoomDie", "Zombies/Zombie/BoomDie.gif");
 
+        // 独臂僵尸：普通僵尸、路障和铁桶的本体掉到一半血时换成这套图。
+        // 素材画布比原版大得多，所以在登记时就缩放好，后面和普通僵尸走同一套代码。
+        scaledAnimation("ZombieNoArm", "Zombies/Zombie/ZombieNoArm.gif",
+            Layout.ZOMBIE_NO_ARM_SCALE);
+        scaledAnimation("ZombieNoArmAttack", "Zombies/Zombie/ZombieNoArmAttack.gif",
+            Layout.ZOMBIE_NO_ARM_SCALE);
+        scaledAnimation("ZombieNoArmDie", "Zombies/Zombie/ZombieNoArmDie.gif",
+            Layout.ZOMBIE_NO_ARM_SCALE);
+        scaledAnimation("ZombieNoArmLostHead", "Zombies/Zombie/ZombieNoArmLostHead.gif",
+            Layout.ZOMBIE_NO_ARM_SCALE);
+        // 这张的导出分辨率只有别的四分之一，得用单独的倍数。
+        scaledAnimation("ZombieNoArmLostHeadAttack",
+            "Zombies/Zombie/ZombieNoArmLostHeadAttack.gif", Layout.ZOMBIE_NO_ARM_SMALL_SCALE);
+
         animation("ConeheadZombie", "Zombies/ConeheadZombie/ConeheadZombie.gif");
         animation("ConeheadZombieAttack", "Zombies/ConeheadZombie/ConeheadZombieAttack.gif");
         animation("BucketheadZombie", "Zombies/BucketheadZombie/BucketheadZombie.gif");
@@ -293,6 +307,68 @@ public class Assets {
             }
         }
         frames.put(name, list);
+    }
+
+    /**
+     * 登记一段动画，并把每一帧都缩放到指定倍数。
+     *
+     * 有些素材的画布比原版大得多（比如独臂僵尸那几组，站立高度是原版的六倍多），
+     * 直接放进来会是个巨人。在这里一次缩好，后面算可见范围、算碰撞盒、
+     * 换动画时对齐底边就都不用再管缩放，和别的僵尸走同一套代码。
+     *
+     * 缩小时分几步走：一次缩到六分之一会丢很多像素，分几次减半再缩更清楚。
+     *
+     * 参数：name 是动画名；file 是文件路径；scale 是目标倍数（小于 1 表示缩小）。
+     */
+    private void scaledAnimation(String name, String file, double scale) throws IOException {
+        List<BufferedImage> list = new ArrayList<BufferedImage>();
+        for (GifFrame frame : readGif(root.resolve(file))) {
+            list.add(resize(frame.image, scale));
+        }
+        frames.put(name, list);
+    }
+
+    /**
+     * 把一张图缩放到指定倍数。
+     *
+     * 参数：source 是原图；scale 是倍数。
+     * 返回：缩放后的新图，宽高至少留 1 像素。
+     */
+    private static BufferedImage resize(BufferedImage source, double scale) {
+        BufferedImage current = source;
+        double remaining = scale;
+        // 先反复对折到接近目标，最后再走一次带插值的缩放。
+        while (remaining <= 0.5) {
+            current = half(current);
+            remaining = remaining * 2;
+        }
+
+        int width = Math.max(1, (int) Math.round(current.getWidth() * remaining));
+        int height = Math.max(1, (int) Math.round(current.getHeight() * remaining));
+        if (width == current.getWidth() && height == current.getHeight()) {
+            return current;
+        }
+
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D painter = result.createGraphics();
+        painter.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+            java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        painter.drawImage(current, 0, 0, width, height, null);
+        painter.dispose();
+        return result;
+    }
+
+    /** 把一张图宽高各取一半。 */
+    private static BufferedImage half(BufferedImage source) {
+        int width = Math.max(1, source.getWidth() / 2);
+        int height = Math.max(1, source.getHeight() / 2);
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D painter = result.createGraphics();
+        painter.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+            java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        painter.drawImage(source, 0, 0, width, height, null);
+        painter.dispose();
+        return result;
     }
 
     /** GIF 里的一帧：合成后的完整画面和它的停留时间（毫秒）。 */

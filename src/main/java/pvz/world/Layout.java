@@ -185,6 +185,32 @@ public final class Layout {
     /** 卡槽中卡片的纵坐标。 */
     public static final int CARD_BAR_TOP = 8;
 
+    /**
+     * 卡槽底板左沿的横坐标。
+     *
+     * 选卡界面和游戏中用的是同一张底板图，位置也必须一样：
+     * 以前选卡界面从 0 画、游戏里从 10 画，镜头一移回草坪卡槽就会往右跳一下。
+     */
+    public static final int CARD_BAR_LEFT = 10;
+
+    /** 卡槽上阳光数字框的左沿横坐标，正好落在底板左边的阳光图标上。 */
+    public static final int CARD_BAR_SUN_LEFT = 31;
+
+    /** 卡槽上阳光数字框的上沿纵坐标。 */
+    public static final int CARD_BAR_SUN_TOP = 66;
+
+    /**
+     * 算出卡槽里第 position 张卡的左沿横坐标。
+     *
+     * 选卡界面摆卡、点卡判定、飞行落点都用它，位置才不会有第二套算法。
+     *
+     * 参数：position 是卡槽里第几格，从 0 开始。
+     * 返回：这张卡左沿的横坐标。
+     */
+    public static int cardSlotLeft(int position) {
+        return CARD_BAR_START + (position + 1) * CARD_BAR_SPACING;
+    }
+
     /** 卡槽数量最少也得有 1 张，否则玩家一张卡都带不了。 */
     public static final int MIN_CARD_SLOTS = 1;
 
@@ -359,6 +385,53 @@ public final class Layout {
 
     /** 僵尸死亡动画帧的间隔。 */
     public static final long ZOMBIE_DIE_ANIMATION_INTERVAL = 200;
+
+    /**
+     * 僵尸掉臂的血量。
+     *
+     * 普通僵尸、路障和铁桶的本体血量都是 10，所以这就是"本体掉到一半"。
+     * 比掉头（见下）早，玩家能先看到它变成独臂，再看到它掉头。
+     */
+    public static final int ZOMBIE_ARM_LOST_HEALTH = 5;
+
+    /**
+     * 僵尸掉头的血量。
+     *
+     * 以前和掉臂一样是 5，那样两者会在同一帧触发，独臂动画根本来不及看清，
+     * 所以把掉头往后挪到 3，让它比掉臂晚一步。
+     */
+    public static final int ZOMBIE_HEAD_LOST_HEALTH = 3;
+
+    /**
+     * 独臂素材的帧间隔。
+     *
+     * 这套图是按 80 毫秒一帧导出的，而原版僵尸是 150 毫秒，
+     * 直接套用原版的间隔会让独臂僵尸慢将近一倍。
+     */
+    public static final int ZOMBIE_NO_ARM_ANIMATION_INTERVAL = 80;
+
+    /** "独臂且掉头后继续啃"那张图的帧间隔，它是按 40 毫秒一帧导出的，比别的快一倍。 */
+    public static final int ZOMBIE_NO_ARM_FAST_INTERVAL = 40;
+
+    /**
+     * 独臂素材的缩放倍数。
+     *
+     * no_hand 那几组图的画布比原来的僵尸图大得多：独臂走路图里僵尸站立高 774 像素，
+     * 而原版僵尸只有 122 像素。四个大图（走路、啃食、倒地、掉头后走）是同一个
+     * 分辨率导出的，所以共用同一个倍数——各用各的会让僵尸在"走 → 啃 → 倒地"
+     * 之间切换时体型跳一下。
+     *
+     * 倍数按站立高度算：122 / 774 ≈ 0.1576。
+     */
+    public static final double ZOMBIE_NO_ARM_SCALE = 0.1576;
+
+    /**
+     * "独臂且掉头后继续啃"那张图的缩放倍数。
+     *
+     * 它的导出分辨率只有别的四分之一（画布 138x149，别的都是 500x700 以上），
+     * 所以得单独一个倍数，同样是按站立高度算：103 / 141 ≈ 0.7305。
+     */
+    public static final double ZOMBIE_NO_ARM_SMALL_SCALE = 0.7305;
 
     /** 窝瓜压下去之后多久砸中目标。 */
     public static final long SQUASH_HIT_DELAY = 1300;
