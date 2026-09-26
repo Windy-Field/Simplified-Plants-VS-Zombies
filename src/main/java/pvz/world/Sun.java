@@ -20,7 +20,7 @@ public class Sun extends Sprite {
     public int targetY;
 
     /** 到达目标的时刻；还没到就是 0。 */
-    public long arrived;
+    public long arrivalTime;
 
     /** 是否正在飞向左上角的阳光数字处。 */
     public boolean flyingToCounter;
@@ -61,11 +61,10 @@ public class Sun extends Sprite {
     /**
      * 朝目标移动一帧，到了就开始计时。
      *
-     * 参数：assets 提供图片；time 是当前时刻；
-     *       speedMultiplier 是当前倍速，1 表示原速，2 表示两倍速。
-     * 说明：倍速要乘在步长上，这样 2 倍速下阳光掉落也是原来的两倍快。
+     * 参数：assets 提供图片；time 是当前时刻。
+     * 说明：战斗会按固定时间小步推进，阳光每一步只走基础距离。
      */
-    public void update(Assets assets, long time, int speedMultiplier) {
+    public void update(Assets assets, long time) {
         if (flyingToCounter) {
             updateFlyingToCounter(assets, time);
             return;
@@ -75,8 +74,8 @@ public class Sun extends Sprite {
         int center = (int) rect.getCenterX();
         int bottom = (int) rect.getMaxY();
 
-        // 这一帧横向、纵向各走多远；倍速越高走得越远。
-        int step = Layout.SUN_SPEED * speedMultiplier;
+        // 横向和纵向使用相同的基础步长，倍速由战斗主循环统一处理。
+        int step = Layout.SUN_SPEED;
 
         // 横向和纵向各自靠近目标，所以阳光走的是斜线。
         // 每边走之前先看看离目标还剩多少，最多只走剩下的距离，
@@ -93,9 +92,9 @@ public class Sun extends Sprite {
         }
 
         if (center == targetX && bottom == targetY) {
-            if (arrived == 0) {
-                arrived = time;
-            } else if (time - arrived > Layout.SUN_STAY_DURATION) {
+            if (arrivalTime == 0) {
+                arrivalTime = time;
+            } else if (time - arrivalTime > Layout.SUN_STAY_DURATION) {
                 alive = false;
             }
         }

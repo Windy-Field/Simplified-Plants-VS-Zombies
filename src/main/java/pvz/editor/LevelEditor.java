@@ -51,6 +51,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import pvz.game.Game;
 import pvz.game.GameState;
 import pvz.plant.Cards;
+import pvz.plant.PlantCatalog;
+import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
 import pvz.world.Layout;
 
@@ -252,7 +254,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
      * 返回：每种植物一行的文字。
      */
     private static String[] plantChoices() {
-        return plantChoices(Cards.PLANTS.length);
+        return plantChoices(PlantCatalog.DEFINITIONS.length);
     }
 
     /**
@@ -264,7 +266,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
      * 返回：每种植物一行的文字。
      */
     private static String[] chooserPlantChoices() {
-        return plantChoices(Cards.CHOOSER_CARD_COUNT);
+        return plantChoices(PlantCatalog.CHOOSER_COUNT);
     }
 
     /**
@@ -276,7 +278,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
     private static String[] plantChoices(int count) {
         String[] result = new String[count];
         for (int index = 0; index < count; index++) {
-            result[index] = Cards.PLANTS[index] + "（" + Cards.COST[index] + "）";
+            PlantDefinition definition = Cards.definitionAt(index);
+            result[index] = definition.name + "（" + definition.cost + "）";
         }
         return result;
     }

@@ -145,7 +145,7 @@ public final class Layout {
     public static final int ZOMBIE_BACK_TRIM_PERCENT = 20;
 
     // TODO：【选做-1】新增射手植物时，如果嘴的高度和豌豆射手不同，需要在这里加一个常量，
-    //                再去 PlantActions.muzzleOffset() 里加对应的 if 分支返回这个常量
+    //                再去 ShooterActions.muzzleOffset() 里加对应的 if 分支返回这个常量
     /**
      * 各种射手的嘴（炮管开口）比身体可见范围的上沿低多少像素。
      *
@@ -292,8 +292,30 @@ public final class Layout {
 
     public static final int SPEED_BUTTON_HEIGHT = 22;
 
-    /** 加速按钮能切换的倍率，按一下就在这几个值之间轮换。 */
-    public static final int[] SPEED_CHOICES = {1, 2, 3};
+    /**
+     * 游戏内部实际使用的速度倍率，按按钮时在这几个值之间轮换。
+     *
+     * 原来的 2 倍速现在作为新的 1 倍速，所以新的三个选项对应旧速度的 2、3、4 倍。
+     */
+    public static final int[] SPEED_MULTIPLIERS = {2, 3, 4};
+
+    /** 和 SPEED_MULTIPLIERS 一一对应的按钮文字。 */
+    public static final String[] SPEED_LABELS = {"1x", "1.5x", "2x"};
+
+    /**
+     * 根据游戏内部倍率取得按钮上显示的文字。
+     *
+     * 参数：multiplier 是游戏内部实际使用的速度倍率。
+     * 返回：对应的显示文字；传入未知倍率时返回新的默认速度文字。
+     */
+    public static String speedLabelFor(int multiplier) {
+        for (int index = 0; index < SPEED_MULTIPLIERS.length; index++) {
+            if (SPEED_MULTIPLIERS[index] == multiplier) {
+                return SPEED_LABELS[index];
+            }
+        }
+        return SPEED_LABELS[0];
+    }
 
     /**
      * 游戏画面右下角作者水印的位置。
@@ -362,8 +384,8 @@ public final class Layout {
     /** 僵尸吃植物的间隔倍率：减速状态下乘 2。 */
     public static final long ZOMBIE_ATTACK_INTERVAL = 1000;
 
-    /** 僵尸走一步的间隔倍率：减速状态下乘 2。 */
-    public static final long ZOMBIE_STEP_INTERVAL = 70;
+    /** 僵尸走一步的毫秒间隔；减速状态下乘 2。 */
+    public static final long ZOMBIE_STEP_INTERVAL = 50;
 
     /** 僵尸掉了头之后，每隔多久流掉一点血。 */
     public static final long ZOMBIE_BLEED_INTERVAL = 1000;

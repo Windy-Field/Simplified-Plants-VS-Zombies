@@ -45,7 +45,9 @@ public class Plant extends Sprite {
      */
     public Plant(String kind, int center, int bottom, int lane, int gridColumn,
                  Assets assets, long time, boolean day) {
-        super(kind, center, bottom, lane, 5, assets);
+        super(kind, center, bottom, lane,
+            PlantCatalog.definitionOf(kind).maxHealth, assets);
+        PlantDefinition definition = PlantCatalog.definitionOf(kind);
         // 父类是按整张图的正中对准格子中心的，根部不在正中的植物要再挪一下。
         x = x + rootShift(kind);
         y = y + verticalShift(kind);
@@ -53,17 +55,8 @@ public class Plant extends Sprite {
         placed = time;
         stateStart = time;
 
-        // 坚果是肉盾，血比普通植物厚得多。
-        if (kind.equals("WallNut")) {
-            health = 30;
-        }
-        // 魅惑菇和保龄球一碰就碎，血量设成 1 就够了。
-        // TODO：【选做-3】新增植物时可以改变植物血量（默认是 5，需要改就在这里加判断）
-        if (kind.equals("HypnoShroom") || PlantRules.isBowling(kind)) {
-            health = 1;
-        }
         // 蘑菇类在白天要睡觉，睡觉时换成带 Sleep 后缀的动画。
-        if (day && PlantRules.sleepsAtDay(kind)) {
+        if (day && definition.sleepsAtDay) {
             sleeping = true;
             change(kind + "Sleep", assets, time);
         }

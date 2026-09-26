@@ -34,7 +34,7 @@
 - 卡槽（或传送带）**常驻画面顶端**，开局演出和正式开打期间都一直显示，不做进出动画；
 - 已完成阳光掉落与收集动画、卡片冷却、小推车防线等基础机制；
 - 传送带关卡（卡片随机送出，不花阳光）和坚果保龄球关卡；
-- 右上角设置了 1x / 2x / 3x 加速按钮；
+- 右上角设置了 1x / 1.5x / 2x 加速按钮；原来的 2 倍速作为新的 1 倍速；
 - **GUI 关卡编辑器：拖动僵尸编排每一波出怪，调节初始阳光、阳光生成速度和出怪速度，还能指定某格随机行出怪、禁用或必选某些植物、限制卡槽数量。**
 
 ## 运行环境
@@ -169,7 +169,7 @@ dist/MyPVZ/                 解压后就是这个文件夹，约 92MB
 | 操作 | 说明 |
 | --- | --- |
 | 鼠标右键 | 取消手中的卡片 |
-| 点击右上角倍速按钮 | 切换 1x、2x、3x 速度 |
+| 点击右上角倍速按钮 | 切换 1x、1.5x、2x 速度 |
 
 ## 项目结构
 
@@ -180,13 +180,23 @@ src/main/java/pvz/
 ├── Main.java             游戏入口
 ├── EditorMain.java       关卡编辑器入口
 ├── plant/                植物 —— 改植物只看这里（外加 Assets 登记动画）
-│   ├── Cards.java            植物资料表：名字、卡片图、花费、冷却
-│   ├── PlantRules.java       植物分类：射手 / 一次性 / 近身 / 夜间
-│   ├── PlantActions.java     植物每一帧的行为：产阳光、开火、爆炸、吞食……
+│   ├── PlantDefinition.java   一种植物的完整固定资料
+│   ├── PlantCatalog.java      全部植物资料表和编号查询
+│   ├── PlantActionType.java   植物行为类别
+│   ├── Cards.java             卡片生成和资料查询工具
+│   ├── PlantRules.java        植物分类查询入口
+│   ├── PlantActions.java      遍历植物并分发行为
+│   ├── SunProducerActions.java 向日葵和阳光菇行为
+│   ├── ShooterActions.java    射手植物行为
+│   ├── WallNutActions.java    坚果裂纹行为
+│   ├── InstantPlantActions.java 一次性植物行为
+│   ├── CloseAttackActions.java 近战和保龄球行为
 │   ├── Plant.java            植物对象，血量和初始状态
 │   └── Card.java             一张卡片（卡槽、传送带、选卡飞行）
 ├── zombie/               僵尸
-│   ├── Zombie.java           僵尸对象：血量、速度、各状态的动画
+│   ├── ZombieDefinition.java 僵尸固定资料：血量、帽子、速度、动画能力
+│   ├── ZombieCatalog.java    僵尸资料表和编辑器名单
+│   ├── Zombie.java           僵尸对象：运行状态和各状态动画
 │   └── ZombieSpawn.java      一条出场记录：第几毫秒、第几行、什么僵尸
 ├── game/                 游戏主循环
 │   ├── Game.java             总控：鼠标输入、出怪、僵尸行为、子弹、胜负
@@ -213,7 +223,11 @@ src/main/java/pvz/
 
 - **逻辑、数据与画面**：`Game` 每帧把植物交给 `PlantActions`，自己处理僵尸和子弹，然后让 `GameRenderer` 画出来。
 
-- **继承关系**：`Plant`、`Zombie`、`Bullet`、`Sun` 继承 `Sprite`（位置、血量、当前动画）。
+- **植物行为分层**：`Plant` 只保存一株植物的运行状态；`PlantDefinition` 和 `PlantCatalog` 保存固定资料；`PlantActions` 只负责分发，具体行为放在 `SunProducerActions`、`ShooterActions`、`WallNutActions`、`InstantPlantActions` 和 `CloseAttackActions` 中。
+
+- **僵尸资料分层**：`Zombie` 保存单只僵尸的运行状态，`ZombieDefinition` 和 `ZombieCatalog` 保存初始血量、帽子、速度和动画能力。相似僵尸不重复建立子类，固定差异放在定义资料里。
+
+- **继承关系**：`Plant`、`Zombie`、`Bullet`、`Sun` 继承 `Sprite`（位置、血量、当前动画）。植物和僵尸的具体品种目前使用资料对象区分，只有真正出现独特行为时才需要新增专门类。
 
 - **关卡**：`LevelLoader` 把 JSON 读成 `Level`，`Game.loadLevel()` 再摊进 `GameState`。编辑器用 `LevelDesign` 读写同一份 JSON，这是游戏和编辑器之间唯一的接口。
 
@@ -225,10 +239,9 @@ src/main/java/pvz/
 
 | 改什么 | 改哪里 |
 | --- | --- |
-| 花费、冷却 | `plant/Cards.java` 的 `COST`、`COOLDOWN` |
-| 血量 | `plant/Plant.java` 构造函数（默认 5，坚果 30） |
+| 名字、卡片图、花费、冷却、初始血量 | `plant/PlantCatalog.java` 中对应的 `PlantDefinition` |
 | 射速、产阳光间隔、土豆雷出土时间等 | `world/Layout.java` 里对应的常量 |
-| 攻击范围、子弹种类等行为细节 | `plant/PlantActions.java` 里对应的方法（见下文） |
+| 攻击范围、子弹种类等行为细节 | `plant/ShooterActions.java` 或其他行为处理器 |
 
 ### 新增一种植物
 
@@ -238,27 +251,27 @@ src/main/java/pvz/
 
 2. **登记动画**：`world/Assets.java` 的 `loadPlants()` 里加一行`animation("植物名", "Plants/…/1.gif");`。有额外状态（睡觉、爆炸等）的，每个状态各登记一个动画。新的卡片图在 `loadCards()` 里登记。
 
-3. **注册资料表**：`plant/Cards.java` 的 `PLANTS`、`PICTURES`、`COST`、`COOLDOWN` 四个数组**同一位置**各加一项，插在最后两个保龄球之前。选卡界面的卡片数量会自动跟着变。
+3. **注册资料表**：在 `plant/PlantCatalog.java` 里新增一个完整的 `PlantDefinition`，插在最后两个保龄球之前。名字、卡片图、花费、冷却、初始血量和行为类别都写在同一条记录里，不再维护多组平行数组。
 
-4. **归类**：如果行为和某类现有植物相同，在 `plant/PlantRules.java` 对应名单里加上名字即可：
+4. **归类**：在 `PlantDefinition` 中填写对应的 `PlantActionType`：
 
-   | 名单 | 特性 | 行为 |
+   | 类别 | 特性 | 处理器 |
    | --- | --- | --- |
-   | `SHOOTER_PLANTS` | 同行有僵尸就开火 | `updateShooter`、`fireBullets`、`bulletNameFor` |
-   | `INSTANT_PLANTS` | 种下播完动画就生效，然后消失 | `updateInstant`、`triggerInstantEffect` |
-   | `CLOSE_ATTACK_PLANTS` | 僵尸走到身上才生效 | `updateCloseAttack`、`handleCloseHit` |
-   | `NIGHT_PLANTS` | 白天睡觉（需要登记"植物名Sleep"动画） | `Plant` 构造函数 |
+   | `SUN_PRODUCER` | 产生阳光 | `SunProducerActions` |
+   | `SHOOTER` | 同行有僵尸就开火 | `ShooterActions` |
+   | `INSTANT` | 种下播完动画就生效，然后消失 | `InstantPlantActions` |
+   | `CLOSE_ATTACK` | 僵尸走到身上才生效 | `CloseAttackActions` |
+   | `WALL_NUT` | 根据血量切换裂纹图 | `WallNutActions` |
 
-  **【注意】产阳光的向日葵类植物需要写在 `PlantActions.dispatchPlant()` 开头的名字判断里。**
+  白天睡觉与能否被吃掉也直接写在 `PlantDefinition` 中；蘑菇仍需登记对应的"植物名Sleep"动画。
 
-5. **特殊行为**（可选）：套路全新、归不进上面任何一类时，在 `PlantActions.dispatchPlant()` 加一个分支，再写一个自己的处理方法即可。
-同类里只有少许差别（比如子弹换一种）时，在上表对应方法里加一个名字判断就够了。
+5. **特殊行为**（可选）：同类里只有少许差别（比如子弹换一种）时，在对应的行为处理器中增加一个清楚的品种判断即可。只有完全不同、无法归入现有行为家族时，才考虑增加新的行为处理器或专门类。
 
-6. **自检**：**强烈建议添加完成后运行`run.bat test`进行自检。**当四个数组项数不一致、忘了登记动画或缺卡片图时，都会在自检时报出来。
+6. **自检**：**强烈建议添加完成后运行`run.bat test`进行自检。**当资料表、动画或卡片图没有对齐时，自检会报出具体项目。
 
-新增僵尸的思路基本类似：`world/Assets.java` 的 `loadZombies()` 登记各状态动画，`zombie/Zombie.java` 设置血量和速度。
+新增僵尸的思路基本类似：`world/Assets.java` 的 `loadZombies()` 登记各状态动画，`zombie/ZombieCatalog.java` 增加 `ZombieDefinition`，在其中设置血量、帽子、速度和是否有独臂动画。只有行为规则完全不同的僵尸，才考虑新增专门类。
 
-若想让编辑器也能放该种类僵尸，还需再加进 `editor/LevelDesign.java` 的 `ZOMBIE_KINDS` 和 `ZOMBIE_LABELS`。
+编辑器支持的僵尸名字和中文名会从 `ZombieCatalog` 自动取得，不需要再同时修改 `editor/LevelDesign.java` 的两组名单。
 
 ## 额外技术说明
 

@@ -65,35 +65,26 @@ public class Zombie extends Sprite {
     /** 每走一步前进的像素；报纸僵尸掉报纸后加速变快。 */
     public int speed = 1;
 
+    /** 失去头盔或报纸后每走一步前进的像素。 */
+    public int speedAfterHelmet = 1;
+
     /**
      * 创建一只僵尸，从屏幕右侧进场。
      *
      * 参数：kind 是品种名；lane 是所在行；bottom 是脚下的纵坐标；assets 提供图片。
      */
-    // TODO：【必做-9】新增僵尸时可以改变僵尸血量（默认是 10，有帽子/盔甲就在这里加判断设 helmet = true）
     public Zombie(String kind, int lane, int bottom, Assets assets) {
-        super(kind, Layout.ZOMBIE_START_X, bottom, lane, 10, assets);
+        super(kind, Layout.ZOMBIE_START_X, bottom, lane,
+            ZombieCatalog.definitionOf(kind).maxHealth, assets);
+        ZombieDefinition definition = ZombieCatalog.definitionOf(kind);
         BufferedImage image = picture(assets, 0);
         x = Layout.ZOMBIE_START_X - image.getWidth() / 2.0;
         y = bottom - image.getHeight();
 
-        // 路障和铁桶多一层血，多出来的部分就是头上那顶帽子。
-        if (kind.equals("ConeheadZombie")) {
-            health = 20;
-            helmet = true;
-        }
-        if (kind.equals("BucketheadZombie")) {
-            health = 30;
-            helmet = true;
-        }
-        if (kind.equals("FlagZombie") || kind.equals("NewspaperZombie")) {
-            health = 15;
-        }
-        // 报纸僵尸手里的报纸相当于一顶帽子，被打掉之后换成没报纸的动画。
-        if (kind.equals("NewspaperZombie")) {
-            helmet = true;
-        }
-        interval = (int) Layout.ZOMBIE_ANIMATION_INTERVAL;
+        helmet = definition.helmet;
+        speed = definition.speed;
+        speedAfterHelmet = definition.speedAfterHelmet;
+        frameInterval = (int) Layout.ZOMBIE_ANIMATION_INTERVAL;
     }
 
     /**
@@ -157,8 +148,7 @@ public class Zombie extends Sprite {
         if (!armLost) {
             return false;
         }
-        return name.equals("Zombie") || name.equals("ConeheadZombie")
-            || name.equals("BucketheadZombie");
+        return ZombieCatalog.definitionOf(name).hasNoArmArt;
     }
 
     /**
@@ -194,7 +184,7 @@ public class Zombie extends Sprite {
             next = "ZombieNoArmDie";
         }
 
-        interval = animationIntervalFor(next);
+        frameInterval = animationIntervalFor(next);
         change(next, assets, time);
     }
 

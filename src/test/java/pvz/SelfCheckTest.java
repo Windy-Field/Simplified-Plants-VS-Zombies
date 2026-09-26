@@ -23,7 +23,10 @@ import pvz.game.GameState;
 import pvz.level.Level;
 import pvz.level.LevelLoader;
 import pvz.plant.Cards;
+import pvz.plant.PlantCatalog;
+import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
+import pvz.world.Bullet;
 import pvz.world.Layout;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
@@ -136,22 +139,17 @@ public class SelfCheckTest {
     /**
      * 检查植物资料表和卡片图。
      *
-     * 加新植物时最容易出的错是四个数组少写一项、或者忘了登记动画，这里都会拦下来。
+     * 加新植物时最容易出的错是资料、动画或卡片图没有对齐，这里都会拦下来。
      */
     private static void checkCards(Assets assets) {
-        int plantCount = Cards.PLANTS.length;
-        check(Cards.PICTURES.length == plantCount, "Cards.PICTURES 和 PLANTS 的项数不一样");
-        check(Cards.COST.length == plantCount, "Cards.COST 和 PLANTS 的项数不一样");
-        check(Cards.COOLDOWN.length == plantCount, "Cards.COOLDOWN 和 PLANTS 的项数不一样");
+        int plantCount = PlantCatalog.DEFINITIONS.length;
 
         for (int index = 0; index < plantCount; index++) {
-            String plantName = Cards.PLANTS[index];
+            PlantDefinition definition = PlantCatalog.definitionAt(index);
+            String plantName = definition.name;
             check(assets.hasAnimation(plantName), "植物没有在 Assets.loadPlants 里登记动画：" + plantName);
-        }
-        for (int index = 0; index < Cards.PICTURES.length; index++) {
-            String name = Cards.PICTURES[index];
-            BufferedImage image = assets.image(name);
-            check(image.getHeight() > 0, "缺少卡片：" + name);
+            BufferedImage image = assets.image(definition.cardPicture);
+            check(image.getHeight() > 0, "缺少卡片：" + definition.cardPicture);
         }
         for (int index = 0; index < CONVEYOR_CARDS.length; index++) {
             String name = CONVEYOR_CARDS[index];
@@ -231,9 +229,95 @@ public class SelfCheckTest {
 
     /** 模拟一遍真实操作：选八张卡、种植、等僵尸出场、传送带出卡。 */
     private static void checkInteraction(Assets assets, Path project) throws Exception {
+        checkSpeedChoices();
+        checkBulletSpeed(assets);
+        checkFixedStepMovement(assets);
         checkNormalLevel(assets, project);
         checkConveyorLevel(assets, project);
         checkBowlingLevel(assets, project);
+    }
+
+    /**
+     * 检查游戏速度选项正好是新的 1 倍、1.5 倍和 2 倍。
+     */
+    private static void checkSpeedChoices() {
+        check(Layout.SPEED_MULTIPLIERS.length == 3, "游戏速度选项数量不对");
+        check(Layout.SPEED_MULTIPLIERS[0] == 2, "新的 1 倍速没有使用原来的 2 倍速");
+        check(Layout.SPEED_MULTIPLIERS[1] == 3, "新的 1.5 倍速内部倍率不对");
+        check(Layout.SPEED_MULTIPLIERS[2] == 4, "新的 2 倍速内部倍率不对");
+        check("1x".equals(Layout.speedLabelFor(2)), "新的 1 倍速显示文字不对");
+        check("1.5x".equals(Layout.speedLabelFor(3)), "新的 1.5 倍速显示文字不对");
+        check("2x".equals(Layout.speedLabelFor(4)), "新的 2 倍速显示文字不对");
+    }
+
+    /**
+     * 检查每个固定战斗小步只让子弹移动基础距离。
+     *
+     * 参数：assets 提供子弹图片。
+     * 异常：子弹素材缺失时抛出异常。
+     */
+    private static void checkBulletSpeed(Assets assets) {
+        Bullet normalBullet = new Bullet("PeaNormal", 100, 120, 0, 120, assets);
+        normalBullet.update(1000);
+        double distance = normalBullet.x - 100;
+        check(distance == Layout.BULLET_SPEED, "固定战斗小步中的子弹位移不正确");
+    }
+
+    /**
+     * 检查一次大步推进和多次小步推进的僵尸结果一致。
+     *
+     * 这能防止高倍速时因为一帧只处理一次移动，导致不同倍速产生不同规则结果。
+     * 参数：assets 提供游戏素材。
+     * 异常：关卡读取失败时抛出异常。
+     */
+    private static void checkFixedStepMovement(Assets assets) throws Exception {
+        int level = findLevelWithBar(assets, GameState.BAR_NORMAL);
+        if (level < 0) {
+            return;
+        }
+
+        long firstSpawn = firstSpawnTime(assets, level);
+        long targetElapsed = firstSpawn + 400;
+        Game oneStepCall = prepareNormalGame(assets, level);
+        Game manyStepCalls = prepareNormalGame(assets, level);
+
+        oneStepCall.step(targetElapsed);
+
+        long elapsed = 0;
+        while (elapsed < targetElapsed) {
+            elapsed = Math.min(targetElapsed, elapsed + 16);
+            manyStepCalls.step(elapsed);
+        }
+
+        check(oneStepCall.getZombieCount() == manyStepCalls.getZombieCount(),
+            "不同推进方式产生的僵尸数量不一致");
+        check(oneStepCall.getZombieCount() > 0, "固定步长检查没有等到僵尸出场");
+        double firstX = oneStepCall.getZombieX(0);
+        double secondX = manyStepCalls.getZombieX(0);
+        check(Math.abs(firstX - secondX) < 0.001,
+            "不同推进方式产生的僵尸位置不一致");
+    }
+
+    /**
+     * 创建一个已经进入正式战斗的正常选卡关卡。
+     *
+     * 参数：assets 提供游戏素材；level 是关卡编号。
+     * 返回：可以用 step 推进的游戏对象。
+     * 异常：关卡读取失败时抛出异常。
+     */
+    private static Game prepareNormalGame(Assets assets, int level) throws Exception {
+        Game game = new Game(assets, level, false);
+        game.loadLevel();
+
+        for (int index = 0; index < PlantCatalog.CHOOSER_COUNT; index++) {
+            int column = index % 8;
+            int row = index / 8;
+            int left = 25 + column * 53;
+            int top = 135 + row * 74;
+            game.click(left, top);
+        }
+        game.click(160, 550);
+        return game;
     }
 
     /** 正常关卡：选满八张卡之后种一株，再推进一秒看僵尸有没有出场。 */
@@ -392,9 +476,9 @@ public class SelfCheckTest {
         JsonArray wave = map.getAsJsonArray("zombie_list");
         long earliest = Long.MAX_VALUE;
         for (int index = 0; index < wave.size(); index++) {
-            long at = wave.get(index).getAsJsonObject().get("time").getAsLong();
-            if (at < earliest) {
-                earliest = at;
+            long spawnTime = wave.get(index).getAsJsonObject().get("time").getAsLong();
+            if (spawnTime < earliest) {
+                earliest = spawnTime;
             }
         }
         return earliest;
@@ -436,10 +520,10 @@ public class SelfCheckTest {
         // 网格上的"倍数"要展开成若干条出场记录，同一格里的僵尸按间隔错开。
         List<ZombieSpawn> spawns = design.buildSpawns();
         check(spawns.size() == 5, "网格摊平后的僵尸总数不对");
-        check(spawns.get(0).at == 10000, "第一波的出场时间不对");
+        check(spawns.get(0).spawnTime == 10000, "第一波的出场时间不对");
         check(spawns.get(0).row == 0, "第一波的行号不对");
-        check(spawns.get(1).at == 10500, "同一格里的第二只僵尸没有按间隔错开");
-        check(spawns.get(4).at == 41000, "最后一波的时间不对");
+        check(spawns.get(1).spawnTime == 10500, "同一格里的第二只僵尸没有按间隔错开");
+        check(spawns.get(4).spawnTime == 41000, "最后一波的时间不对");
         check(spawns.get(4).name.equals("BucketheadZombie"), "最后一波的僵尸品种不对");
 
         // 存盘再读回，网格和参数都要原样还原。

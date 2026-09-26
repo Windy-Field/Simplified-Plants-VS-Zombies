@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import pvz.plant.Card;
 import pvz.plant.Cards;
 import pvz.plant.Plant;
+import pvz.plant.PlantCatalog;
 import pvz.plant.PlantRules;
 import pvz.world.Assets;
 import pvz.world.Bullet;
@@ -377,7 +378,7 @@ public class GameRenderer {
         // 候选卡按 8 张一行往下排；现在是 17 张，所以第 17 张单独占第三行第一个。
         // 已选中或正在飞行（飞往卡槽、飞回候选区）的卡，在原位显示为灰色锁定状态。
         // 提示：选卡界面最多能放 24 张卡（3 行），超过需要改布局。
-        for (int index = 0; index < Cards.CHOOSER_CARD_COUNT; index++) {
+        for (int index = 0; index < PlantCatalog.CHOOSER_COUNT; index++) {
             int column = index % 8;
             int row = index / 8;
             int left = Layout.CHOOSER_LEFT + column * Layout.CHOOSER_COLUMN_SPACING;
@@ -450,7 +451,7 @@ public class GameRenderer {
      * 画右上角的加速按钮。
      *
      * 按钮用纯色矩形加文字，不依赖外部素材，所以不会因为缺图而出错。
-     * 非 1 倍速时按钮变色，让玩家一眼看出现在是加速状态。
+     * 非新的 1 倍速时按钮变色，让玩家一眼看出现在是加速状态。
      */
     private void drawSpeedButton(Graphics2D painter, GameState state) {
         int left = Layout.SPEED_BUTTON_LEFT;
@@ -459,7 +460,7 @@ public class GameRenderer {
         int height = Layout.SPEED_BUTTON_HEIGHT;
 
         Color face = new Color(60, 60, 100);
-        if (state.speedMultiplier > 1) {
+        if (state.speedMultiplier != Layout.SPEED_MULTIPLIERS[0]) {
             face = new Color(190, 60, 45);
         }
         painter.setColor(face);
@@ -467,7 +468,7 @@ public class GameRenderer {
         painter.setColor(new Color(234, 233, 171));
         painter.drawRect(left, top, width - 1, height - 1);
 
-        String text = state.speedMultiplier + "x";
+        String text = Layout.speedLabelFor(state.speedMultiplier);
         painter.setFont(new Font("SansSerif", Font.BOLD, 14));
         int textWidth = painter.getFontMetrics().stringWidth(text);
         int textX = left + (width - textWidth) / 2;
@@ -579,12 +580,12 @@ public class GameRenderer {
 
     /** 手里拿着卡片时，同时画出半透明的落点提示和跟着鼠标的图。 */
     private void drawPreview(Graphics2D painter, long time, GameState state) {
-        Card held = state.held;
-        if (held == null) {
+        Card heldCard = state.heldCard;
+        if (heldCard == null) {
             return;
         }
 
-        String name = Cards.PLANTS[held.index];
+        String name = Cards.nameAt(heldCard.index);
         BufferedImage preview = assets.sprite(name, 0, 1);
 
         int column = Layout.columnAt(state.mouseX);

@@ -16,7 +16,7 @@ public class ZombieSpawn {
     public static final int RANDOM_ROW = -1;
 
     /** 从关卡开始算起，第几毫秒出现。 */
-    public int at;
+    public int spawnTime;
 
     /** 出现在第几行；是 {@link #RANDOM_ROW} 时表示随机行。 */
     public int row;
@@ -30,7 +30,7 @@ public class ZombieSpawn {
      * 参数：spawnTime 是出场时刻（毫秒）；lane 是行号；kind 是僵尸品种名。
      */
     public ZombieSpawn(int spawnTime, int lane, String kind) {
-        at = spawnTime;
+        this.spawnTime = spawnTime;
         row = lane;
         name = kind;
     }

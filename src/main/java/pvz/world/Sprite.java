@@ -36,7 +36,7 @@ public class Sprite {
     public long animationStart;
 
     /** 每帧停留多少毫秒，数值越小播得越快。 */
-    public int interval = 100;
+    public int frameInterval = 100;
 
     /** 绘制时的缩放倍数，阳光和寒冰菇会用到。 */
     public double scale = 1.0;
@@ -119,8 +119,8 @@ public class Sprite {
      * 返回：帧号，从 0 开始。
      */
     protected int currentFrameIndex(long time) {
-        if (interval > 0 && time >= animationStart) {
-            return (int) ((time - animationStart) / interval);
+        if (frameInterval > 0 && time >= animationStart) {
+            return (int) ((time - animationStart) / frameInterval);
         }
         return 0;
     }

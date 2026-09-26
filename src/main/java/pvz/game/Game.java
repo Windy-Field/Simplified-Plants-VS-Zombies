@@ -22,6 +22,8 @@ import pvz.plant.Card;
 import pvz.plant.Cards;
 import pvz.plant.Plant;
 import pvz.plant.PlantActions;
+import pvz.plant.PlantCatalog;
+import pvz.plant.PlantDefinition;
 import pvz.plant.PlantRules;
 import pvz.world.Assets;
 import pvz.world.Bullet;
@@ -62,6 +64,9 @@ public class Game extends JPanel {
 
     /** 是否处于测试模式（测试时跳过选卡动画，立即更新状态）。 */
     private final boolean testMode;
+
+    /** 战斗中不足一个固定步长的游戏时间，留到下一次刷新。 */
+    private long pendingPlayTime;
 
     /**
      * 每 16 毫秒推进一帧的计时器。
@@ -116,7 +121,7 @@ public class Game extends JPanel {
             /** 左键点击按当前画面处理，右键取消手里拿着的卡片。 */
             public void mousePressed(MouseEvent event) {
                 if (event.getButton() == MouseEvent.BUTTON3) {
-                    state.held = null;
+                    state.heldCard = null;
                 } else if (event.getButton() == MouseEvent.BUTTON1) {
                     click(event.getX(), event.getY());
                 }
@@ -138,13 +143,18 @@ public class Game extends JPanel {
     }
 
     /**
-     * 推进一帧：先把游戏时钟往前拨，再按画面处理逻辑，最后请求重绘。
+     * 推进一次界面刷新：先积攒游戏时间，再按当前画面处理逻辑，最后请求重绘。
      *
-     * 游戏时钟不是直接读墙上时间，而是"这一帧真实过了多久 × 加速倍率"累加上去。
-     * 这样开加速时逻辑和动画一起变快，而画面刷新率保持不变，不会卡顿。
+     * 战斗中使用所选倍率；菜单、选卡、开局演出和结算按真实时间推进。
+     * 画面刷新率不变，只有战斗逻辑和动画跟着倍率变化。
      */
     private void tick() {
-        advanceClock();
+        long realElapsed = elapsedSinceLastFrame();
+        if (state.screen == GameScreen.PLAY) {
+            advancePlayBy(realElapsed * state.speedMultiplier);
+        } else {
+            state.time = state.time + realElapsed;
+        }
 
         if (state.screen == GameScreen.MENU && state.startingMenu) {
             if (state.time - state.screenStart > Layout.MENU_START_DELAY) {
@@ -158,9 +168,6 @@ public class Game extends JPanel {
         }
         if (state.screen == GameScreen.INTRO) {
             updateIntro();
-        }
-        if (state.screen == GameScreen.PLAY) {
-            updateLevel();
         }
         if (state.screen == GameScreen.VICTORY) {
             if (state.time - state.screenStart > Layout.ENDING_SCREEN_DURATION) {
@@ -176,12 +183,13 @@ public class Game extends JPanel {
     }
 
     /**
-     * 把游戏时钟往前拨一帧。
+     * 读取这一帧真实经过的时间。
      *
      * 真实间隔要设个上限：窗口被拖动或最小化时计时器可能卡住很久，
      * 恢复后如果一次补上几秒，僵尸会瞬间窜过整个草坪。
+     * 返回：经过的毫秒数，最多按上限计算。
      */
-    private void advanceClock() {
+    private long elapsedSinceLastFrame() {
         long realNow = System.currentTimeMillis();
         long realElapsed = realNow - state.lastRealTime;
         state.lastRealTime = realNow;
@@ -192,7 +200,7 @@ public class Game extends JPanel {
         if (realElapsed > Layout.MAX_FRAME_ELAPSED) {
             realElapsed = Layout.MAX_FRAME_ELAPSED;
         }
-        state.time = state.time + realElapsed * state.speedMultiplier;
+        return realElapsed;
     }
 
     /**
@@ -290,7 +298,7 @@ public class Game extends JPanel {
         int limit = Math.min(state.requiredPlants.size(), state.maxCards);
         for (int position = 0; position < limit; position++) {
             int plantIndex = state.requiredPlants.get(position).intValue();
-            if (plantIndex >= Cards.CHOOSER_CARD_COUNT) {
+            if (plantIndex >= PlantCatalog.CHOOSER_COUNT) {
                 continue;
             }
             if (testMode) {
@@ -323,6 +331,7 @@ public class Game extends JPanel {
 
     /** 真正开始打关卡：正常模式先按选好的卡摆出卡槽，然后切到游戏画面。 */
     private void startPlay() {
+        pendingPlayTime = 0;
         state.cards.clear();
         if (state.barType == GameState.BAR_NORMAL) {
             state.cards.addAll(Cards.staticBar(state.selected));
@@ -337,7 +346,7 @@ public class Game extends JPanel {
         state.playStart = state.time;
         state.lastSkySun = state.time;
         // 让第一张传送带卡片立即就能出，所以故意往前挪一点。
-        state.lastCard = state.time - Layout.CONVEYOR_CARD_INTERVAL - 1;
+        state.lastCardTime = state.time - Layout.CONVEYOR_CARD_INTERVAL - 1;
     }
 
     /**
@@ -544,14 +553,32 @@ public class Game extends JPanel {
     }
 
     /**
-     * 推进一帧到指定的游戏时间，不依赖真实时钟。
+     * 把战斗推进到指定的游戏时间，不依赖真实时钟。
      *
      * 参数：elapsed 是距离本关开始的毫秒数。
      * 说明：只给自检用，游戏本身靠计时器推进，不会调用它。
      */
     public void step(long elapsed) {
-        state.time = state.playStart + elapsed;
         if (state.screen == GameScreen.PLAY) {
+            long targetTime = state.playStart + elapsed;
+            long remaining = targetTime - state.time - pendingPlayTime;
+            advancePlayBy(remaining);
+        }
+    }
+
+    /**
+     * 把游戏时间积攒起来，按固定的小步推进战斗。
+     *
+     * 参数：elapsed 是本次增加的游戏毫秒数；不足一步的部分留给下次。
+     */
+    private void advancePlayBy(long elapsed) {
+        if (elapsed <= 0) {
+            return;
+        }
+        pendingPlayTime = pendingPlayTime + elapsed;
+        while (pendingPlayTime >= FRAME_DELAY && state.screen == GameScreen.PLAY) {
+            pendingPlayTime = pendingPlayTime - FRAME_DELAY;
+            state.time = state.time + FRAME_DELAY;
             updateLevel();
         }
     }
@@ -617,7 +644,7 @@ public class Game extends JPanel {
             return;
         }
         // 再看是不是点在候选卡上；已经选过的卡不能再选一次。
-        for (int index = 0; index < Cards.CHOOSER_CARD_COUNT; index++) {
+        for (int index = 0; index < PlantCatalog.CHOOSER_COUNT; index++) {
             // 被本关禁掉的植物画成灰色锁定，点了也不该有反应。
             if (state.bannedPlants.contains(Integer.valueOf(index))) {
                 continue;
@@ -648,7 +675,7 @@ public class Game extends JPanel {
         if (clickSpeedButton(x, y)) {
             return;
         }
-        if (state.held == null) {
+        if (state.heldCard == null) {
             if (collectSun(x, y)) {
                 return;
             }
@@ -675,12 +702,12 @@ public class Game extends JPanel {
 
     /** 在可选倍率里找出当前倍率的下一个；已经是最后一个就绕回第一个。 */
     private int nextSpeedMultiplier(int current) {
-        for (int index = 0; index < Layout.SPEED_CHOICES.length - 1; index++) {
-            if (Layout.SPEED_CHOICES[index] == current) {
-                return Layout.SPEED_CHOICES[index + 1];
+        for (int index = 0; index < Layout.SPEED_MULTIPLIERS.length - 1; index++) {
+            if (Layout.SPEED_MULTIPLIERS[index] == current) {
+                return Layout.SPEED_MULTIPLIERS[index + 1];
             }
         }
-        return Layout.SPEED_CHOICES[0];
+        return Layout.SPEED_MULTIPLIERS[0];
     }
 
     /**
@@ -711,13 +738,14 @@ public class Game extends JPanel {
             }
             // 传送带和保龄球模式不花阳光、也没有冷却，直接就能拿。
             if (state.barType != GameState.BAR_NORMAL) {
-                state.held = card;
+                state.heldCard = card;
                 return;
             }
-            boolean enoughSun = state.sunValue >= Cards.COST[card.index];
-            boolean cooledDown = state.time - card.lastUsed > Cards.COOLDOWN[card.index];
+            PlantDefinition definition = Cards.definitionAt(card.index);
+            boolean enoughSun = state.sunValue >= definition.cost;
+            boolean cooledDown = state.time - card.lastUsed > definition.cooldown;
             if (enoughSun && cooledDown) {
-                state.held = card;
+                state.heldCard = card;
             }
             return;
         }
@@ -727,7 +755,7 @@ public class Game extends JPanel {
     private void plantHeldCard(int x, int y) {
         // 点回卡槽那一条就当作取消。
         if (y < Layout.PLAY_CARD_BAR_BOTTOM) {
-            state.held = null;
+            state.heldCard = null;
             return;
         }
 
@@ -743,7 +771,7 @@ public class Game extends JPanel {
             return;
         }
 
-        String name = Cards.PLANTS[state.held.index];
+        String name = Cards.nameAt(state.heldCard.index);
         int center = Layout.columnCenter(column);
         int bottom = Layout.rowBottom(row);
         boolean day = state.backgroundIndex == 0;
@@ -756,13 +784,14 @@ public class Game extends JPanel {
         }
 
         if (state.barType == GameState.BAR_NORMAL) {
-            state.sunValue = state.sunValue - Cards.COST[state.held.index];
-            state.held.lastUsed = state.time;
+            PlantDefinition definition = Cards.definitionAt(state.heldCard.index);
+            state.sunValue = state.sunValue - definition.cost;
+            state.heldCard.lastUsed = state.time;
         } else {
             // 传送带上的卡用掉一张就少一张。
-            state.cards.remove(state.held);
+            state.cards.remove(state.heldCard);
         }
-        state.held = null;
+        state.heldCard = null;
     }
 
     /** 推进关卡一帧：出僵尸、出卡、掉阳光，然后更新所有物体。 */
@@ -781,22 +810,21 @@ public class Game extends JPanel {
         checkVictory();
     }
 
-    /** 按出场表放出到时间的僵尸，每次最多放一只。 */
+    /** 按出场表放出所有到时间的僵尸。 */
     private void spawnDueZombies() {
-        if (state.nextZombie >= state.schedule.size()) {
-            return;
+        while (state.nextSpawnIndex < state.schedule.size()) {
+            ZombieSpawn spawn = state.schedule.get(state.nextSpawnIndex);
+            if (state.time - state.playStart < spawn.spawnTime) {
+                return;
+            }
+            int targetRow = spawn.row;
+            if (spawn.row == ZombieSpawn.RANDOM_ROW) {
+                targetRow = random.nextInt(Layout.ROW_COUNT);
+            }
+            int bottom = 160 + targetRow * Layout.CELL_HEIGHT;
+            state.zombies.add(new Zombie(spawn.name, targetRow, bottom, assets));
+            state.nextSpawnIndex = state.nextSpawnIndex + 1;
         }
-        ZombieSpawn spawn = state.schedule.get(state.nextZombie);
-        if (state.time - state.playStart < spawn.at) {
-            return;
-        }
-        int targetRow = spawn.row;
-        if (spawn.row == ZombieSpawn.RANDOM_ROW) {
-            targetRow = random.nextInt(Layout.ROW_COUNT);
-        }
-        int bottom = 160 + targetRow * Layout.CELL_HEIGHT;
-        state.zombies.add(new Zombie(spawn.name, targetRow, bottom, assets));
-        state.nextZombie = state.nextZombie + 1;
     }
 
     /** 传送带和保龄球模式每六秒补一张卡，位置够放才补。 */
@@ -804,7 +832,7 @@ public class Game extends JPanel {
         if (state.barType == GameState.BAR_NORMAL || state.pool.isEmpty()) {
             return;
         }
-        if (state.time - state.lastCard <= Layout.CONVEYOR_CARD_INTERVAL) {
+        if (state.time - state.lastCardTime <= Layout.CONVEYOR_CARD_INTERVAL) {
             return;
         }
         boolean roomLeft = true;
@@ -818,7 +846,7 @@ public class Game extends JPanel {
             return;
         }
         state.cards.add(Cards.newMovingCard(state.pool, random, state.time));
-        state.lastCard = state.time;
+        state.lastCardTime = state.time;
     }
 
     /** 传送带上的卡片慢慢往左挪，挪到自己的位置上。 */
@@ -854,7 +882,7 @@ public class Game extends JPanel {
 
     /** 僵尸全部出完并且场上没有活僵尸，就算过关。 */
     private void checkVictory() {
-        if (state.nextZombie != state.schedule.size()) {
+        if (state.nextSpawnIndex != state.schedule.size()) {
             return;
         }
         if (!noActiveZombies()) {
@@ -908,7 +936,7 @@ public class Game extends JPanel {
         if (!zombie.dying) {
             return false;
         }
-        long duration = assets.count(zombie.animation) * zombie.interval;
+        long duration = assets.count(zombie.animation) * zombie.frameInterval;
         if (state.time - zombie.deathTime >= duration) {
             zombie.alive = false;
         }
@@ -922,9 +950,7 @@ public class Game extends JPanel {
         if (zombie.helmet && zombie.health <= 10) {
             zombie.helmet = false;
             // 报纸僵尸掉了报纸之后会加快脚步。
-            if (zombie.name.equals("NewspaperZombie")) {
-                zombie.speed = 2;
-            }
+            zombie.speed = zombie.speedAfterHelmet;
             zombie.change(zombie.stateAnimation(zombie.attacking), assets, state.time);
         }
 
@@ -933,7 +959,7 @@ public class Game extends JPanel {
         if (!zombie.armLost && zombie.health <= Layout.ZOMBIE_ARM_LOST_HEALTH) {
             zombie.armLost = true;
             String next = zombie.stateAnimation(zombie.attacking);
-            zombie.interval = Zombie.animationIntervalFor(next);
+            zombie.frameInterval = Zombie.animationIntervalFor(next);
             zombie.change(next, assets, state.time);
         }
 
@@ -1063,7 +1089,7 @@ public class Game extends JPanel {
         // 帧间隔交给动画名统一决定：独臂那套素材是 80 毫秒一帧，
         // 比原版的 150/100 快，硬套原版常量会让独臂僵尸看起来在慢放。
         String next = zombie.stateAnimation(fighting);
-        zombie.interval = Zombie.animationIntervalFor(next);
+        zombie.frameInterval = Zombie.animationIntervalFor(next);
         zombie.change(next, assets, state.time);
         zombie.lastAttack = state.time;
     }
@@ -1156,7 +1182,7 @@ public class Game extends JPanel {
     /** 掉下来的僵尸头播完动画就消失。 */
     private void updateHeads() {
         for (Sprite head : state.heads) {
-            long duration = assets.count(head.animation) * head.interval;
+            long duration = assets.count(head.animation) * head.frameInterval;
             if (state.time - head.animationStart > duration) {
                 head.alive = false;
             }
@@ -1170,7 +1196,7 @@ public class Game extends JPanel {
                 continue;
             }
             boolean wasAlive = sun.alive;
-            sun.update(assets, state.time, state.speedMultiplier);
+            sun.update(assets, state.time);
             // 收集动画飞到终点时，阳光会标记自己为死。这时加阳光值。
             if (wasAlive && !sun.alive && sun.flyingToCounter) {
                 state.sunValue = state.sunValue + sun.value;
@@ -1253,6 +1279,16 @@ public class Game extends JPanel {
     /** 返回已经出场的僵尸数量，供测试核对。 */
     public int getZombieCount() {
         return state.zombies.size();
+    }
+
+    /**
+     * 返回指定僵尸的横坐标，供自检核对不同推进方式的结果。
+     *
+     * 参数：index 是僵尸在出场列表中的位置。
+     * 返回：该僵尸图片左边缘的横坐标。
+     */
+    public double getZombieX(int index) {
+        return state.zombies.get(index).x;
     }
 
     /** 返回当前卡槽里的卡片数量，供测试核对。 */

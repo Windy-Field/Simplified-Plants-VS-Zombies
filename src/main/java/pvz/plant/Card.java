@@ -13,7 +13,7 @@ import pvz.world.Assets;
  * 传送带上的卡片用完就没了，所以额外记录了创建时间。
  */
 public class Card {
-    /** 这代表哪一种植物，是 Cards.PLANTS 里的下标。 */
+    /** 这代表哪一种植物，是 PlantCatalog 里的下标。 */
     public int index;
 
     /** 卡片左上角的横坐标。 */
@@ -62,7 +62,8 @@ public class Card {
         index = plantIndex;
         x = left;
         y = top;
-        lastUsed = -Cards.COOLDOWN[index];
+        PlantDefinition definition = Cards.definitionAt(index);
+        lastUsed = -definition.cooldown;
     }
 
     /**
@@ -93,17 +94,18 @@ public class Card {
         Rectangle rect = bounds(assets, scale);
         painter.drawImage(image, x, y, rect.width, rect.height, null);
 
-        boolean notEnoughSun = !moving && sun < Cards.COST[index];
+        PlantDefinition definition = Cards.definitionAt(index);
+        boolean notEnoughSun = !moving && sun < definition.cost;
         if (!available || notEnoughSun) {
             painter.setColor(new Color(0, 0, 0, 100));
             painter.fillRect(x, y, rect.width, rect.height);
             return;
         }
 
-        long remaining = Cards.COOLDOWN[index] - (time - lastUsed);
+        long remaining = definition.cooldown - (time - lastUsed);
         if (remaining > 0) {
             // 冷却条从下往上退，所以盖住的高度按剩余时间算。
-            int covered = (int) (remaining * rect.height / Cards.COOLDOWN[index]);
+            int covered = (int) (remaining * rect.height / definition.cooldown);
             painter.setColor(new Color(0, 0, 0, 120));
             painter.fillRect(x, y, rect.width, covered);
         }
@@ -116,7 +118,8 @@ public class Card {
      * 但如果这张图本来就叫 _move，就不要重复加后缀。
      */
     private String pictureName() {
-        String name = Cards.PICTURES[index];
+        PlantDefinition definition = Cards.definitionAt(index);
+        String name = definition.cardPicture;
         if (moving && !name.endsWith("_move")) {
             return name + "_move";
         }

@@ -17,7 +17,7 @@ public class Bullet extends Sprite {
     public long hitTime;
 
     /** 期望落到的纵坐标。 */
-    public int destination;
+    public int targetY;
 
     /**
      * 在植物枪口位置产生一颗子弹。
@@ -31,7 +31,7 @@ public class Bullet extends Sprite {
         // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次。
         x = left;
         y = top;
-        destination = target;
+        targetY = target;
         ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom"); // 减速效果
     }
 
@@ -49,12 +49,14 @@ public class Bullet extends Sprite {
             return;
         }
 
-        x = x + Layout.BULLET_SPEED;
+        // 战斗会按固定时间小步推进，子弹在每一步只走基础距离。
+        int step = Layout.BULLET_SPEED;
+        x = x + step;
         // 逐渐把高度调到目标行，避免子弹在行之间瞬移。
-        if (y < destination) {
-            y = Math.min(destination, y + Layout.BULLET_SPEED);
-        } else if (y > destination) {
-            y = Math.max(destination, y - Layout.BULLET_SPEED);
+        if (y < targetY) {
+            y = Math.min(targetY, y + step);
+        } else if (y > targetY) {
+            y = Math.max(targetY, y - step);
         }
         // 飞出屏幕右边就不用再算了。
         if (x > Layout.WINDOW_WIDTH) {
@@ -67,7 +69,7 @@ public class Bullet extends Sprite {
      *
      * 参数：assets 提供图片；time 是打中的时刻。
      */
-    // TODO：【选做-2.75】新增植物时植物子弹的特殊效果（二）（必须和 PlantActions 的 bulletNameFor() 中返回的字符串一致）
+    // TODO：【选做-2.75】新增植物时植物子弹的特殊效果（二）（必须和 ShooterActions 的 bulletNameFor() 中返回的字符串一致）
     public void explode(Assets assets, long time) {
         exploded = true;
         hitTime = time;

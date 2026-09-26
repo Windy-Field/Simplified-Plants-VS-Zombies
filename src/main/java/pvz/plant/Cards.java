@@ -6,60 +6,16 @@ import java.util.Random;
 import pvz.world.Layout;
 
 /**
- * 植物的卡片资料表。
+ * 卡片相关的工具方法。
  *
- * 四个数组必须一一对应：第 index 号植物叫 PLANTS[index]，
- * 用 PICTURES[index] 这张图，花 COST[index] 阳光，冷却 COOLDOWN[index] 毫秒。
- * 这个顺序也决定了选卡界面里卡片的摆放位置；增删植物时几个数组要同步修改，否则卡片会错位。
- * 最后两种是保龄球，只在保龄球关里用，新植物要插在它们前面。
+ * 植物的固定资料已经集中在 PlantCatalog，这个类只负责把植物资料变成卡片，
+ * 以及按编号查找植物。这样旧的调用处仍然有一个清楚的卡片入口。
  */
 public final class Cards {
-    /** 排在最后、不进选卡界面的保龄球有几种。 */
-    private static final int BOWLING_COUNT = 2;
+    /** 选卡界面里可以出现的植物数量。 */
+    public static final int CHOOSER_CARD_COUNT = PlantCatalog.CHOOSER_COUNT;
 
-    /** 全部植物的名字。 */
-    // TODO：【必做-2】新增植物时需要注册植物名（必须和 Assets.loadPlants() 中的植物名一致，
-    //                且四个数组必须在同一位置各插一项，都插在 "WallNutBowling" 之前）
-    public static final String[] PLANTS = {
-        "SunFlower", "Peashooter", "SnowPea", "WallNut", "CherryBomb",
-        "Threepeater", "RepeaterPea", "Chomper", "PuffShroom", "PotatoMine",
-        "Squash", "Spikeweed", "Jalapeno", "ScaredyShroom", "SunShroom",
-        "IceShroom", "HypnoShroom",
-        "WallNutBowling", "RedWallNutBowling"
-    };
-
-    /** 和植物一一对应的卡片图片名。 */
-    // TODO：【必做-3】新增植物时需要添加植物卡片材质路径（即 assets/Cards/ 下的文件名（不含.png），
-    //                必须和 PLANTS 数组同一位置对应）
-    public static final String[] PICTURES = {
-        "card_sunflower", "card_peashooter", "card_snowpea", "card_wallnut",
-        "card_cherrybomb", "card_threepeashooter", "card_repeaterpea", "card_chomper",
-        "card_puffshroom", "card_potatomine", "card_squash", "card_spikeweed",
-        "card_jalapeno", "card_scaredyshroom", "card_sunshroom", "card_iceshroom",
-        "card_hypnoshroom", "card_wallnut", "card_redwallnut_move"
-    };
-
-    /** 每种植物要花多少阳光；传送带和保龄球植物是 0，因为不花阳光。 */
-    // TODO：【必做-4】新增植物时需要添加植物消耗阳光数（必须和 PLANTS 数组同一位置对应）
-    public static final int[] COST = {
-        50, 100, 175, 50, 150, 325, 200, 150, 0, 25,
-        50, 100, 125, 25, 25, 75, 75, 0, 0
-    };
-
-    /** 每种植物用完之后要等多少毫秒；传送带和保龄球植物是 0，没有冷却。 */
-    // TODO：【必做-5】新增植物时需要添加植物种植冷却时长（必须和 PLANTS 数组同一位置对应）
-    public static final int[] COOLDOWN = {
-        7500, 7500, 7500, 30000, 50000, 7500, 7500, 7500, 7500,
-        30000, 30000, 7500, 50000, 7500, 7500, 50000, 30000, 0, 0
-    };
-
-    /**
-     * 选卡界面里一共摆几张候选卡，也就是除了保龄球以外的全部植物。
-     * 它跟着 PLANTS 的长度自动变，加了新植物不用再改这里。
-     */
-    public static final int CHOOSER_CARD_COUNT = PLANTS.length - BOWLING_COUNT;
-
-    /** 这个类只提供静态数据，不允许创建对象。 */
+    /** 这个类只提供静态方法，不允许创建对象。 */
     private Cards() {
     }
 
@@ -70,12 +26,27 @@ public final class Cards {
      * 返回：找到就返回下标；找不到返回 -1。
      */
     public static int indexOf(String plantName) {
-        for (int index = 0; index < PLANTS.length; index++) {
-            if (PLANTS[index].equals(plantName)) {
-                return index;
-            }
-        }
-        return -1;
+        return PlantCatalog.indexOf(plantName);
+    }
+
+    /**
+     * 按编号取得植物名字。
+     *
+     * 参数：plantIndex 是植物编号。
+     * 返回：植物名字。
+     */
+    public static String nameAt(int plantIndex) {
+        return PlantCatalog.nameAt(plantIndex);
+    }
+
+    /**
+     * 按编号取得植物资料。
+     *
+     * 参数：plantIndex 是植物编号。
+     * 返回：植物固定资料。
+     */
+    public static PlantDefinition definitionAt(int plantIndex) {
+        return PlantCatalog.definitionAt(plantIndex);
     }
 
     /**
@@ -88,7 +59,6 @@ public final class Cards {
         List<Card> result = new ArrayList<Card>();
         for (int position = 0; position < indices.size(); position++) {
             int plantIndex = indices.get(position).intValue();
-            // 位置统一由 Layout 算，选卡界面、飞行落点和这里的摆法才不会各走一套。
             result.add(new Card(plantIndex, Layout.cardSlotLeft(position), Layout.CARD_BAR_TOP));
         }
         return result;
@@ -98,7 +68,7 @@ public final class Cards {
      * 从可出卡池里随机挑一张，做成传送带上的新卡片。
      *
      * 参数：pool 是可出卡池；random 是随机数生成器；time 是当前时刻。
-     * 返回：一张标记为"在移动"的新卡片，出现在传送带右端。
+     * 返回：一张标记为在移动的新卡片。
      */
     public static Card newMovingCard(List<Integer> pool, Random random, long time) {
         int choice = random.nextInt(pool.size());

@@ -48,7 +48,7 @@ public class GameState {
     public long skySunInterval = Layout.SKY_SUN_INTERVAL;
 
     /** 僵尸出场表里下一条该出场的记录的下标。 */
-    public int nextZombie;
+    public int nextSpawnIndex;
 
     /** 鼠标当前横坐标，用于显示种植预览。 */
     public int mouseX;
@@ -57,7 +57,7 @@ public class GameState {
     public int mouseY;
 
     /** 玩家手里拿着的卡片；没拿就是 null。 */
-    public Card held;
+    public Card heldCard;
 
     /** 是不是已经点了冒险模式、正在等进入关卡。 */
     public boolean startingMenu;
@@ -72,9 +72,9 @@ public class GameState {
     public long lastSkySun;
 
     /** 上次送出传送带卡片的时刻。 */
-    public long lastCard;
+    public long lastCardTime;
 
-    /** 当前时刻。它不是墙上时间，而是按加速倍率累加出来的游戏时间。 */
+    /** 当前时刻。战斗中按倍速推进，其他画面按真实时间推进。 */
     public long time;
 
     /**
@@ -128,8 +128,8 @@ public class GameState {
      */
     public final List<Zombie> introZombies = new ArrayList<Zombie>();
 
-    /** 游戏速度倍率，1 是正常速度，2 是两倍速。 */
-    public int speedMultiplier = 1;
+    /** 游戏内部速度倍率，2 是新的 1 倍速，3 是新的 1.5 倍速。 */
+    public int speedMultiplier = 2;
 
     /** 上一帧的真实时刻，用来算出这一帧过了多久。 */
     public long lastRealTime;
@@ -191,8 +191,8 @@ public class GameState {
         flyingCards.clear();
         // 卡槽数量是每关自己的设置，换关时先退回默认值，免得上一关的小卡槽跟着带过来。
         maxCards = Layout.DEFAULT_CARD_SLOTS;
-        nextZombie = 0;
-        held = null;
+        nextSpawnIndex = 0;
+        heldCard = null;
     }
 
     /**

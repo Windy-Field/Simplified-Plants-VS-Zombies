@@ -94,7 +94,7 @@ public class LevelLoader {
         for (int index = 1; index < spawns.size(); index++) {
             ZombieSpawn current = spawns.get(index);
             int position = index - 1;
-            while (position >= 0 && spawns.get(position).at > current.at) {
+            while (position >= 0 && spawns.get(position).spawnTime > current.spawnTime) {
                 spawns.set(position + 1, spawns.get(position));
                 position = position - 1;
             }

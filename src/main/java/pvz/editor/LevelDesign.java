@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import pvz.game.GameState;
 import pvz.plant.Cards;
+import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
+import pvz.zombie.ZombieCatalog;
 import pvz.zombie.Zombie;
 import pvz.zombie.ZombieSpawn;
 
@@ -25,14 +27,10 @@ import pvz.zombie.ZombieSpawn;
  */
 public class LevelDesign {
     /** 编辑器能放置的僵尸品种，必须都是游戏真正实现了的。 */
-    public static final String[] ZOMBIE_KINDS = {
-        "Zombie", "ConeheadZombie", "BucketheadZombie", "FlagZombie", "NewspaperZombie"
-    };
+    public static final String[] ZOMBIE_KINDS = ZombieCatalog.names();
 
     /** 和 ZOMBIE_KINDS 一一对应的中文名，只用来显示。 */
-    public static final String[] ZOMBIE_LABELS = {
-        "普通僵尸", "路障僵尸", "铁桶僵尸", "旗帜僵尸", "读报僵尸"
-    };
+    public static final String[] ZOMBIE_LABELS = ZombieCatalog.labels();
 
     /** 背景选项，下标就是关卡文件里的 background_type。 */
     public static final String[] BACKGROUND_LABELS = {
@@ -458,12 +456,12 @@ public class LevelDesign {
                     continue;
                 }
                 for (int index = 0; index < counts[row][wave]; index++) {
-                    long at = waveTime(wave) + index * spawnSpacing;
+                    long spawnTime = waveTime(wave) + index * spawnSpacing;
                     int targetRow = row;
                     if (randomRows[row][wave]) {
                         targetRow = ZombieSpawn.RANDOM_ROW;
                     }
-                    result.add(new ZombieSpawn((int) at, targetRow, kind));
+                    result.add(new ZombieSpawn((int) spawnTime, targetRow, kind));
                 }
             }
         }
@@ -480,7 +478,7 @@ public class LevelDesign {
         for (int index = 1; index < spawns.size(); index++) {
             ZombieSpawn current = spawns.get(index);
             int position = index - 1;
-            while (position >= 0 && spawns.get(position).at > current.at) {
+            while (position >= 0 && spawns.get(position).spawnTime > current.spawnTime) {
                 spawns.set(position + 1, spawns.get(position));
                 position = position - 1;
             }
@@ -525,7 +523,7 @@ public class LevelDesign {
         text.append("    \"zombie_list\":[\n");
         for (int index = 0; index < spawns.size(); index++) {
             ZombieSpawn spawn = spawns.get(index);
-            text.append("        {\"time\":" + spawn.at);
+            text.append("        {\"time\":" + spawn.spawnTime);
             text.append(", \"map_y\":" + spawn.row);
             text.append(", \"name\":\"" + spawn.name + "\"}");
             text.append(lineEnd(index, spawns.size()));
@@ -550,7 +548,7 @@ public class LevelDesign {
         text.append("    \"" + field + "\":[\n");
         for (int index = 0; index < plants.size(); index++) {
             int plantIndex = plants.get(index).intValue();
-            text.append("        {\"name\":\"" + Cards.PLANTS[plantIndex] + "\"}");
+            text.append("        {\"name\":\"" + Cards.nameAt(plantIndex) + "\"}");
             text.append(lineEnd(index, plants.size()));
         }
         text.append("    ],\n");
@@ -762,10 +760,10 @@ public class LevelDesign {
         List<ZombieSpawn> spawns = new ArrayList<ZombieSpawn>();
         for (int index = 0; index < list.size(); index++) {
             JsonObject entry = list.get(index).getAsJsonObject();
-            int at = entry.get("time").getAsInt();
+            int spawnTime = entry.get("time").getAsInt();
             int row = entry.get("map_y").getAsInt();
             String name = entry.get("name").getAsString();
-            spawns.add(new ZombieSpawn(at, row, name));
+            spawns.add(new ZombieSpawn(spawnTime, row, name));
         }
         if (spawns.isEmpty()) {
             clearAllCells();
@@ -793,7 +791,7 @@ public class LevelDesign {
         for (int index = 1; index < spawns.size(); index++) {
             ZombieSpawn spawn = spawns.get(index);
             ZombieSpawn previous = current.get(current.size() - 1);
-            if (spawn.at - previous.at > IMPORT_WAVE_GAP) {
+            if (spawn.spawnTime - previous.spawnTime > IMPORT_WAVE_GAP) {
                 waves.add(current);
                 current = new ArrayList<ZombieSpawn>();
             }
@@ -813,18 +811,18 @@ public class LevelDesign {
      */
     private void readTimingFromWaves(List<ZombieSpawn> spawns, List<List<ZombieSpawn>> waves) {
         List<ZombieSpawn> firstWave = waves.get(0);
-        firstWaveDelay = firstWave.get(0).at;
+        firstWaveDelay = firstWave.get(0).spawnTime;
 
         if (waves.size() > 1) {
             List<ZombieSpawn> lastWave = waves.get(waves.size() - 1);
-            long span = lastWave.get(0).at - firstWave.get(0).at;
+            long span = lastWave.get(0).spawnTime - firstWave.get(0).spawnTime;
             long average = span / (waves.size() - 1);
             waveInterval = Math.max(MIN_WAVE_INTERVAL, average);
         }
 
         long smallestGap = Long.MAX_VALUE;
         for (int index = 1; index < spawns.size(); index++) {
-            long gap = spawns.get(index).at - spawns.get(index - 1).at;
+            long gap = spawns.get(index).spawnTime - spawns.get(index - 1).spawnTime;
             // 跨波的大间距不能拿来当同格间隔，所以只看波内的那些小间距。
             if (gap > 0 && gap <= IMPORT_WAVE_GAP && gap < smallestGap) {
                 smallestGap = gap;
@@ -974,7 +972,7 @@ public class LevelDesign {
                 + " 张，进了关卡没法开始。";
         }
         // 除开禁用和必选，候选区剩下的植物不够填满卡槽，玩家照样凑不齐没法开始。
-        int usablePlants = Cards.CHOOSER_CARD_COUNT - bannedPlants.size() - requiredPlants.size();
+        int usablePlants = PlantCatalog.CHOOSER_COUNT - bannedPlants.size() - requiredPlants.size();
         if (usablePlants < maxCards) {
             return "禁用和必选之后只剩 " + usablePlants + " 种植物可选，凑不满 " + maxCards
                 + " 张卡槽，进了关卡没法开始。";
@@ -983,7 +981,7 @@ public class LevelDesign {
         for (int index = 0; index < bannedPlants.size(); index++) {
             int plant = bannedPlants.get(index).intValue();
             if (requiredPlants.contains(Integer.valueOf(plant))) {
-                return Cards.PLANTS[plant] + " 同时出现在禁用和必选清单里，游戏里会按必选处理。";
+                return Cards.nameAt(plant) + " 同时出现在禁用和必选清单里，游戏里会按必选处理。";
             }
         }
         return "";
