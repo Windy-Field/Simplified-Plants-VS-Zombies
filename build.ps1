@@ -4,16 +4,66 @@
     [int] $Level = 0
 )
 
+# 编译需要 JDK 17 或更高版本。
+$requiredJavaVersion = 17
+
+<#
+    检查一个目录里的 javac 是否达到要求的版本。
+    参数 directory 是 JDK 的 bin 目录。
+    返回 $true 表示这个 JDK 可以用，返回 $false 表示不存在或版本太低。
+#>
+function Check-JavaVersion {
+    param([string] $Directory)
+
+    $compiler = Join-Path $Directory 'javac.exe'
+    if (-not (Test-Path $compiler)) {
+        return $false
+    }
+    # javac -version 会把版本号打到标准错误流（stderr）而不是标准输出，所以要合并两个流再读。
+    $text = (& $compiler '-version' 2>&1 | Out-String).Trim()
+    $match = [regex]::Match($text, 'javac\s+(\d+)')
+    if (-not $match.Success) {
+        return $false
+    }
+    $version = [int] $match.Groups[1].Value
+    return $version -ge $requiredJavaVersion
+}
+
 # 使用真正的 JDK，避免系统 javapath 启动器指向缺失的安装。
-$jdk = 'C:\Program Files\Java\jdk-17\bin'
+# 按 JAVA_HOME、常见安装位置的顺序找一个版本够用的 JDK。
+$jdk = $null
+$candidates = New-Object System.Collections.ArrayList
 if ($env:JAVA_HOME) {
-    $candidate = Join-Path $env:JAVA_HOME 'bin'
-    if (Test-Path (Join-Path $candidate 'javac.exe')) {
-        $jdk = $candidate
+    [void] $candidates.Add((Join-Path $env:JAVA_HOME 'bin'))
+}
+$vendors = @(
+    'C:\Program Files\Java',
+    'C:\Program Files\Microsoft',
+    'C:\Program Files\Eclipse Adoptium',
+    'C:\Program Files\Amazon Corretto',
+    'C:\Program Files\Zulu'
+)
+foreach ($vendor in $vendors) {
+    if (-not (Test-Path $vendor)) {
+        continue
+    }
+    # 只挑名字里带 jdk / java 的目录，避免把无关软件当成 JDK。
+    $entries = Get-ChildItem -Path $vendor -Directory -ErrorAction SilentlyContinue
+    foreach ($entry in $entries) {
+        $lower = $entry.Name.ToLower()
+        if ($lower.Contains('jdk') -or $lower.Contains('java')) {
+            [void] $candidates.Add((Join-Path $entry.FullName 'bin'))
+        }
     }
 }
-if (-not (Test-Path (Join-Path $jdk 'javac.exe'))) {
-    throw '需要 JDK 17 或更高版本，请安装后设置 JAVA_HOME。'
+foreach ($candidate in $candidates) {
+    if (Check-JavaVersion $candidate) {
+        $jdk = $candidate
+        break
+    }
+}
+if (-not $jdk) {
+    throw ('需要 JDK ' + $requiredJavaVersion + ' 或更高版本，请安装后设置 JAVA_HOME。')
 }
 # 图片素材和关卡配置都放在 assets 目录里；它不随代码仓库分发，缺少时给出明确提示。
 $project = Join-Path $PSScriptRoot 'assets'

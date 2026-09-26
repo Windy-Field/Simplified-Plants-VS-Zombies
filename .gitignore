@@ -4,6 +4,9 @@ out/
 target/
 *.class
 
+# 打包产物（package.ps1 生成的免安装发行包，体积近百 MB，不进仓库）
+dist/
+
 # 版权
 # 资源包不随代码分发，所以整个 assets 目录不进仓库。
 assets/
