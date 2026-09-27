@@ -57,7 +57,7 @@ public class SelfCheckTest {
         "SunShroomSleep", "IceShroom", "IceShroomSnow", "IceShroomSleep", "IceShroomTrap",
         "HypnoShroom", "HypnoShroomSleep", "WallNutBowling", "RedWallNutBowling",
         "RedWallNutBowlingExplode", "PeaNormal", "PeaIce", "BulletMushRoom", "PeaNormalExplode",
-        "BulletMushRoomExplode", "Zombie", "ZombieAttack", "ZombieLostHead", "ZombieLostHeadAttack",
+        "BulletMushRoomExplode", "PeaFire", "Torchwood", "Zombie", "ZombieAttack", "ZombieLostHead", "ZombieLostHeadAttack",
         "ZombieDie", "ZombieHead", "BoomDie", "ConeheadZombie", "ConeheadZombieAttack", "BucketheadZombie",
         "BucketheadZombieAttack", "ZombieNoArm", "ZombieNoArmAttack", "ZombieNoArmDie",
         "ZombieNoArmLostHead", "ZombieNoArmLostHeadAttack", "FlagZombie", "FlagZombieAttack", "FlagZombieLostHead",
@@ -71,7 +71,7 @@ public class SelfCheckTest {
     private static final String[] CONVEYOR_CARDS = {
         "card_peashooter_move", "card_snowpea_move", "card_wallnut_move",
         "card_cherrybomb_move", "card_repeaterpea_move", "card_chomper_move", "card_potatomine_move",
-        "card_redwallnut_move"
+        "card_redwallnut_move", "card_torchwood_move"
     };
 
     /**

@@ -21,6 +21,14 @@ public final class PlantCatalog {
             CombatValues.WALL_NUT_HEALTH, false, true, PlantActionType.WALL_NUT, false),
         new PlantDefinition("CherryBomb", "card_cherrybomb", 150, 50000,
             CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.INSTANT, false),
+        new PlantDefinition("Torchwood", "card_torchwood", 175, 7500,
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.NONE, false,
+            0, 0, null, new BulletTransformation[] {
+                new BulletTransformation("PeaNormal", "PeaFire", 2,
+                    12, 6, 54, 39),
+                new BulletTransformation("PeaIce", "PeaNormal", 1,
+                    12, 6, 54, 39)
+            }),
         new PlantDefinition("Threepeater", "card_threepeashooter", 325, 7500,
             CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("RepeaterPea", "card_repeaterpea", 200, 7500,

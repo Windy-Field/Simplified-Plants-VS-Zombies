@@ -10,6 +10,12 @@ public class Bullet extends Sprite {
     /** 是否是冰冻子弹，打中僵尸会让它减速。 */
     public boolean ice;
 
+    /** 子弹造成的伤害倍率，普通子弹是 1。 */
+    public int damageMultiplier = 1;
+
+    /** 上一次触发转换的对象，防止子弹在同一对象里重复转换。 */
+    public Sprite lastTransformationSource;
+
     /** 是否已经打中目标，进入爆炸动画阶段。 */
     public boolean exploded;
 
@@ -25,14 +31,45 @@ public class Bullet extends Sprite {
      * 参数：kind 是子弹素材名；left 和 top 是子弹左上角坐标；
      *       lane 是所在行；target 是期望落到的纵坐标；assets 提供图片。
      */
-    // TODO：【选做-2.75（一）】新增植物时想让子弹有冰冻减速效果，需要把子弹名加进下面的判断里
     public Bullet(String kind, int left, int top, int lane, int target, Assets assets) {
         super(kind, left, top, lane, 1, assets);
         // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次。
         x = left;
         y = top;
         targetY = target;
-        ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom"); // 减速效果
+        updateTypeData(kind);
+    }
+
+    /**
+     * 把子弹变成另一种子弹。
+     *
+     * 参数：next 是转换后的子弹名；multiplier 是转换后的伤害倍率；
+     * assets 提供子弹图片；time 是当前游戏时刻。
+     */
+    public void transform(String next, int multiplier, Assets assets, long time) {
+        name = next;
+        updateTypeData(next);
+        damageMultiplier = multiplier;
+        change(next, assets, time);
+    }
+
+    /**
+     * 按当前伤害倍率计算子弹造成的伤害。
+     *
+     * 参数：baseDamage 是普通子弹的基础伤害。
+     * 返回：应用伤害倍率之后的伤害。
+     */
+    public int damageAmount(int baseDamage) {
+        return baseDamage * damageMultiplier;
+    }
+
+    /**
+     * 根据子弹名字更新减速属性。
+     *
+     * 参数：kind 是当前子弹名字。
+     */
+    private void updateTypeData(String kind) {
+        ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom");
     }
 
     /**
@@ -69,7 +106,6 @@ public class Bullet extends Sprite {
      *
      * 参数：assets 提供图片；time 是打中的时刻。
      */
-    // TODO：【选做-2.75】新增植物时植物子弹的特殊效果（二）（必须和 ShooterActions 的 bulletNameFor() 中返回的字符串一致）
     public void explode(Assets assets, long time) {
         exploded = true;
         hitTime = time;

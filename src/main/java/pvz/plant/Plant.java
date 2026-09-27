@@ -1,6 +1,8 @@
 package pvz.plant;
 
+import java.awt.Rectangle;
 import pvz.world.Assets;
+import pvz.world.Bullet;
 import pvz.world.Sprite;
 import pvz.zombie.Zombie;
 
@@ -91,5 +93,52 @@ public class Plant extends Sprite {
      */
     public static int verticalShift(String kind) {
         return PlantCatalog.definitionOf(kind).verticalShift;
+    }
+
+    /**
+     * 算出这株植物的子弹转换区域。
+     *
+     * 参数：transformation 是转换资料。
+     * 返回：屏幕坐标中的转换区域。
+     */
+    public Rectangle transformationBounds(BulletTransformation transformation) {
+        int left = (int) x + transformation.zoneLeft;
+        int top = (int) y + transformation.zoneTop;
+        int width = transformation.zoneWidth;
+        int height = transformation.zoneHeight;
+        return new Rectangle(left, top, width, height);
+    }
+
+    /**
+     * 尝试把经过这株植物的子弹转换成另一种子弹。
+     *
+     * 参数：bullet 是正在飞行的子弹；assets 提供图片；time 是当前游戏时刻。
+     * 返回：发生转换时返回真，没有碰到转换区域时返回假。
+     */
+    public boolean tryTransformBullet(Bullet bullet, Assets assets, long time) {
+        if (!alive || bullet.row != row) {
+            return false;
+        }
+        if (bullet.lastTransformationSource == this) {
+            return false;
+        }
+
+        PlantDefinition definition = PlantCatalog.definitionOf(name);
+        BulletTransformation transformation =
+            definition.transformationFor(bullet.name);
+        if (transformation == null) {
+            return false;
+        }
+
+        Rectangle zone = transformationBounds(transformation);
+        Rectangle bulletBox = bullet.collisionBox(assets, time);
+        if (!zone.intersects(bulletBox)) {
+            return false;
+        }
+
+        bullet.transform(transformation.targetBullet,
+            transformation.damageMultiplier, assets, time);
+        bullet.lastTransformationSource = this;
+        return true;
     }
 }

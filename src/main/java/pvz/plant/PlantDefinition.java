@@ -56,6 +56,9 @@ public class PlantDefinition {
      */
     public final String attackAnimation;
 
+    /** 这株植物可以触发的子弹转换资料。 */
+    public final BulletTransformation[] bulletTransformations;
+
     /**
      * 创建一种植物的固定资料，位置不需要额外偏移，也没有攻击动画。
      *
@@ -67,7 +70,7 @@ public class PlantDefinition {
             int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
             PlantActionType actionType, boolean bowling) {
         this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
-            actionType, bowling, 0, 0, null);
+            actionType, bowling, 0, 0, null, new BulletTransformation[0]);
     }
 
     /**
@@ -80,7 +83,8 @@ public class PlantDefinition {
             int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
             PlantActionType actionType, boolean bowling, int rootShift, int verticalShift) {
         this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
-            actionType, bowling, rootShift, verticalShift, null);
+            actionType, bowling, rootShift, verticalShift, null,
+            new BulletTransformation[0]);
     }
 
     /**
@@ -92,6 +96,20 @@ public class PlantDefinition {
             int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
             PlantActionType actionType, boolean bowling, int rootShift, int verticalShift,
             String attackAnimation) {
+        this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
+            actionType, bowling, rootShift, verticalShift, attackAnimation,
+            new BulletTransformation[0]);
+    }
+
+    /**
+     * 创建一种带子弹转换资料的植物。
+     *
+     * 参数：前面几个参数和完整构造函数相同；transformations 是转换列表。
+     */
+    public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
+            int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
+            PlantActionType actionType, boolean bowling, int rootShift, int verticalShift,
+            String attackAnimation, BulletTransformation[] transformations) {
         this.name = name;
         this.cardPicture = cardPicture;
         this.cost = cost;
@@ -104,5 +122,22 @@ public class PlantDefinition {
         this.rootShift = rootShift;
         this.verticalShift = verticalShift;
         this.attackAnimation = attackAnimation;
+        bulletTransformations = transformations;
+    }
+
+    /**
+     * 查找能处理指定子弹的转换资料。
+     *
+     * 参数：bulletName 是当前子弹名字。
+     * 返回：找到转换规则时返回它，否则返回 null。
+     */
+    public BulletTransformation transformationFor(String bulletName) {
+        for (int index = 0; index < bulletTransformations.length; index++) {
+            BulletTransformation transformation = bulletTransformations[index];
+            if (transformation.sourceBullet.equals(bulletName)) {
+                return transformation;
+            }
+        }
+        return null;
     }
 }

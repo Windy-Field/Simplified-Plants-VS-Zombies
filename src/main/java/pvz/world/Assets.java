@@ -118,6 +118,7 @@ public class Assets {
         alias("card_sunflower", "card_2");
         alias("card_chomper", "card_3");
         alias("card_cherrybomb", "card_4");
+        alias("card_torchwood_move", "card_torchwood");
     }
 
     /** 关卡背景，下标就是关卡文件里的 background_type。 */
@@ -189,6 +190,7 @@ public class Assets {
 
         animation("HypnoShroom", "Plants/HypnoShroom/HypnoShroom.gif");
         animation("HypnoShroomSleep", "Plants/HypnoShroom/HypnoShroomSleep.gif");
+        animation("Torchwood", "Plants/Torchwood/Torchwood.gif");
     }
 
     /** 僵尸的走路、啃食、掉头、死亡等动画。 */
@@ -249,6 +251,7 @@ public class Assets {
     private void loadBullets() throws IOException {
         sequence("PeaNormal", "bullets/PeaNormal/PeaNormal_0.png");
         sequence("PeaIce", "bullets/PeaIce/PeaIce_0.png");
+        sequence("PeaFire", "new_assets/torch_wood/fire_pea.png");
         sequence("PeaNormalExplode", "bullets/PeaNormalExplode/PeaNormalExplode_0.png");
         sequence("BulletMushRoom",
             "bullets/BulletMushRoom/BulletMushRoom_0.png",

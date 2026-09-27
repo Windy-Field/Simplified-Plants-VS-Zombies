@@ -1242,7 +1242,29 @@ public class Game extends JPanel {
             if (bullet.exploded) {
                 continue;
             }
+            transformBullet(bullet);
+            if (!bullet.alive) {
+                continue;
+            }
             hitZombieWithBullet(bullet);
+        }
+    }
+
+    /**
+     * 按植物资料检查子弹是否经过转换区域。
+     *
+     * 这里不判断植物名字，只读取植物资料中的转换规则，
+     * 所以后续新增别的子弹转换植物时不需要改游戏主循环。
+     * 参数：bullet 是正在飞行的子弹。
+     */
+    private void transformBullet(Bullet bullet) {
+        for (Plant plant : state.plants) {
+            if (!plant.alive || plant.row != bullet.row) {
+                continue;
+            }
+            if (plant.tryTransformBullet(bullet, assets, state.time)) {
+                return;
+            }
         }
     }
 
@@ -1255,7 +1277,8 @@ public class Game extends JPanel {
             if (!Sprite.touches(bullet, zombie, assets, state.time)) {
                 continue;
             }
-            zombie.health = zombie.health - CombatValues.BULLET_DAMAGE;
+            int damage = bullet.damageAmount(CombatValues.BULLET_DAMAGE);
+            zombie.health = zombie.health - damage;
             if (bullet.ice) {
                 zombie.slowedUntil = state.time + Layout.ZOMBIE_SLOW_DURATION;
             }
