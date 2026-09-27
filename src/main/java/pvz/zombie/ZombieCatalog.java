@@ -16,7 +16,7 @@ public final class ZombieCatalog {
         new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, ZombieAbility.NONE),
         new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 2, ZombieAbility.NONE),
         new ZombieDefinition("JokerZombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
-            ZombieAbility.EXPLODES_ON_PLANT)
+            ZombieAbility.EXPLODES_ON_PLANT, "JokerZombie", "JokerZombieExplode")
     };
 
     /** 和 DEFINITIONS 一一对应的编辑器中文名。 */

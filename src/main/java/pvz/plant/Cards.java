@@ -12,9 +12,6 @@ import pvz.world.Layout;
  * 以及按编号查找植物。这样旧的调用处仍然有一个清楚的卡片入口。
  */
 public final class Cards {
-    /** 选卡界面里可以出现的植物数量。 */
-    public static final int CHOOSER_CARD_COUNT = PlantCatalog.CHOOSER_COUNT;
-
     /** 这个类只提供静态方法，不允许创建对象。 */
     private Cards() {
     }

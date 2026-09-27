@@ -126,11 +126,28 @@ public final class Layout {
     /** 每个格子的高度。 */
     public static final int CELL_HEIGHT = 100;
 
+    /** 草坪最下一行的行号。 */
+    public static final int LAST_ROW = ROW_COUNT - 1;
+
+    /** 草坪最下一行的底部纵坐标。 */
+    public static final int LAWN_BOTTOM = GRID_TOP + (LAST_ROW + 1) * CELL_HEIGHT;
+
+    /** 草坪最下一行可以上下弹动的纵坐标上限（保龄球用）。 */
+    public static final int BOWLING_BOUNCE_LIMIT = LAWN_BOTTOM - CELL_HEIGHT;
+
     /** 植物绘制时相对格子中心向右偏移的像素。 */
     public static final int PLANT_CENTER_OFFSET = 40;
 
     /** 植物绘制时相对格子上沿向下偏移的像素。 */
     public static final int PLANT_BOTTOM_OFFSET = 60;
+
+    /**
+     * 僵尸脚下踩的那条基准线，也就是第 0 行的落脚点。
+     *
+     * 出怪、开场演出摆位和掉落的僵尸头都用它算纵坐标：
+     * 第 row 行的位置就是 ZOMBIE_FOOT_BASE + row * CELL_HEIGHT。
+     */
+    public static final int ZOMBIE_FOOT_BASE = GRID_TOP + PLANT_BOTTOM_OFFSET;
 
     /**
      * 大嘴花的图要往右挪多少像素。
@@ -156,7 +173,7 @@ public final class Layout {
      * 各种射手的嘴（炮管开口）比身体可见范围的上沿低多少像素。
      *
      * 子弹要从嘴里射出来，而嘴长在头的中下部，不是头顶。
-     * 以前直接用身体上沿当子弹高度，看起来就像从头顶冒出来，所以要按品种各量一个偏移。
+     * 直接拿身体上沿当子弹高度的话，看起来就像从头顶冒出来，所以要按品种各量一个偏移。
      * 数值是量图片里炮管开口的中心位置得到的。
      */
     public static final int PEA_SHOOTER_MUZZLE_OFFSET = 14;
@@ -195,7 +212,7 @@ public final class Layout {
      * 卡槽底板左沿的横坐标。
      *
      * 选卡界面和游戏中用的是同一张底板图，位置也必须一样：
-     * 以前选卡界面从 0 画、游戏里从 10 画，镜头一移回草坪卡槽就会往右跳一下。
+     * 两边各画各的话，镜头一移回草坪卡槽就会往右跳一下。
      */
     public static final int CARD_BAR_LEFT = 10;
 
@@ -345,6 +362,29 @@ public final class Layout {
     /** 主菜单按钮闪光切换的毫秒数。 */
     public static final long MENU_BLINK_INTERVAL = 200;
 
+    /**
+     * 主菜单里"冒险模式"按钮的位置和大小。
+     *
+     * 画按钮和判断有没有点中它必须是同一块区域，所以两处都从这里取，
+     * 免得画面挪了、点击判定还停在原地。
+     */
+    public static final int MENU_BUTTON_LEFT = 435;
+
+    public static final int MENU_BUTTON_TOP = 75;
+
+    public static final int MENU_BUTTON_WIDTH = 280;
+
+    public static final int MENU_BUTTON_HEIGHT = 131;
+
+    /** 选卡界面"开始战斗"按钮的左沿横坐标。 */
+    public static final int START_BUTTON_LEFT = 155;
+
+    /** 选卡界面"开始战斗"按钮的上沿纵坐标。 */
+    public static final int START_BUTTON_TOP = 547;
+
+    /** 选卡界面背包面板顶部的纵坐标。 */
+    public static final int CHOOSER_PANEL_TOP = 87;
+
     /** 点击冒险模式后等多久进入关卡，用于播放切换动画。 */
     public static final long MENU_START_DELAY = 1300;
 
@@ -425,8 +465,7 @@ public final class Layout {
     /**
      * 僵尸掉头的血量。
      *
-     * 以前和掉臂一样是 5，那样两者会在同一帧触发，独臂动画根本来不及看清，
-     * 所以把掉头往后挪到 3，让它比掉臂晚一步。
+     * 特意比掉臂（见上）晚一步：两者同时触发的话，独臂动画根本来不及看清。
      */
     public static final int ZOMBIE_HEAD_LOST_HEALTH = 3 * CombatValues.HEALTH_MULTIPLIER;
 
@@ -536,4 +575,40 @@ public final class Layout {
 
     /** 阳光被点击收集后飞向左上角的速度，单位是像素每帧。 */
     public static final double SUN_COLLECT_SPEED = 8.0;
+
+    /** 飞行动画前百分之多少走匀速，剩下的走减速。 */
+    public static final double FLY_UNIFORM_RATIO = 0.8;
+
+    /**
+     * 算出飞行动画此刻已经走完了全程的百分之几。
+     *
+     * 起步那一段匀速，快到位时再慢慢收住，看起来才像"飞过去停住"，
+     * 而不是啪一下贴上去。卡片飞进卡槽、阳光飞向左上角都用这条曲线，
+     * 所以放在这里共用，免得各写一份、改了这边忘了那边。
+     *
+     * 参数：elapsed 是已经飞了多久；duration 是全程要多久。
+     * 返回：0 到 1 之间的行进比例，超过 1 按 1 算。
+     */
+    public static double flyProgress(long elapsed, double duration) {
+        if (duration <= 0) {
+            return 1.0;
+        }
+        double progress = elapsed / duration;
+        if (progress <= 0) {
+            return 0;
+        }
+        if (progress >= 1.0) {
+            return 1.0;
+        }
+
+        // 前一段匀速，线性推进。
+        if (progress <= FLY_UNIFORM_RATIO) {
+            return progress;
+        }
+
+        // 后一段三次缓出：越接近终点越慢。
+        double slowProgress = (progress - FLY_UNIFORM_RATIO) / (1.0 - FLY_UNIFORM_RATIO);
+        double slowCurve = 1 - (1 - slowProgress) * (1 - slowProgress) * (1 - slowProgress);
+        return FLY_UNIFORM_RATIO + (1.0 - FLY_UNIFORM_RATIO) * slowCurve;
+    }
 }

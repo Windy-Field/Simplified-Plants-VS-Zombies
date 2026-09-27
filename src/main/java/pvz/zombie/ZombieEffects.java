@@ -30,48 +30,108 @@ public final class ZombieEffects {
      */
     public static void die(Zombie zombie, Assets assets, GameState state,
             long time, boolean explosion) {
-        die(zombie, assets, state, time, explosion, null);
-    }
-
-    /**
-     * 让接触植物的僵尸死亡，并以接触格作为爆炸中心。
-     *
-     * 参数：zombie 是要死亡的僵尸；assets 提供素材；state 是当前游戏数据；
-     * time 是当前游戏时刻；explosion 表示是否使用普通爆炸死亡效果；
-     * touchedPlant 是触发爆炸的植物，非接触死亡时传 null。
-     */
-    public static void die(Zombie zombie, Assets assets, GameState state,
-            long time, boolean explosion, Plant touchedPlant) {
         if (!zombie.alive || zombie.dying) {
             return;
         }
-        if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)
-                && !zombie.explosionTriggered) {
-            detonateExplodingZombie(zombie, assets, state, time, touchedPlant);
+        if (zombie.hasOwnAnimation()) {
+            // 有专属动画的僵尸用自己的开盒动画代替普通掉头动画。
+            zombie.explosionOrigin = zombie.collisionBox(assets, time);
+            zombie.pendingDeathExplosion = explosion;
+            zombie.die(assets, time, explosion);
+            return;
         }
+
+        if (!zombie.headLost) {
+            startHeadLoss(zombie, assets, state, time, explosion);
+            return;
+        }
+
         zombie.die(assets, time, explosion);
     }
 
     /**
-     * 执行小丑爆炸：清除范围内植物，伤害范围内魅惑僵尸，并添加爆炸提示图。
+     * 等死亡动画播完后才移除僵尸，并在此时执行小丑自爆。
      *
-     * 参数：zombie 是正在爆炸的僵尸；assets 提供素材；state 是当前游戏数据；
-     * time 是当前游戏时刻；touchedPlant 是接触目标，其他死亡原因时为 null。
+     * 参数：zombie 是待更新的僵尸；assets 提供动画帧数；
+     * state 是当前游戏数据；time 是当前游戏时刻。
+     * 返回：这只僵尸正在死亡或已经死亡时返回真。
      */
-    private static void detonateExplodingZombie(Zombie zombie, Assets assets,
-            GameState state, long time, Plant touchedPlant) {
-        zombie.explosionTriggered = true;
-
-        Rectangle body = zombie.collisionBox(assets, time);
-        int centerX = (int) body.getCenterX();
-        int centerY = (int) body.getMaxY();
-        int centerColumn = Layout.columnAt(centerX);
-
-        // 接触可能发生在植物边缘，此时僵尸身体中心还在隔壁格。
-        if (touchedPlant != null) {
-            centerColumn = touchedPlant.column;
-            centerX = Layout.columnCenter(centerColumn);
+    public static boolean updateDeath(Zombie zombie, Assets assets,
+            GameState state, long time) {
+        if (!zombie.dying) {
+            return false;
         }
+
+        if (zombie.waitingForDeath) {
+            long headLossDuration = assets.count(zombie.animation)
+                * zombie.frameInterval;
+            if (time - zombie.headLossTime >= headLossDuration) {
+                zombie.waitingForDeath = false;
+                zombie.die(assets, time, zombie.pendingDeathExplosion);
+            }
+            return true;
+        }
+
+        long duration = assets.count(zombie.animation) * zombie.frameInterval;
+        if (time - zombie.deathTime >= duration) {
+            finishDeath(zombie, assets, state, time);
+            zombie.alive = false;
+        }
+        return true;
+    }
+
+    /**
+     * 开始播放普通僵尸的掉头动画，动画结束后才进入死亡动画。
+     *
+     * 参数：zombie 是即将死亡的僵尸；assets 提供素材；state 保存掉下来的头；
+     * time 是当前游戏时刻；explosion 表示之后是否使用爆炸死亡图。
+     */
+    private static void startHeadLoss(Zombie zombie, Assets assets,
+            GameState state, long time, boolean explosion) {
+        Rectangle oldBody = zombie.bounds(assets, time);
+        int center = (int) oldBody.getCenterX();
+        int bottom = (int) oldBody.getMaxY();
+        String headAnimation = "ZombieHead";
+        if (zombie.name.equals("NewspaperZombie")) {
+            headAnimation = "NewspaperZombieHead";
+        }
+
+        Sprite head = new Sprite(headAnimation, center, bottom,
+            zombie.row, 0, assets);
+        head.animationStart = time;
+        state.heads.add(head);
+
+        zombie.helmet = false;
+        zombie.headLost = true;
+        zombie.attacking = false;
+        zombie.dying = true;
+        zombie.headLossTime = time;
+        zombie.deathTime = time;
+        zombie.pendingDeathExplosion = explosion;
+        zombie.waitingForDeath = true;
+
+        String headlessAnimation = zombie.stateAnimation(false);
+        zombie.frameInterval = Zombie.animationIntervalFor(headlessAnimation);
+        zombie.change(headlessAnimation, assets, time);
+    }
+
+    /**
+     * 死亡动画播完后结算小丑爆炸，普通僵尸无需处理。
+     *
+     * 参数：zombie 是结束死亡动画的僵尸；assets 提供素材；
+     * state 是当前游戏数据；time 是当前游戏时刻。
+     */
+    private static void finishDeath(Zombie zombie, Assets assets,
+            GameState state, long time) {
+        if (zombie.explosionOrigin == null) {
+            return;
+        }
+
+        Rectangle origin = zombie.explosionOrigin;
+        zombie.explosionOrigin = null;
+        int centerX = (int) origin.getCenterX();
+        int centerY = (int) origin.getMaxY();
+        int centerColumn = Layout.columnAt(centerX);
 
         clearPlants(zombie.row, centerColumn, state);
         damageHypnotizedZombies(zombie, centerColumn, assets, state, time);

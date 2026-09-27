@@ -1,6 +1,7 @@
 package pvz.game;
 
 import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -28,6 +29,13 @@ import pvz.zombie.Zombie;
  * 想调整画面效果时不用在游戏逻辑里翻找。
  */
 public class GameRenderer {
+    /** 调试框使用独立颜色，图例同时写出类型，避免只靠颜色判断。 */
+    private static final Color PLANT_DEBUG_COLOR = new Color(68, 235, 114);
+    private static final Color ZOMBIE_DEBUG_COLOR = new Color(255, 93, 86);
+    private static final Color HYPNO_DEBUG_COLOR = new Color(78, 225, 240);
+    private static final Color BULLET_DEBUG_COLOR = new Color(255, 227, 74);
+    private static final Color SUN_DEBUG_COLOR = new Color(255, 161, 62);
+
     /** 提供图片素材。 */
     private final Assets assets;
 
@@ -44,9 +52,10 @@ public class GameRenderer {
      * 按当前状态选择该画哪一个画面。
      *
      * 参数：painter 是画笔；screen 是当前画面编号；time 是当前时刻；
-     *       state 里装着要画的所有数据。
+     *       state 里装着要画的所有数据；developerMode 决定是否显示调试叠层。
      */
-    public void draw(Graphics2D painter, int screen, long time, GameState state) {
+    public void draw(Graphics2D painter, int screen, long time, GameState state,
+            boolean developerMode) {
         // 打开双线性插值，图片缩放之后边缘不会出现锯齿。
         painter.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
@@ -66,6 +75,9 @@ public class GameRenderer {
                 drawIntro(painter, time, state);
             } else {
                 drawPlay(painter, time, state);
+                if (developerMode) {
+                    drawDeveloperOverlay(painter, time, state);
+                }
             }
         }
     }
@@ -91,7 +103,9 @@ public class GameRenderer {
             }
         }
         BufferedImage button = assets.image(option);
-        painter.drawImage(button, 435, 75, 715, 206, 0, 0, 165, 70, null);
+        painter.drawImage(button, Layout.MENU_BUTTON_LEFT, Layout.MENU_BUTTON_TOP,
+            Layout.MENU_BUTTON_LEFT + Layout.MENU_BUTTON_WIDTH,
+            Layout.MENU_BUTTON_TOP + Layout.MENU_BUTTON_HEIGHT, 0, 0, 165, 70, null);
     }
 
     /** 画胜利或失败那张整屏图片。 */
@@ -374,7 +388,7 @@ public class GameRenderer {
      * 参数：painter 是画笔；time 是当前时刻；state 里装着选卡数据。
      */
     private void drawChooserPanel(Graphics2D painter, long time, GameState state) {
-        painter.drawImage(assets.image("PanelBackground"), 0, 87, null);
+        painter.drawImage(assets.image("PanelBackground"), 0, Layout.CHOOSER_PANEL_TOP, null);
 
         // 候选卡按 8 张一行往下排；现在是 17 张，所以第 17 张单独占第三行第一个。
         // 已选中或正在飞行（飞往卡槽、飞回候选区）的卡，在原位显示为灰色锁定状态。
@@ -393,7 +407,8 @@ public class GameRenderer {
         }
 
         if (state.selected.size() == state.maxCards) {
-            painter.drawImage(assets.image("StartButton"), 155, 547, null);
+            painter.drawImage(assets.image("StartButton"),
+                Layout.START_BUTTON_LEFT, Layout.START_BUTTON_TOP, null);
         }
     }
 
@@ -432,6 +447,174 @@ public class GameRenderer {
         drawPreview(painter, time, state);
         drawSpeedButton(painter, state);
         drawWatermark(painter);
+    }
+
+    /**
+     * 在试玩画面上叠加草坪网格、碰撞箱和当前战斗状态。
+     *
+     * 参数：painter 是画笔；time 是当前游戏时刻；state 是游戏数据。
+     */
+    private void drawDeveloperOverlay(Graphics2D painter, long time, GameState state) {
+        Graphics2D debugPainter = (Graphics2D) painter.create();
+        debugPainter.setFont(new Font("SansSerif", Font.BOLD, 12));
+        debugPainter.setStroke(new BasicStroke(2));
+
+        drawDebugGrid(debugPainter);
+        drawDebugEntities(debugPainter, time, state);
+        drawDebugSummary(debugPainter, state);
+        debugPainter.dispose();
+    }
+
+    /**
+     * 标出种植和爆炸规则所使用的行列边界。
+     *
+     * 参数：painter 是调试画笔。
+     */
+    private void drawDebugGrid(Graphics2D painter) {
+        int right = Layout.GRID_LEFT + Layout.COLUMN_COUNT * Layout.CELL_WIDTH;
+        int bottom = Layout.LAWN_TOP + Layout.ROW_COUNT * Layout.CELL_HEIGHT;
+        painter.setStroke(new BasicStroke(1));
+        painter.setColor(new Color(255, 255, 255, 115));
+
+        for (int column = 0; column <= Layout.COLUMN_COUNT; column++) {
+            int left = Layout.GRID_LEFT + column * Layout.CELL_WIDTH;
+            painter.drawLine(left, Layout.LAWN_TOP, left, bottom);
+        }
+        for (int row = 0; row <= Layout.ROW_COUNT; row++) {
+            int top = Layout.LAWN_TOP + row * Layout.CELL_HEIGHT;
+            painter.drawLine(Layout.GRID_LEFT, top, right, top);
+        }
+        painter.setStroke(new BasicStroke(2));
+    }
+
+    /**
+     * 画出场上实体实际参与碰撞的矩形和血量。
+     *
+     * 参数：painter 是调试画笔；time 是游戏时刻；state 是游戏数据。
+     */
+    private void drawDebugEntities(Graphics2D painter, long time, GameState state) {
+        for (Plant plant : state.plants) {
+            if (plant.alive) {
+                drawDebugBox(painter, plant.collisionBox(assets, time),
+                    PLANT_DEBUG_COLOR, "植物 " + plant.health);
+            }
+        }
+        for (Zombie zombie : state.zombies) {
+            if (!zombie.alive) {
+                continue;
+            }
+            Color color = ZOMBIE_DEBUG_COLOR;
+            String label = "僵尸 " + zombie.health;
+            if (zombie.hypno) {
+                color = HYPNO_DEBUG_COLOR;
+                label = "魅惑 " + zombie.health;
+            }
+            drawDebugBox(painter, zombie.collisionBox(assets, time), color, label);
+        }
+        for (Bullet bullet : state.bullets) {
+            if (bullet.alive && !bullet.exploded) {
+                drawDebugBox(painter, bullet.collisionBox(assets, time),
+                    BULLET_DEBUG_COLOR, "子弹");
+            }
+        }
+        for (Sun sun : state.suns) {
+            if (sun.alive) {
+                drawDebugBox(painter, sun.collisionBox(assets, time),
+                    SUN_DEBUG_COLOR, "阳光 " + sun.value);
+            }
+        }
+    }
+
+    /**
+     * 画一个碰撞箱，在框上方标出对象类型及血量。
+     *
+     * 参数：painter 是调试画笔；box 是对象的真实碰撞矩形；
+     * color 是分类颜色；label 是类型和数值说明。
+     */
+    private void drawDebugBox(Graphics2D painter, Rectangle box,
+            Color color, String label) {
+        // 完全离开窗口的实体不应在屏幕边缘留下调试标签。
+        if (box.getMaxX() <= 0 || box.x >= Layout.WINDOW_WIDTH) {
+            return;
+        }
+        if (box.getMaxY() <= 0 || box.y >= Layout.WINDOW_HEIGHT) {
+            return;
+        }
+
+        painter.setColor(color);
+        painter.drawRect(box.x, box.y, box.width, box.height);
+
+        int textWidth = painter.getFontMetrics().stringWidth(label);
+        int labelLeft = box.x;
+        if (labelLeft < 0) {
+            labelLeft = 0;
+        }
+        if (labelLeft + textWidth + 6 > Layout.WINDOW_WIDTH) {
+            labelLeft = Layout.WINDOW_WIDTH - textWidth - 6;
+        }
+
+        int labelTop = box.y - 17;
+        if (labelTop < Layout.GRID_TOP) {
+            labelTop = box.y + box.height + 1;
+        }
+        if (labelTop + 16 > Layout.WINDOW_HEIGHT) {
+            labelTop = Layout.WINDOW_HEIGHT - 16;
+        }
+        painter.setColor(new Color(0, 0, 0, 200));
+        painter.fillRect(labelLeft, labelTop, textWidth + 6, 16);
+        painter.setColor(color);
+        painter.drawString(label, labelLeft + 3, labelTop + 12);
+    }
+
+    /**
+     * 显示本关进度、场上数量与碰撞箱颜色图例。
+     *
+     * 参数：painter 是调试画笔；state 是游戏数据。
+     */
+    private void drawDebugSummary(Graphics2D painter, GameState state) {
+        int left = 452;
+        int top = 90;
+        painter.setColor(new Color(0, 0, 0, 195));
+        painter.fillRect(left, top, 340, 66);
+        painter.setFont(new Font("SansSerif", Font.BOLD, 12));
+        painter.setColor(Color.WHITE);
+
+        long elapsedSeconds = (state.time - state.playStart) / 1000;
+        String progress = "调试  第" + (state.levelNumber + 1) + "关  "
+            + elapsedSeconds + "秒  出怪 " + state.nextSpawnIndex
+            + "/" + state.schedule.size();
+        painter.drawString(progress, left + 8, top + 16);
+
+        int plantCount = 0;
+        for (Plant plant : state.plants) {
+            if (plant.alive) {
+                plantCount = plantCount + 1;
+            }
+        }
+        int zombieCount = 0;
+        for (Zombie zombie : state.zombies) {
+            if (zombie.alive) {
+                zombieCount = zombieCount + 1;
+            }
+        }
+        int bulletCount = 0;
+        for (Bullet bullet : state.bullets) {
+            if (bullet.alive) {
+                bulletCount = bulletCount + 1;
+            }
+        }
+        int sunCount = 0;
+        for (Sun sun : state.suns) {
+            if (sun.alive) {
+                sunCount = sunCount + 1;
+            }
+        }
+
+        String counts = "植物 " + plantCount + "  僵尸 " + zombieCount
+            + "  子弹 " + bulletCount + "  阳光 " + sunCount;
+        painter.drawString(counts, left + 8, top + 36);
+        painter.drawString("绿 植物  红 僵尸  青 魅惑  黄 子弹  橙 阳光",
+            left + 8, top + 55);
     }
 
     /**

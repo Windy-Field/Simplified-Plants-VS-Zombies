@@ -15,24 +15,6 @@ public final class PlantRules {
         return PlantCatalog.isBowling(plantName);
     }
 
-    /** 判断是不是射手。 */
-    public static boolean isShooter(String plantName) {
-        PlantDefinition definition = PlantCatalog.definitionOf(plantName);
-        return definition.actionType == PlantActionType.SHOOTER;
-    }
-
-    /** 判断是不是种下后生效的一次性植物。 */
-    public static boolean isInstant(String plantName) {
-        PlantDefinition definition = PlantCatalog.definitionOf(plantName);
-        return definition.actionType == PlantActionType.INSTANT;
-    }
-
-    /** 判断是不是靠近僵尸才生效的植物。 */
-    public static boolean isCloseAttack(String plantName) {
-        PlantDefinition definition = PlantCatalog.definitionOf(plantName);
-        return definition.actionType == PlantActionType.CLOSE_ATTACK;
-    }
-
     /** 判断僵尸能不能吃掉这种植物。 */
     public static boolean canBeEaten(String plantName) {
         return PlantCatalog.canBeEaten(plantName);
@@ -41,18 +23,17 @@ public final class PlantRules {
     /**
      * 判断植物当前是否处于可以躲过爆炸僵尸的攻击动作。
      *
+     * 正在播自己的攻击动画，就说明这一下已经打出去了、收不回来，
+     * 爆炸僵尸不该把它打断。这条对所有植物都成立，不需要按品种逐个列举。
+     *
      * 参数：plant 是要检查的植物。
-     * 返回：正在攻击中的大嘴花或窝瓜返回真。
+     * 返回：正在攻击中返回真。
      */
     public static boolean isProtectedFromExplodingZombie(Plant plant) {
-        if (plant.name.equals("Chomper")
-                && plant.animation.equals("ChomperAttack")) {
-            return true;
+        String attack = PlantCatalog.definitionOf(plant.name).attackAnimation;
+        if (attack == null) {
+            return false;
         }
-        if (plant.name.equals("Squash")
-                && plant.animation.equals("SquashAttack")) {
-            return true;
-        }
-        return false;
+        return plant.animation.equals(attack);
     }
 }

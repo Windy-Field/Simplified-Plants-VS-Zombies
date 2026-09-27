@@ -3,7 +3,6 @@ package pvz.zombie;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
-import pvz.plant.Plant;
 import pvz.world.Assets;
 import pvz.world.Layout;
 import pvz.world.Sprite;
@@ -56,23 +55,26 @@ public class Zombie extends Sprite {
     /** 开始播放死亡动画的时刻。 */
     public long deathTime;
 
-    /** 正在啃的植物。 */
-    public Plant prey;
-
-    /** 被魅惑后正在攻击的另一只僵尸。 */
-    public Zombie opponent;
-
     /** 每走一步前进的像素；报纸僵尸掉报纸后加速变快。 */
     public int speed = 1;
 
     /** 失去头盔或报纸后每走一步前进的像素。 */
     public int speedAfterHelmet = 1;
 
-    /** 是否正在播放小丑爆炸动画。 */
-    public boolean exploding;
+    /** 小丑开盒前的躯干位置，动画结束时用它确定爆炸中心。 */
+    public Rectangle explosionOrigin;
 
-    /** 是否已经执行过小丑爆炸效果，防止重复爆炸。 */
-    public boolean explosionTriggered;
+    /** 是否正在播放掉头后再进入死亡动画的过渡。 */
+    public boolean waitingForDeath;
+
+    /** 掉头动画开始的时刻。 */
+    public long headLossTime;
+
+    /** 掉头动画结束后是否使用普通爆炸死亡图。 */
+    public boolean pendingDeathExplosion;
+
+    /** 是否已经进入最后的死亡动画。 */
+    public boolean deathAnimationStarted;
 
     /**
      * 创建一只僵尸，从屏幕右侧进场。
@@ -102,11 +104,9 @@ public class Zombie extends Sprite {
     // TODO：【选做-6】新增僵尸时如果换装规则和默认不同（比如掉帽子后用特殊动画而非退化成普通僵尸），
     //                需要在这里加判断返回正确的动画名
     public String stateAnimation(boolean fight) {
-        if (hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
-            if (exploding) {
-                return "JokerZombieExplode";
-            }
-            return "JokerZombie";
+        // 有专属立绘的品种（比如小丑）先用它，不走后面那套"名字加后缀"的规律。
+        if (definition().idleAnimation != null) {
+            return definition().idleAnimation;
         }
 
         // 还戴着帽子的僵尸，动图已经把帽子画进身体里了，不用换名字。
@@ -173,18 +173,20 @@ public class Zombie extends Sprite {
     // TODO：【选做-9】新增僵尸时如果有专属死亡动画（比如机器人断成两截、巨人倒地砸坑），
     //                需要在这里加判断返回正确的死亡动画名
     public void die(Assets assets, long time, boolean explosion) {
-        if (dying) {
+        if (dying && deathAnimationStarted) {
             return;
         }
         dying = true;
+        waitingForDeath = false;
+        deathAnimationStarted = true;
         attacking = false;
         deathTime = time;
 
-        // 小丑无论因为什么死亡，都使用自己的爆炸动画。
-        if (hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
-            exploding = true;
-            frameInterval = animationIntervalFor("JokerZombieExplode");
-            change("JokerZombieExplode", assets, time);
+        // 资料里写了专属死亡动画的品种（比如小丑），无论因为什么死亡都先播它。
+        String replacement = definition().abilityAnimation;
+        if (replacement != null) {
+            frameInterval = animationIntervalFor(replacement);
+            change(replacement, assets, time);
             return;
         }
 
@@ -210,14 +212,27 @@ public class Zombie extends Sprite {
     }
 
     /**
-     * 判断这只僵尸是否拥有指定能力。
+     * 这只僵尸有没有自己的专属动画。
      *
-     * 参数：ability 是要查询的能力。
-     * 返回：拥有该能力时返回真。
+     * 有专属动画的品种（比如小丑）整个死亡流程都由它接管，
+     * 不再走掉帽子、掉臂、掉头那套血量节点。
+     *
+     * 返回：资料里登记了专属动画就返回真。
      */
-    public boolean hasAbility(ZombieAbility ability) {
-        ZombieDefinition definition = ZombieCatalog.definitionOf(name);
-        return definition.ability == ability;
+    public boolean hasOwnAnimation() {
+        return definition().abilityAnimation != null;
+    }
+
+    /**
+     * 取得这只僵尸的固定资料。
+     *
+     * 品种差异全部记在资料里，这里按名字现查一次，
+     * 免得每只僵尸都额外存一份指向资料的引用。
+     *
+     * 返回：该品种的固定资料。
+     */
+    private ZombieDefinition definition() {
+        return ZombieCatalog.definitionOf(name);
     }
 
     /**

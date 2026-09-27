@@ -122,42 +122,27 @@ public class Sun extends Sprite {
         // 目标是左上角阳光数字的中心。
         final double GOAL_X = 50.0;
         final double GOAL_Y = 50.0;
-        final double UNIFORM_RATIO = 0.8;  // 前 80% 匀速，后 20% 减速
 
-        // 总路程和已经飞行的时间（毫秒）。
-        double totalDist = Math.sqrt(
-            (GOAL_X - collectStartX) * (GOAL_X - collectStartX)
-            + (GOAL_Y - collectStartY) * (GOAL_Y - collectStartY));
-        long elapsed = time - collectStartTime;
-
-        // 按时间计算应该飞到的位置（每像素约 2ms）。
+        // 起点到终点的直线距离，以及按速度换算出的飞行时长。
+        double totalDistX = GOAL_X - collectStartX;
+        double totalDistY = GOAL_Y - collectStartY;
+        double totalDist = Math.sqrt(totalDistX * totalDistX + totalDistY * totalDistY);
         double durationMs = totalDist / Layout.SUN_COLLECT_SPEED * 16;
-        double progress = Math.min(1.0, elapsed / durationMs);
 
-        // 前 80% 匀速，后 20% 三次缓出减速。
-        double traveled;
-        if (progress <= UNIFORM_RATIO) {
-            // 匀速阶段：线性推进。
-            traveled = totalDist * progress / UNIFORM_RATIO * UNIFORM_RATIO;
-        } else {
-            // 减速阶段：三次缓出曲线 (cubic ease-out)。
-            double slowProgress = (progress - UNIFORM_RATIO) / (1.0 - UNIFORM_RATIO);
-            double slowCurve = 1 - (1 - slowProgress) * (1 - slowProgress) * (1 - slowProgress);
-            traveled = totalDist * (UNIFORM_RATIO + (1.0 - UNIFORM_RATIO) * slowCurve);
-        }
+        // 和卡片飞入卡槽用同一条曲线：前 80% 匀速，后 20% 缓出停住。
+        double traveled = Layout.flyProgress(time - collectStartTime, durationMs) * totalDist;
 
-        // 按行进比例计算新位置。
-        double angle = Math.atan2(GOAL_Y - collectStartY, GOAL_X - collectStartX);
+        // 按行进距离沿直线推进，再换算成左上角坐标。
+        double angle = Math.atan2(totalDistY, totalDistX);
         double newCenterX = collectStartX + Math.cos(angle) * traveled;
         double newCenterY = collectStartY + Math.sin(angle) * traveled;
 
-        // 转换成左上角坐标。
         BufferedImage image = picture(assets, time);
         x = newCenterX - image.getWidth() / 2.0;
         y = newCenterY - image.getHeight() / 2.0;
 
         // 到达终点就标记为死。
-        if (progress >= 1.0) {
+        if (time - collectStartTime >= durationMs) {
             alive = false;
         }
     }

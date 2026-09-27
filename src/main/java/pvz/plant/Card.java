@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import pvz.world.Assets;
+import pvz.world.Layout;
 
 /**
  * 卡槽上的一张卡片，比如"向日葵 50 阳光"。
@@ -13,6 +14,9 @@ import pvz.world.Assets;
  * 传送带上的卡片用完就没了，所以额外记录了创建时间。
  */
 public class Card {
+    /** 选卡界面卡片的飞行总时长，单位毫秒。 */
+    private static final double FLIGHT_DURATION_MS = 300.0;
+
     /** 这代表哪一种植物，是 PlantCatalog 里的下标。 */
     public int index;
 
@@ -153,29 +157,14 @@ public class Card {
 
         double totalDistX = flyTargetX - flyStartX;
         double totalDistY = flyTargetY - flyStartY;
-        double totalDist = Math.sqrt(totalDistX * totalDistX + totalDistY * totalDistY);
 
         // 飞行总时长 300ms，前 80% 匀速，后 20% 三次缓出减速。
-        final double FLIGHT_DURATION_MS = 300.0;
-        final double UNIFORM_RATIO = 0.8;  // 前 80% 匀速
-        long elapsed = time - flyStartTime;
-        double progress = Math.min(1.0, elapsed / FLIGHT_DURATION_MS);
-
-        double traveled;
-        if (progress <= UNIFORM_RATIO) {
-            // 匀速阶段：线性推进。
-            traveled = progress / UNIFORM_RATIO * UNIFORM_RATIO;
-        } else {
-            // 减速阶段：三次缓出曲线 (cubic ease-out)。
-            double slowProgress = (progress - UNIFORM_RATIO) / (1.0 - UNIFORM_RATIO);
-            double slowCurve = 1 - (1 - slowProgress) * (1 - slowProgress) * (1 - slowProgress);
-            traveled = UNIFORM_RATIO + (1.0 - UNIFORM_RATIO) * slowCurve;
-        }
+        double traveled = Layout.flyProgress(time - flyStartTime, FLIGHT_DURATION_MS);
 
         x = (int) (flyStartX + totalDistX * traveled);
         y = (int) (flyStartY + totalDistY * traveled);
 
-        if (progress >= 1.0) {
+        if (time - flyStartTime >= FLIGHT_DURATION_MS) {
             x = (int) flyTargetX;
             y = (int) flyTargetY;
             flying = false;

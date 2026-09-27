@@ -23,8 +23,6 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import pvz.world.Layout;
 
-import static pvz.world.Layout.CELL_WIDTH;
-
 /**
  * 编辑器中间那张出怪网格。
  *

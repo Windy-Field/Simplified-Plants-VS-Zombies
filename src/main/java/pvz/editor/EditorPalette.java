@@ -17,7 +17,7 @@ import javax.swing.JPanel;
  * 编辑器左边那一列可供选用的僵尸。
  *
  * 每种僵尸占一行，显示图标和中文名。点一下表示选中它，
- * 之后在网格的空格子上点左键就会放下这种僵尸；也可以直接把它拖进格子里。
+ * 之后可以按住 Ctrl 用右键将它放进空格，或者直接把它拖进格子。
  */
 public class EditorPalette extends JPanel {
     /** 每种僵尸占的高度。 */

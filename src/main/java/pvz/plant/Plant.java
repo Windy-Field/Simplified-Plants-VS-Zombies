@@ -1,7 +1,6 @@
 package pvz.plant;
 
 import pvz.world.Assets;
-import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.zombie.Zombie;
 
@@ -66,38 +65,31 @@ public class Plant extends Sprite {
         }
     }
 
+    // TODO：【选做-5】新增植物时，如果它的根部不在网格正中（比如大嘴花），
+    //                需要在 PlantCatalog 对应那条资料里填 rootShift；
+    //                如果它的图偏高、底部会超出格子（比如窝瓜），就填 verticalShift
     /**
      * 这种植物的图要往右挪多少，根部才正好落在格子中心。
      *
-     * 大多数植物的动图里，根部就在图片正中，不用挪。
-     * 大嘴花的图右边留了一大片空白给"往前扑咬"的动作，根部偏在左边，
-     * 按图片正中摆放的话整株会往左偏出小半格。
+     * 偏移量记在品种资料里，大多数植物是 0。
      * 种植和画落点预览都要用它，两边才对得上。
      *
      * 参数：kind 是植物名。
      * 返回：向右挪的像素数。
      */
-    // TODO：【选做-5】新增植物时植物根部不在网格正中（需要在这里加判断返回偏移量）
     public static int rootShift(String kind) {
-        if (kind.equals("Chomper")) {
-            return Layout.CHOMPER_ROOT_SHIFT;
-        }
-        return 0;
+        return PlantCatalog.definitionOf(kind).rootShift;
     }
 
     /**
      * 这种植物的图要往上挪多少，底部才正好落在合适位置。
      *
-     * 大多数植物用默认的 PLANT_BOTTOM_OFFSET 就行。
-     * 窝瓜的图比其他植物高，用默认值会让它底部超出格子。
+     * 偏移量记在品种资料里，大多数植物是 0。
      *
      * 参数：kind 是植物名。
      * 返回：向上挪的像素数（负数表示向上）。
      */
     public static int verticalShift(String kind) {
-        if (kind.equals("Squash")) {
-            return Layout.SQUASH_VERTICAL_SHIFT;
-        }
-        return 0;
+        return PlantCatalog.definitionOf(kind).verticalShift;
     }
 }

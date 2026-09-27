@@ -17,6 +17,9 @@ public class InstantPlantActions {
     /** 樱桃炸弹横向波及相邻一格的距离。 */
     private static final int CHERRY_BLAST_RADIUS = Layout.CELL_WIDTH * 3 / 2;
 
+    /** 寒冰菇雪花特效的放大倍数；放大了才盖得住整片草坪。 */
+    private static final double ICE_SHROOM_SNOW_SCALE = 1.5;
+
     /** 图片和动画资源。 */
     private final Assets assets;
     /** 当前游戏的数据。 */
@@ -87,8 +90,10 @@ public class InstantPlantActions {
         }
 
         if (plant.name.equals("Jalapeno")) {
-            plant.change("JalapenoExplode", assets, state.time);
-            plant.x = Layout.GRID_LEFT;
+            // 火舌从草坪左沿铺开，横向对齐草坪而不是格子中心。
+            explodeAcrossLawn(plant, "JalapenoExplode");
+            // 烧一整行。这里只按行号找目标，和植物自己的坐标无关，
+            // 所以放在换图之后判也不会偏（不像樱桃炸弹要按位置算距离）。
             for (Zombie zombie : state.zombies) {
                 if (!zombie.hypno && zombie.row == plant.row) {
                     ZombieEffects.die(zombie, assets, state, state.time, true);
@@ -98,16 +103,13 @@ public class InstantPlantActions {
         }
 
         // 剩下的就是寒冰菇：把雪花放大后铺在屏幕正中，冻住所有僵尸。
-        plant.scale = 1.5;
-        plant.change("IceShroomSnow", assets, state.time);
-        BufferedImage snow = plant.picture(assets, state.time);
-        plant.x = (Layout.WINDOW_WIDTH - snow.getWidth()) / 2.0;
-        plant.y = (Layout.WINDOW_HEIGHT - snow.getHeight()) / 2.0;
         for (Zombie zombie : state.zombies) {
             if (!zombie.hypno && !zombie.dying) {
                 zombie.frozenUntil = state.time + Layout.ZOMBIE_FREEZE_DURATION;
             }
         }
+        plant.scale = ICE_SHROOM_SNOW_SCALE;
+        centerOnScreen(plant, "IceShroomSnow");
     }
 
     /**
@@ -115,7 +117,7 @@ public class InstantPlantActions {
      *
      * 换动画时默认是"新图的底边对准旧图的底边"，这对换装、啃食那类动画是对的，
      * 但火球比植物高得多，底边对齐会把整团火顶到上一行去，看着像炸偏了。
-     * 这里改成对准格子中心：植物的图矮、贴着格子下沿画，火球却是四面扩散的，
+     * 所以这里对准格子中心：植物的图矮、贴着格子下沿画，火球却是四面扩散的，
      * 对准格子才会和真正的杀伤范围同心。
      *
      * 注意：这个方法会改动植物的坐标，凡是按坐标算范围的判定都要在调用它之前做完。
@@ -133,5 +135,30 @@ public class InstantPlantActions {
         Rectangle blast = plant.bounds(assets, state.time);
         plant.x = plant.x + (cellCenterX - blast.getCenterX());
         plant.y = plant.y + (cellCenterY - blast.getCenterY());
+    }
+
+    /**
+     * 换成横向铺开一整行的特效，火舌从草坪左沿开始。
+     *
+     * 只挪横向：火焰图的纵向本来就画在这一行上，纵向再动就偏了。
+     *
+     * 参数：plant 是要引爆的植物；effectAnimation 是特效动画名。
+     */
+    private void explodeAcrossLawn(Plant plant, String effectAnimation) {
+        plant.change(effectAnimation, assets, state.time);
+        plant.x = Layout.GRID_LEFT;
+    }
+
+    /**
+     * 换成铺满整个屏幕的特效，图片摆到画面正中。
+     *
+     * 参数：plant 是触发特效的植物；effectAnimation 是特效动画名。
+     */
+    private void centerOnScreen(Plant plant, String effectAnimation) {
+        plant.change(effectAnimation, assets, state.time);
+
+        BufferedImage effect = plant.picture(assets, state.time);
+        plant.x = (Layout.WINDOW_WIDTH - effect.getWidth()) / 2.0;
+        plant.y = (Layout.WINDOW_HEIGHT - effect.getHeight()) / 2.0;
     }
 }

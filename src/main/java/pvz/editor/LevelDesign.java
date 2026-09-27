@@ -14,7 +14,6 @@ import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
 import pvz.zombie.ZombieCatalog;
-import pvz.zombie.Zombie;
 import pvz.zombie.ZombieSpawn;
 
 /**
@@ -108,9 +107,9 @@ public class LevelDesign {
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
     /**
-     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     * 本关要求玩家恰好选中的卡片数量。
      *
-     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式生效。
+     * 只对正常选卡模式生效；选中数量必须等于这个值才能开始战斗。
      */
     public int maxCards = Layout.DEFAULT_CARD_SLOTS;
 
@@ -362,7 +361,7 @@ public class LevelDesign {
     /**
      * 交换两个格子的内容。
      *
-     * 拖动时如果目标格子已经有僵尸，直接覆盖会把原来的内容弄丢，所以改成交换。
+     * 用交换而不是覆盖：目标格子往往已经有僵尸，直接写进去会把它弄丢。
      *
      * 参数：firstRow、firstWave 是第一个格子的坐标；secondRow、secondWave 是第二个格子的坐标。
      */
@@ -966,7 +965,7 @@ public class LevelDesign {
         if (barType == GameState.BAR_NORMAL && backgroundIndex != 0) {
             return "只有白天草坪（背景 0）的正常选卡关卡会从天上掉阳光，当前设置下阳光生成速度不起作用。";
         }
-        // 必选超过卡槽数量就塞不进去，开始按钮永远不会亮。
+        // 必选超过卡槽数量时，游戏只能放入前几张，不能按关卡原计划选卡。
         if (requiredPlants.size() > maxCards) {
             return "卡槽数量是 " + maxCards + " 张，必选植物却有 " + requiredPlants.size()
                 + " 张，进了关卡没法开始。";

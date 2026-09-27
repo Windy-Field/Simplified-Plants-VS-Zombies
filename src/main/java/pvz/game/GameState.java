@@ -166,9 +166,9 @@ public class GameState {
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
     /**
-     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     * 本关要求玩家恰好选中的卡片数量。
      *
-     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式有影响。
+     * 只对正常选卡模式有影响；选中数量必须等于这个值才能开始战斗。
      */
     public int maxCards = Layout.DEFAULT_CARD_SLOTS;
 
@@ -209,22 +209,6 @@ public class GameState {
         for (int position = 0; position < flyingCards.size(); position++) {
             Card card = flyingCards.get(position);
             if (card.index == plantIndex && card.flying) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 判断某张卡片是不是正在飞往卡槽。
-     *
-     * 参数：plantIndex 是植物下标。
-     * 返回：正在飞向卡槽就返回真。
-     */
-    public boolean isFlyingToBar(int plantIndex) {
-        for (int position = 0; position < flyingCards.size(); position++) {
-            Card card = flyingCards.get(position);
-            if (card.index == plantIndex && card.flying && card.flyingToBar) {
                 return true;
             }
         }

@@ -139,7 +139,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 同一格里的僵尸错开多久，单位是毫秒。 */
     private final JSpinner spacingSpinner;
 
-    /** 本关的卡槽数量，也就是玩家最多能带几张卡。 */
+    /** 本关要求玩家恰好携带的卡片数量。 */
     private final JSpinner cardSlotSpinner;
 
     /** 用第几张背景图。 */
@@ -159,6 +159,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
 
     /** 勾上表示当前选中的格子改成随机行出怪。 */
     private final JCheckBox randomRowBox = new JCheckBox("选中格子随机行出怪");
+
+    /** 勾上后，下次试玩会显示碰撞箱和战斗状态。 */
+    private final JCheckBox developerModeBox = new JCheckBox("开发者模式");
 
     /** 僵尸列表里当前选中的品种，在空格子上点左键就放它。 */
     private String selectedKind = LevelDesign.ZOMBIE_KINDS[0];
@@ -306,6 +309,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
                 playCurrentLevel();
             }
         }));
+        developerModeBox.setToolTipText("下次试玩显示碰撞箱、血量和战斗状态");
+        toolbar.add(developerModeBox);
         return toolbar;
     }
 
@@ -466,7 +471,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         gridRow = addField(panel, constraints, gridRow, "出怪间隔（秒）", waveIntervalSpinner);
         gridRow = addField(panel, constraints, gridRow, "同格僵尸间隔（毫秒）", spacingSpinner);
         gridRow = addField(panel, constraints, gridRow, "波数", waveCountSpinner);
-        gridRow = addField(panel, constraints, gridRow, "卡槽数量（最多 8）", cardSlotSpinner);
+        gridRow = addField(panel, constraints, gridRow, "卡槽数量（1~8）", cardSlotSpinner);
         gridRow = addField(panel, constraints, gridRow, "背景", backgroundBox);
         gridRow = addField(panel, constraints, gridRow, "卡槽模式", barBox);
 
@@ -1126,7 +1131,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
         if (!saveLevelByNumber()) {
             return;
         }
-        final Game game = new Game(assets, levelNumber());
+        boolean developerMode = developerModeBox.isSelected();
+        final Game game = new Game(assets, levelNumber(), true, developerMode);
         JFrame window = new JFrame("试玩：第 " + (levelNumber() + 1) + " 关");
         // 试玩窗口关掉只是收起这一局，编辑器还要继续用，所以不能设成退出程序。
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

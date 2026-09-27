@@ -1,6 +1,7 @@
 package pvz.plant;
 
 import pvz.world.CombatValues;
+import pvz.world.Layout;
 
 /**
  * 全部植物的固定资料表。
@@ -25,13 +26,15 @@ public final class PlantCatalog {
         new PlantDefinition("RepeaterPea", "card_repeaterpea", 200, 7500,
             CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("Chomper", "card_chomper", 150, 7500,
-            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false,
+            Layout.CHOMPER_ROOT_SHIFT, 0, "ChomperAttack"),
         new PlantDefinition("PuffShroom", "card_puffshroom", 0, 7500,
             CombatValues.DEFAULT_PLANT_HEALTH, true, true, PlantActionType.SHOOTER, false),
         new PlantDefinition("PotatoMine", "card_potatomine", 25, 30000,
             CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("Squash", "card_squash", 50, 30000,
-            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false),
+            CombatValues.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.CLOSE_ATTACK, false,
+            0, Layout.SQUASH_VERTICAL_SHIFT, "SquashAttack"),
         new PlantDefinition("Spikeweed", "card_spikeweed", 100, 7500,
             CombatValues.DEFAULT_PLANT_HEALTH, false, false, PlantActionType.CLOSE_ATTACK, false),
         new PlantDefinition("Jalapeno", "card_jalapeno", 125, 50000,

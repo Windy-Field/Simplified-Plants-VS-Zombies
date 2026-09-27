@@ -38,9 +38,9 @@ public class Level {
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
     /**
-     * 本关的卡槽数量，也就是选卡界面上最多能带几张卡。
+     * 本关要求玩家恰好选中的卡片数量。
      *
-     * 这是个上限：玩家可以少带，但不能超过它。只对正常选卡模式生效。
+     * 只对正常选卡模式生效；选中数量必须等于这个值才能开始战斗。
      * 关卡文件没写这一项时保持和原版一致的 8。
      */
     public int maxCards = 8;

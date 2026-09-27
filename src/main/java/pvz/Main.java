@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import pvz.game.Game;
-import pvz.plant.Plant;
 import pvz.world.Assets;
 
 /**

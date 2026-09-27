@@ -27,13 +27,9 @@ import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
 import pvz.world.Bullet;
-import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
-import pvz.zombie.ZombieAbility;
-import pvz.zombie.ZombieCatalog;
-import pvz.zombie.ZombieDefinition;
 import pvz.zombie.ZombieSpawn;
 
 /**
@@ -325,7 +321,7 @@ public class SelfCheckTest {
         return game;
     }
 
-    /** 正常关卡：选满八张卡之后种一株，再推进一秒看僵尸有没有出场。 */
+    /** 正常关卡：选中本关指定数量的卡之后种一株，再推进一秒看僵尸有没有出场。 */
     private static void checkNormalLevel(Assets assets, Path project) throws Exception {
         int level = findLevelWithBar(assets, GameState.BAR_NORMAL);
         if (level < 0) {

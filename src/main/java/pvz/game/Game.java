@@ -33,7 +33,6 @@ import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
-import pvz.zombie.ZombieAbility;
 import pvz.zombie.ZombieEffects;
 import pvz.zombie.ZombieSpawn;
 
@@ -55,6 +54,9 @@ public class Game extends JPanel {
 
     /** 负责把 state 画出来。 */
     private final GameRenderer renderer;
+
+    /** 是否在这个试玩窗口显示开发者调试信息。 */
+    private final boolean developerMode;
 
     /** 随机数，用于挑选天空阳光的落点和传送带的卡片。 */
     private final Random random = new Random();
@@ -96,8 +98,20 @@ public class Game extends JPanel {
      *       不用真的等时间。
      */
     public Game(Assets originalAssets, int firstLevel, boolean runTimer) {
+        this(originalAssets, firstLevel, runTimer, false);
+    }
+
+    /**
+     * 创建游戏画面，并决定是否显示开发者调试信息。
+     *
+     * 参数：originalAssets 提供素材；firstLevel 是起始关卡；
+     * runTimer 表示是否自动推进；showDeveloperInfo 表示是否显示调试叠层。
+     */
+    public Game(Assets originalAssets, int firstLevel, boolean runTimer,
+            boolean showDeveloperInfo) {
         assets = originalAssets;
         renderer = new GameRenderer(originalAssets);
+        developerMode = showDeveloperInfo;
         levelLoader = new LevelLoader(originalAssets);
         plantActions = new PlantActions(originalAssets, state);
         // 不启动计时器就说明是测试在手动推帧，这时跳过选卡的飞行动画更省事。
@@ -293,7 +307,7 @@ public class Game extends JPanel {
      * 和玩家自己点卡是同一套飞行动画，只不过这里同时起飞，
      * 而且落点按清单顺序排，飞完之后玩家就不能再取消它们了。
      *
-     * 必选张数超过卡槽数量时只放得下前面几张。编辑器会在存档前拦下这种关卡，
+     * 必选张数超过要求数量时只放得下前面几张。编辑器会在存档前提醒这种关卡，
      * 但关卡文件是给人手改的，真被改坏了也得让玩家进得去、打得成，
      * 所以这里截断而不是报错。
      */
@@ -422,7 +436,7 @@ public class Game extends JPanel {
             int row = index % Layout.ROW_COUNT;
             int bank = index / Layout.ROW_COUNT;
             int x = Layout.INTRO_ZOMBIE_X + bank * Layout.INTRO_ZOMBIE_BANK_SPACING;
-            int bottom = 160 + row * Layout.CELL_HEIGHT;
+            int bottom = Layout.ZOMBIE_FOOT_BASE + row * Layout.CELL_HEIGHT;
 
             Zombie zombie = new Zombie(kinds.get(index), row, bottom, assets);
             // 僵尸是"从右边走进来"的，构造时横坐标固定在 ZOMBIE_START_X，
@@ -533,7 +547,8 @@ public class Game extends JPanel {
 
     /** 判断有没有点中"冒险模式"按钮。 */
     private void clickMenu(int x, int y) {
-        Rectangle option = new Rectangle(435, 75, 280, 131);
+        Rectangle option = new Rectangle(Layout.MENU_BUTTON_LEFT, Layout.MENU_BUTTON_TOP,
+            Layout.MENU_BUTTON_WIDTH, Layout.MENU_BUTTON_HEIGHT);
         if (option.contains(x, y)) {
             state.startingMenu = true;
             state.screenStart = state.time;
@@ -587,7 +602,7 @@ public class Game extends JPanel {
     }
 
     /**
-     * 处理选卡界面的点击：可以取消已选的卡、选中新卡，选满卡槽后按开始。
+     * 处理选卡界面的点击：可以取消已选的卡、选中新卡，恰好选满指定数量后才能开始。
      */
     private void clickCardChooser(int x, int y) {
         // 演出里的选卡界面正在升起或收起时不接受点击：
@@ -600,7 +615,8 @@ public class Game extends JPanel {
         }
         if (state.selected.size() == state.maxCards) {
             BufferedImage button = assets.image("StartButton");
-            Rectangle start = new Rectangle(155, 547, button.getWidth(), button.getHeight());
+            Rectangle start = new Rectangle(Layout.START_BUTTON_LEFT, Layout.START_BUTTON_TOP,
+                button.getWidth(), button.getHeight());
             if (start.contains(x, y)) {
                 // 演出里的选卡界面：先让背包沉回画面下方，沉完才轮到镜头移回草坪。
                 // 直接载入选卡界面的老路子（自检）没有演出，点开始就是直接开打。
@@ -825,7 +841,7 @@ public class Game extends JPanel {
             if (spawn.row == ZombieSpawn.RANDOM_ROW) {
                 targetRow = random.nextInt(Layout.ROW_COUNT);
             }
-            int bottom = 160 + targetRow * Layout.CELL_HEIGHT;
+            int bottom = Layout.ZOMBIE_FOOT_BASE + targetRow * Layout.CELL_HEIGHT;
             state.zombies.add(new Zombie(spawn.name, targetRow, bottom, assets));
             state.nextSpawnIndex = state.nextSpawnIndex + 1;
         }
@@ -879,18 +895,23 @@ public class Game extends JPanel {
         int column = random.nextInt(Layout.COLUMN_COUNT);
         int row = random.nextInt(Layout.ROW_COUNT);
         int center = Layout.SKY_SUN_COLUMN_CENTER + column * Layout.CELL_WIDTH;
-        int bottom = 160 + row * Layout.CELL_HEIGHT;
+        int bottom = Layout.ZOMBIE_FOOT_BASE + row * Layout.CELL_HEIGHT;
         state.suns.add(new Sun(center, 0, center, bottom, true, assets));
         state.lastSkySun = state.time;
     }
 
-    /** 僵尸全部出完并且场上没有活僵尸，就算过关。 */
+    /** 僵尸全部出完、场上没有敌人且爆炸特效播完，才算过关。 */
     private void checkVictory() {
         if (state.nextSpawnIndex != state.schedule.size()) {
             return;
         }
         if (!noActiveZombies()) {
             return;
+        }
+        for (Sprite effect : state.effects) {
+            if (effect.alive) {
+                return;
+            }
         }
         state.levelNumber = state.levelNumber + 1;
         state.screen = GameScreen.VICTORY;
@@ -913,7 +934,7 @@ public class Game extends JPanel {
             if (!zombie.alive) {
                 continue;
             }
-            if (updateZombieDying(zombie)) {
+            if (ZombieEffects.updateDeath(zombie, assets, state, state.time)) {
                 continue;
             }
             if (zombie.health <= 0) {
@@ -931,27 +952,11 @@ public class Game extends JPanel {
         }
     }
 
-    /**
-     * 处理僵尸的死亡动画。
-     *
-     * 返回：真表示这只僵尸这一帧已经处理完了。
-     */
-    private boolean updateZombieDying(Zombie zombie) {
-        if (!zombie.dying) {
-            return false;
-        }
-        long duration = assets.count(zombie.animation) * zombie.frameInterval;
-        if (state.time - zombie.deathTime >= duration) {
-            zombie.alive = false;
-        }
-        return true;
-    }
-
     /** 处理僵尸掉帽子、掉臂和掉头这几个血量节点。 */
     // TODO：【选做-7】新增僵尸时如果掉帽子/盔甲后有特殊效果（变快、反击、召唤小兵等），
     //                需要在这里加判断触发效果
     private void updateZombieDamageState(Zombie zombie) {
-        if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+        if (zombie.hasOwnAnimation()) {
             return;
         }
         if (zombie.helmet
@@ -980,8 +985,8 @@ public class Game extends JPanel {
         Rectangle old = zombie.bounds(assets, state.time);
         int center = (int) old.getCenterX();
         int bottom = (int) old.getMaxY();
-        // TODO：【选做-8】新增僵尸时如果有专属的头部素材（比如旗帜僵尸、报纸僵尸），
-        //                需要在这里加判断返回正确的头部素材名（默认是 "ZombieHead"）
+        // TODO：战斗中掉头目前使用通用素材；死亡时的报纸僵尸专属头部素材
+        // 已由 ZombieEffects 处理，这里后续可按品种资料选择对应的头部素材。
         Sprite head = new Sprite("ZombieHead", center, bottom, zombie.row, 0, assets);
         head.animationStart = state.time;
         state.heads.add(head);
@@ -1006,10 +1011,10 @@ public class Game extends JPanel {
 
     /** 僵尸这一帧的主动行为：找到要咬的东西，然后决定是咬还是走。 */
     private void updateZombieActions(Zombie zombie) {
-        if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
+        if (zombie.hasOwnAnimation()) {
             Plant target = findExplodingZombiePlant(zombie);
             if (target != null) {
-                ZombieEffects.die(zombie, assets, state, state.time, false, target);
+                ZombieEffects.die(zombie, assets, state, state.time, false);
                 return;
             }
             if (hasTouchingProtectedPlant(zombie)) {
@@ -1323,7 +1328,7 @@ public class Game extends JPanel {
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
         Graphics2D painter = (Graphics2D) graphics.create();
-        renderer.draw(painter, state.screen, state.time, state);
+        renderer.draw(painter, state.screen, state.time, state, developerMode);
         painter.dispose();
     }
 
