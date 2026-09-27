@@ -1009,7 +1009,7 @@ public class Game extends JPanel {
         if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)) {
             Plant target = findExplodingZombiePlant(zombie);
             if (target != null) {
-                ZombieEffects.die(zombie, assets, state, state.time, false);
+                ZombieEffects.die(zombie, assets, state, state.time, false, target);
                 return;
             }
             if (hasTouchingProtectedPlant(zombie)) {

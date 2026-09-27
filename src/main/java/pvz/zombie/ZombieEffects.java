@@ -30,9 +30,24 @@ public final class ZombieEffects {
      */
     public static void die(Zombie zombie, Assets assets, GameState state,
             long time, boolean explosion) {
+        die(zombie, assets, state, time, explosion, null);
+    }
+
+    /**
+     * 让接触植物的僵尸死亡，并以接触格作为爆炸中心。
+     *
+     * 参数：zombie 是要死亡的僵尸；assets 提供素材；state 是当前游戏数据；
+     * time 是当前游戏时刻；explosion 表示是否使用普通爆炸死亡效果；
+     * touchedPlant 是触发爆炸的植物，非接触死亡时传 null。
+     */
+    public static void die(Zombie zombie, Assets assets, GameState state,
+            long time, boolean explosion, Plant touchedPlant) {
+        if (!zombie.alive || zombie.dying) {
+            return;
+        }
         if (zombie.hasAbility(ZombieAbility.EXPLODES_ON_PLANT)
                 && !zombie.explosionTriggered) {
-            detonateExplodingZombie(zombie, assets, state, time);
+            detonateExplodingZombie(zombie, assets, state, time, touchedPlant);
         }
         zombie.die(assets, time, explosion);
     }
@@ -41,16 +56,22 @@ public final class ZombieEffects {
      * 执行小丑爆炸：清除范围内植物，伤害范围内魅惑僵尸，并添加爆炸提示图。
      *
      * 参数：zombie 是正在爆炸的僵尸；assets 提供素材；state 是当前游戏数据；
-     * time 是当前游戏时刻。
+     * time 是当前游戏时刻；touchedPlant 是接触目标，其他死亡原因时为 null。
      */
-    public static void detonateExplodingZombie(Zombie zombie, Assets assets,
-            GameState state, long time) {
+    private static void detonateExplodingZombie(Zombie zombie, Assets assets,
+            GameState state, long time, Plant touchedPlant) {
         zombie.explosionTriggered = true;
 
         Rectangle body = zombie.collisionBox(assets, time);
         int centerX = (int) body.getCenterX();
         int centerY = (int) body.getMaxY();
         int centerColumn = Layout.columnAt(centerX);
+
+        // 接触可能发生在植物边缘，此时僵尸身体中心还在隔壁格。
+        if (touchedPlant != null) {
+            centerColumn = touchedPlant.column;
+            centerX = Layout.columnCenter(centerColumn);
+        }
 
         clearPlants(zombie.row, centerColumn, state);
         damageHypnotizedZombies(zombie, centerColumn, assets, state, time);
