@@ -76,7 +76,7 @@ public class DeveloperModeTest {
      * 参数：assets 提供游戏图片和关卡配置。
      */
     private static void checkGameConstructors(Assets assets) {
-        Game normalGame = new Game(assets, 4, false);
+        Game normalGame = new Game(assets, 4, false, false);
         Game developerGame = new Game(assets, 4, false, true);
         normalGame.loadLevel();
         developerGame.loadLevel();

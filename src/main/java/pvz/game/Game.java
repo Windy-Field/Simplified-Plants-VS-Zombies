@@ -86,10 +86,6 @@ public class Game extends JPanel {
      *
      * 参数：originalAssets 是资源对象；firstLevel 是从第几关开始。
      */
-    public Game(Assets originalAssets, int firstLevel) {
-        this(originalAssets, firstLevel, true);
-    }
-
     /**
      * 创建游戏画面。
      *
@@ -97,12 +93,8 @@ public class Game extends JPanel {
      *       runTimer 表示要不要启动计时器。测试时传假，就能一帧一帧手动推进，
      *       不用真的等时间。
      */
-    public Game(Assets originalAssets, int firstLevel, boolean runTimer) {
-        this(originalAssets, firstLevel, runTimer, false);
-    }
-
     /**
-     * 创建游戏画面，并决定是否显示开发者调试信息。
+     * 创建游戏画面，并决定是否自动推进和显示开发者调试信息。
      *
      * 参数：originalAssets 提供素材；firstLevel 是起始关卡；
      * runTimer 表示是否自动推进；showDeveloperInfo 表示是否显示调试叠层。
@@ -760,7 +752,7 @@ public class Game extends JPanel {
                 state.heldCard = card;
                 return;
             }
-            PlantDefinition definition = Cards.definitionAt(card.index);
+            PlantDefinition definition = PlantCatalog.definitionAt(card.index);
             boolean enoughSun = state.sunValue >= definition.cost;
             boolean cooledDown = state.time - card.lastUsed > definition.cooldown;
             if (enoughSun && cooledDown) {
@@ -790,7 +782,7 @@ public class Game extends JPanel {
             return;
         }
 
-        String name = Cards.nameAt(state.heldCard.index);
+        String name = PlantCatalog.nameAt(state.heldCard.index);
         int center = Layout.columnCenter(column);
         int bottom = Layout.rowBottom(row);
         boolean day = state.backgroundIndex == 0;
@@ -803,7 +795,7 @@ public class Game extends JPanel {
         }
 
         if (state.barType == GameState.BAR_NORMAL) {
-            PlantDefinition definition = Cards.definitionAt(state.heldCard.index);
+            PlantDefinition definition = PlantCatalog.definitionAt(state.heldCard.index);
             state.sunValue = state.sunValue - definition.cost;
             state.heldCard.lastUsed = state.time;
         } else {
@@ -1152,7 +1144,7 @@ public class Game extends JPanel {
             if (plant.row != zombie.row) {
                 continue;
             }
-            if (!PlantRules.canBeEaten(plant.name)) {
+            if (!PlantCatalog.canBeEaten(plant.name)) {
                 continue;
             }
             if (Sprite.touches(zombie, plant, assets, state.time)) {

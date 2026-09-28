@@ -10,16 +10,6 @@ public final class PlantRules {
     private PlantRules() {
     }
 
-    /** 判断是不是保龄球类植物。 */
-    public static boolean isBowling(String plantName) {
-        return PlantCatalog.isBowling(plantName);
-    }
-
-    /** 判断僵尸能不能吃掉这种植物。 */
-    public static boolean canBeEaten(String plantName) {
-        return PlantCatalog.canBeEaten(plantName);
-    }
-
     /**
      * 判断植物当前是否处于可以躲过爆炸僵尸的攻击动作。
      *

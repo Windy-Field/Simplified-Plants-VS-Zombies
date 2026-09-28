@@ -66,7 +66,7 @@ public class Card {
         index = plantIndex;
         x = left;
         y = top;
-        PlantDefinition definition = Cards.definitionAt(index);
+        PlantDefinition definition = PlantCatalog.definitionAt(index);
         lastUsed = -definition.cooldown;
     }
 
@@ -98,7 +98,7 @@ public class Card {
         Rectangle rect = bounds(assets, scale);
         painter.drawImage(image, x, y, rect.width, rect.height, null);
 
-        PlantDefinition definition = Cards.definitionAt(index);
+        PlantDefinition definition = PlantCatalog.definitionAt(index);
         boolean notEnoughSun = !moving && sun < definition.cost;
         if (!available || notEnoughSun) {
             painter.setColor(new Color(0, 0, 0, 100));
@@ -122,7 +122,7 @@ public class Card {
      * 但如果这张图本来就叫 _move，就不要重复加后缀。
      */
     private String pictureName() {
-        PlantDefinition definition = Cards.definitionAt(index);
+        PlantDefinition definition = PlantCatalog.definitionAt(index);
         String name = definition.cardPicture;
         if (moving && !name.endsWith("_move")) {
             return name + "_move";

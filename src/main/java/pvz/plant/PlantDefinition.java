@@ -59,57 +59,21 @@ public class PlantDefinition {
     /** 这株植物可以触发的子弹转换资料。 */
     public final BulletTransformation[] bulletTransformations;
 
-    /**
-     * 创建一种植物的固定资料，位置不需要额外偏移，也没有攻击动画。
-     *
-     * 参数：name 是动画名；cardPicture 是卡片图名；cost 是阳光花费；
-     * cooldown 是冷却时间；maxHealth 是初始血量；sleepsAtDay 表示白天是否睡觉；
-     * canBeEaten 表示能否被僵尸吃掉；actionType 是行为类别；bowling 表示是否为保龄球。
-     */
-    public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
-            int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
-            PlantActionType actionType, boolean bowling) {
-        this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
-            actionType, bowling, 0, 0, null, new BulletTransformation[0]);
-    }
-
-    /**
-     * 创建一种植物的固定资料，并指定绘制偏移。
-     *
-     * 参数：前面几个和上面一样；rootShift 是向右挪的像素；
-     * verticalShift 是向上挪的像素（负数表示向上）。
-     */
-    public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
-            int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
-            PlantActionType actionType, boolean bowling, int rootShift, int verticalShift) {
-        this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
-            actionType, bowling, rootShift, verticalShift, null,
-            new BulletTransformation[0]);
-    }
+    /** 这株植物每次产出几颗阳光。 */
+    public final int sunCount;
 
     /**
      * 创建一种植物的完整固定资料。
      *
-     * 参数：前面几个和上面一样；attackAnimation 是发动攻击时播的动画名，没有就传 null。
+     * 参数：前面几个参数是植物基本资料；rootShift 和 verticalShift 是绘制偏移；
+     * attackAnimation 是攻击动画，没有时传 null；transformations 是子弹转换列表；
+     * sunAmount 是每次产出的阳光数。
      */
     public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
             int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
             PlantActionType actionType, boolean bowling, int rootShift, int verticalShift,
-            String attackAnimation) {
-        this(name, cardPicture, cost, cooldown, maxHealth, sleepsAtDay, canBeEaten,
-            actionType, bowling, rootShift, verticalShift, attackAnimation,
-            new BulletTransformation[0]);
-    }
-
-    /**
-     * 创建一种带子弹转换资料的植物。
-     *
-     * 参数：前面几个参数和完整构造函数相同；transformations 是转换列表。
-     */
-    public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
-            int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
-            PlantActionType actionType, boolean bowling, int rootShift, int verticalShift,
-            String attackAnimation, BulletTransformation[] transformations) {
+            String attackAnimation, BulletTransformation[] transformations,
+            int sunAmount) {
         this.name = name;
         this.cardPicture = cardPicture;
         this.cost = cost;
@@ -123,6 +87,7 @@ public class PlantDefinition {
         this.verticalShift = verticalShift;
         this.attackAnimation = attackAnimation;
         bulletTransformations = transformations;
+        sunCount = sunAmount;
     }
 
     /**

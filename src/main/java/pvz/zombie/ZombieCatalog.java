@@ -10,11 +10,11 @@ import pvz.world.CombatValues;
 public final class ZombieCatalog {
     /** 编辑器目前支持的僵尸资料。 */
     public static final ZombieDefinition[] DEFINITIONS = {
-        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, ZombieAbility.NONE),
-        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE),
-        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE),
-        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, ZombieAbility.NONE),
-        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 3, ZombieAbility.NONE),
+        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, ZombieAbility.NONE, null, null),
+        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE, null, null),
+        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE, null, null),
+        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, ZombieAbility.NONE, null, null),
+        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 3, ZombieAbility.NONE, null, null),
         new ZombieDefinition("JokerZombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
             ZombieAbility.EXPLODES_ON_PLANT, "JokerZombie", "JokerZombieExplode")
     };

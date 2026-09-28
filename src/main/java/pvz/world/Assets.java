@@ -23,7 +23,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import pvz.plant.Cards;
 import pvz.zombie.Zombie;
 
 /**
@@ -116,6 +115,7 @@ public class Assets {
         }
         alias("card_peashooter", "card_1");
         alias("card_sunflower", "card_2");
+        alias("card_twin_sunflower_move", "card_twin_sunflower");
         alias("card_chomper", "card_3");
         alias("card_cherrybomb", "card_4");
         alias("card_torchwood_move", "card_torchwood");
@@ -137,6 +137,7 @@ public class Assets {
         animation("Sun", "Screen/Sun.gif");
 
         animation("SunFlower", "Plants/SunFlower/1.gif");
+        animation("TwinSunflower", "Plants/TwinSunflower/TwinSunflower1.gif");
         animation("Peashooter", "Plants/Peashooter/1.gif");
         animation("SnowPea", "Plants/SnowPea/1.gif");
         animation("RepeaterPea", "Plants/Repeater/1.gif");

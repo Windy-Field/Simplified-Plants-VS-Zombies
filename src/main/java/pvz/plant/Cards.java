@@ -17,36 +17,6 @@ public final class Cards {
     }
 
     /**
-     * 查一种植物排在第几号。
-     *
-     * 参数：plantName 是植物名字。
-     * 返回：找到就返回下标；找不到返回 -1。
-     */
-    public static int indexOf(String plantName) {
-        return PlantCatalog.indexOf(plantName);
-    }
-
-    /**
-     * 按编号取得植物名字。
-     *
-     * 参数：plantIndex 是植物编号。
-     * 返回：植物名字。
-     */
-    public static String nameAt(int plantIndex) {
-        return PlantCatalog.nameAt(plantIndex);
-    }
-
-    /**
-     * 按编号取得植物资料。
-     *
-     * 参数：plantIndex 是植物编号。
-     * 返回：植物固定资料。
-     */
-    public static PlantDefinition definitionAt(int plantIndex) {
-        return PlantCatalog.definitionAt(plantIndex);
-    }
-
-    /**
      * 按选好的植物编号摆出一排静态卡片。
      *
      * 参数：indices 是玩家在选卡界面选中的植物编号，按选择先后排列。

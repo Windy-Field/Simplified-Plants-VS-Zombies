@@ -41,23 +41,12 @@ public class ZombieDefinition {
     public final String abilityAnimation;
 
     /**
-     * 创建一种僵尸的固定资料，动画名都按默认规则从名字推导。
+     * 创建一种僵尸的完整固定资料。
      *
      * 参数：name 是内部名字；maxHealth 是初始血量；helmet 表示是否戴帽子；
      * hasNoArmArt 表示是否有独臂动画；speed 是初始每步移动像素；
-     * speedAfterHelmet 是失去头盔或报纸后的每步移动像素；ability 是特殊能力类别。
-     */
-    public ZombieDefinition(String name, int maxHealth, boolean helmet,
-            boolean hasNoArmArt, int speed, int speedAfterHelmet,
-            ZombieAbility ability) {
-        this(name, maxHealth, helmet, hasNoArmArt, speed, speedAfterHelmet,
-            ability, null, null);
-    }
-
-    /**
-     * 创建一种僵尸的固定资料，并指定专属动画名。
-     *
-     * 参数：前面几个和上面一样；idleAnimation 是平常该播的动画名（null 表示用名字）；
+     * speedAfterHelmet 是失去头盔或报纸后的每步移动像素；ability 是特殊能力类别；
+     * idleAnimation 是平常该播的动画名（null 表示用名字）；
      * abilityAnimation 是触发特殊能力时替换掉的死亡动画名（null 表示没有）。
      */
     public ZombieDefinition(String name, int maxHealth, boolean helmet,

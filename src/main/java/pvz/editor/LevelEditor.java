@@ -50,7 +50,6 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import pvz.game.Game;
 import pvz.game.GameState;
-import pvz.plant.Cards;
 import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
@@ -281,7 +280,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
     private static String[] plantChoices(int count) {
         String[] result = new String[count];
         for (int index = 0; index < count; index++) {
-            PlantDefinition definition = Cards.definitionAt(index);
+            PlantDefinition definition = PlantCatalog.definitionAt(index);
             result[index] = definition.name + "（" + definition.cost + "）";
         }
         return result;

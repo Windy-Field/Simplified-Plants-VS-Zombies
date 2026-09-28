@@ -22,7 +22,6 @@ import pvz.game.Game;
 import pvz.game.GameState;
 import pvz.level.Level;
 import pvz.level.LevelLoader;
-import pvz.plant.Cards;
 import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
@@ -49,7 +48,7 @@ public class SelfCheckTest {
     // TODO：【必做-7】新增植物时需要把植物的所有动画状态名加到这个数组里，否则自检不会检查它
     // TODO：【必做-10】新增僵尸时需要把僵尸的所有动画状态名加到这个数组里，否则自检不会检查它
     private static final String[] ANIMATIONS = {
-        "Sun", "SunFlower", "Peashooter", "SnowPea", "WallNut", "WallNut_cracked1",
+        "Sun", "SunFlower", "TwinSunflower", "Peashooter", "SnowPea", "WallNut", "WallNut_cracked1",
         "WallNut_cracked2", "CherryBomb", "CherryBombExplode", "Threepeater", "RepeaterPea", "Chomper", "ChomperAttack",
         "ChomperDigest", "PuffShroom", "PuffShroomSleep", "PotatoMineInit", "PotatoMine",
         "PotatoMineExplode", "Squash", "SquashAttack", "Spikeweed", "Jalapeno", "JalapenoExplode",
@@ -71,7 +70,7 @@ public class SelfCheckTest {
     private static final String[] CONVEYOR_CARDS = {
         "card_peashooter_move", "card_snowpea_move", "card_wallnut_move",
         "card_cherrybomb_move", "card_repeaterpea_move", "card_chomper_move", "card_potatomine_move",
-        "card_redwallnut_move", "card_torchwood_move"
+        "card_redwallnut_move", "card_torchwood_move", "card_twin_sunflower_move"
     };
 
     /**
@@ -224,7 +223,7 @@ public class SelfCheckTest {
         for (int index = 0; index < pool.size(); index++) {
             JsonElement item = pool.get(index);
             String name = item.getAsJsonObject().get("name").getAsString();
-            check(Cards.indexOf(name) >= 0, "卡池里有不认识的卡：" + name);
+            check(PlantCatalog.indexOf(name) >= 0, "卡池里有不认识的卡：" + name);
         }
     }
 
@@ -307,7 +306,7 @@ public class SelfCheckTest {
      * 异常：关卡读取失败时抛出异常。
      */
     private static Game prepareNormalGame(Assets assets, int level) throws Exception {
-        Game game = new Game(assets, level, false);
+        Game game = new Game(assets, level, false, false);
         game.loadLevel();
 
         for (int index = 0; index < PlantCatalog.CHOOSER_COUNT; index++) {
@@ -329,7 +328,7 @@ public class SelfCheckTest {
             return;
         }
 
-        Game normal = new Game(assets, level, false);
+        Game normal = new Game(assets, level, false, false);
         normal.loadLevel();
 
         for (int column = 0; column < 8; column++) {
@@ -355,7 +354,7 @@ public class SelfCheckTest {
             return;
         }
 
-        Game conveyor = new Game(assets, level, false);
+        Game conveyor = new Game(assets, level, false, false);
         conveyor.loadLevel();
         conveyor.step(1000);
         check(conveyor.getCardCount() >= 1, "传送带没有出卡，关卡 " + level);
@@ -370,7 +369,7 @@ public class SelfCheckTest {
             return;
         }
 
-        Game bowling = new Game(assets, level, false);
+        Game bowling = new Game(assets, level, false, false);
         bowling.loadLevel();
         bowling.step(1000);
         check(bowling.getCardCount() >= 1, "保龄球关卡没有出卡，关卡 " + level);
@@ -416,7 +415,7 @@ public class SelfCheckTest {
     /** 不显示窗口，输出菜单的 800×600 渲染图供人工核对。 */
     private static void renderMenu(Assets assets, Path project) throws Exception {
         // 这里画的是主菜单，没有载入关卡，所以传第几关都一样。
-        Game game = new Game(assets, 1, false);
+        Game game = new Game(assets, 1, false, false);
         render(game, project.resolve("../build/menu.png"));
     }
 
@@ -433,7 +432,7 @@ public class SelfCheckTest {
             expected = map.get("choosebar_type").getAsInt();
         }
 
-        Game game = new Game(assets, level, false);
+        Game game = new Game(assets, level, false, false);
         game.loadLevel();
         check(game.getBarType() == expected, "游戏读到的卡槽模式和文件里写的不一致，关卡 " + level);
 
@@ -606,7 +605,7 @@ public class SelfCheckTest {
      */
     private static void checkGameCanBeStopped(Assets assets) {
         // 只看计时器停不停得下来，不载入关卡，所以传第几关都一样。
-        Game game = new Game(assets, 1);
+        Game game = new Game(assets, 1, true, false);
         check(game.isRunning(), "刚创建的一局应该是在跑的");
         game.stop();
         check(!game.isRunning(), "调用 stop 之后这一局还在跑，试玩窗口关掉后会白占处理器");

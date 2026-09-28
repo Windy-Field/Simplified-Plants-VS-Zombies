@@ -41,7 +41,7 @@ public class CloseAttackActions {
     public void update(Plant plant) {
         String name = plant.name;
         chargeUpPotatoMine(plant);
-        if (PlantRules.isBowling(name)) {
+        if (PlantCatalog.isBowling(name)) {
             rollBowling(plant);
         }
 

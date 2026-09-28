@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import pvz.game.GameState;
-import pvz.plant.Cards;
 import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
@@ -303,7 +302,7 @@ public class LevelDesign {
         if (kind == null) {
             return null;
         }
-        int position = kindIndex(kind);
+        int position = indexOfKind(kind);
         String label = kind;
         if (position >= 0) {
             label = ZOMBIE_LABELS[position];
@@ -317,15 +316,6 @@ public class LevelDesign {
      * 参数：kind 是僵尸品种名。
      * 返回：找到就返回下标；找不到返回 -1。
      */
-    private static int kindIndex(String kind) {
-        for (int index = 0; index < ZOMBIE_KINDS.length; index++) {
-            if (ZOMBIE_KINDS[index].equals(kind)) {
-                return index;
-            }
-        }
-        return -1;
-    }
-
     /**
      * 切换某个格子的随机行状态。
      *
@@ -421,7 +411,7 @@ public class LevelDesign {
      * 返回：支持就返回真。
      */
     public static boolean isKnownKind(String kind) {
-        return kindIndex(kind) >= 0;
+        return indexOfKind(kind) >= 0;
     }
 
     /**
@@ -547,7 +537,7 @@ public class LevelDesign {
         text.append("    \"" + field + "\":[\n");
         for (int index = 0; index < plants.size(); index++) {
             int plantIndex = plants.get(index).intValue();
-            text.append("        {\"name\":\"" + Cards.nameAt(plantIndex) + "\"}");
+            text.append("        {\"name\":\"" + PlantCatalog.nameAt(plantIndex) + "\"}");
             text.append(lineEnd(index, plants.size()));
         }
         text.append("    ],\n");
@@ -694,7 +684,7 @@ public class LevelDesign {
         for (int index = 0; index < array.size(); index++) {
             JsonObject entry = array.get(index).getAsJsonObject();
             String name = entry.get("name").getAsString();
-            int cardIndex = Cards.indexOf(name);
+            int cardIndex = PlantCatalog.indexOf(name);
             if (cardIndex >= 0) {
                 target.add(Integer.valueOf(cardIndex));
             }
@@ -980,7 +970,7 @@ public class LevelDesign {
         for (int index = 0; index < bannedPlants.size(); index++) {
             int plant = bannedPlants.get(index).intValue();
             if (requiredPlants.contains(Integer.valueOf(plant))) {
-                return Cards.nameAt(plant) + " 同时出现在禁用和必选清单里，游戏里会按必选处理。";
+                return PlantCatalog.nameAt(plant) + " 同时出现在禁用和必选清单里，游戏里会按必选处理。";
             }
         }
         return "";

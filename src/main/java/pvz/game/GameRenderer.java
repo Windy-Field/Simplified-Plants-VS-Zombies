@@ -9,10 +9,8 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import pvz.plant.Card;
-import pvz.plant.Cards;
 import pvz.plant.Plant;
 import pvz.plant.PlantCatalog;
-import pvz.plant.PlantRules;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Car;
@@ -730,7 +728,7 @@ public class GameRenderer {
 
     /** 判断这株保龄球是不是正处于滚动状态（红坚果炸之前也在地上滚）。 */
     private boolean isRollingBowling(Plant plant) {
-        if (!PlantRules.isBowling(plant.name)) {
+        if (!PlantCatalog.isBowling(plant.name)) {
             return false;
         }
         if (plant.name.equals("RedWallNutBowling") && plant.triggered) {
@@ -774,7 +772,7 @@ public class GameRenderer {
             return;
         }
 
-        String name = Cards.nameAt(heldCard.index);
+        String name = PlantCatalog.nameAt(heldCard.index);
         BufferedImage preview = assets.sprite(name, 0, 1);
 
         int column = Layout.columnAt(state.mouseX);

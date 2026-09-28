@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import pvz.game.GameState;
-import pvz.plant.Cards;
+import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
 import pvz.zombie.ZombieSpawn;
@@ -116,7 +116,7 @@ public class LevelLoader {
             JsonElement item = choices.get(index);
             JsonObject entry = item.getAsJsonObject();
             String name = entry.get("name").getAsString();
-            int cardIndex = Cards.indexOf(name);
+            int cardIndex = PlantCatalog.indexOf(name);
             if (cardIndex < 0) {
                 throw new IllegalArgumentException("关卡里出现了未知的卡片：" + name);
             }
@@ -156,7 +156,7 @@ public class LevelLoader {
             JsonElement item = choices.get(index);
             JsonObject entry = item.getAsJsonObject();
             String name = entry.get("name").getAsString();
-            int plantIndex = Cards.indexOf(name);
+            int plantIndex = PlantCatalog.indexOf(name);
             if (plantIndex < 0) {
                 throw new IllegalArgumentException("关卡里的 " + field + " 出现了未知的植物：" + name);
             }

@@ -38,7 +38,7 @@ public class Main {
             public void run() {
                 JFrame window = new JFrame("植物大战僵尸（Java 版） - Windy-Field / Octorange");
                 window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                window.setContentPane(new Game(assets, startLevel));
+                window.setContentPane(new Game(assets, startLevel, true, false));
                 window.pack();
                 window.setLocationRelativeTo(null);
                 window.setResizable(false);

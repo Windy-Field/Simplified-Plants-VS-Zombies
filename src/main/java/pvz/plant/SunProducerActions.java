@@ -57,7 +57,13 @@ public class SunProducerActions {
         int bottom = (int) bounds.getMaxY();
         int sunTargetX = bounds.x + bounds.width;
         int sunTargetY = bottom + bounds.height / 2;
-        state.suns.add(new Sun(center, bottom, sunTargetX, sunTargetY, big, assets));
+        PlantDefinition definition = PlantCatalog.definitionOf(plant.name);
+        for (int index = 0; index < definition.sunCount; index++) {
+            int sourceCenter = center - (definition.sunCount - 1) * 10 + index * 20;
+            int targetX = sunTargetX - (definition.sunCount - 1) * 10 + index * 20;
+            state.suns.add(new Sun(sourceCenter, bottom, targetX, sunTargetY,
+                big, assets));
+        }
         plant.lastAction = state.time;
     }
 }
