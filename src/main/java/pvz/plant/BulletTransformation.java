@@ -31,14 +31,15 @@ public class BulletTransformation {
     /**
      * 创建一条子弹转换资料。
      *
-     * 参数：source 是原来的子弹；target 是转换后的子弹；
-     * damageScale 是伤害倍率；其余参数是植物图片中的触发区域。
+     * 参数：sourceBullet 是原来的子弹；targetBullet 是转换后的子弹；
+     * damageMultiplier 是伤害倍率；其余参数是植物图片中的触发区域。
      */
-    public BulletTransformation(String source, String target, int damageScale,
+    public BulletTransformation(String sourceBullet, String targetBullet,
+            int damageMultiplier,
             int zoneLeft, int zoneTop, int zoneWidth, int zoneHeight) {
-        sourceBullet = source;
-        targetBullet = target;
-        damageMultiplier = damageScale;
+        this.sourceBullet = sourceBullet;
+        this.targetBullet = targetBullet;
+        this.damageMultiplier = damageMultiplier;
         this.zoneLeft = zoneLeft;
         this.zoneTop = zoneTop;
         this.zoneWidth = zoneWidth;

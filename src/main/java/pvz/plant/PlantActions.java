@@ -31,15 +31,15 @@ public class PlantActions {
     /**
      * 创建植物行为总入口。
      *
-     * 参数：originalAssets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据。
      */
-    public PlantActions(Assets originalAssets, GameState gameState) {
+    public PlantActions(Assets assets, GameState gameState) {
         state = gameState;
-        sunProducerActions = new SunProducerActions(originalAssets, gameState);
-        shooterActions = new ShooterActions(originalAssets, gameState);
-        wallNutActions = new WallNutActions(originalAssets, gameState);
-        instantPlantActions = new InstantPlantActions(originalAssets, gameState);
-        closeAttackActions = new CloseAttackActions(originalAssets, gameState);
+        sunProducerActions = new SunProducerActions(assets, gameState);
+        shooterActions = new ShooterActions(assets, gameState);
+        wallNutActions = new WallNutActions(assets, gameState);
+        instantPlantActions = new InstantPlantActions(assets, gameState);
+        closeAttackActions = new CloseAttackActions(assets, gameState);
     }
 
     /**

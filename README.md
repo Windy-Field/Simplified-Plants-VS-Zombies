@@ -34,7 +34,7 @@
 - 新增火焰豌豆：普通豌豆经过火炬树桩的火焰区域后变成火焰豌豆，伤害变为普通豌豆的 2 倍；
 - 冰豌豆经过火炬树桩后会变回普通豌豆，冰冻减速效果随之消失；
 - 子弹转换规则改为写入植物资料，由通用的子弹转换流程处理，新增类似植物时不需要在 `Game` 中增加品种判断；
-- 新增火炬树桩的专项自检，检查普通豌豆、冰豌豆的转换结果、伤害倍率和减速效果；
+- 火炬树桩和双发向日葵由通用自检检查素材、资料表、卡片和基本流程，不在 `SelfCheckTest` 中加入植物专用分支或专用测试类；
 - 新增双发向日葵，使用 `Plants/TwinSunflower/` 动画；每次生产阳光时同时生成两颗阳光；
 - 每种植物的产阳光数量写在 `PlantDefinition` 资料中，普通植物默认生成一颗阳光；
 
@@ -101,6 +101,16 @@ run.bat editor 3   :: 打开关卡编辑器并载入第 4 关
 ```
 
 **PowerShell**：在**根目录**执行 `.\java\build.ps1`，可加 `-Level 5`、`-Test`、`-Editor`。
+
+**素材工具**：素材预处理工具在 `src/main/java/pvz/tools/AssetToolkit.java`，可以规范图片尺寸、把图片序列合成 GIF，也可以调用本机 FFmpeg 把视频转成 GIF。先编译项目，再在 `java` 目录执行：
+
+```bat
+java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit normalize input.png output.png 64 89
+java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit images-to-gif output.gif 100 frame1.png frame2.png frame3.png
+java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit video-to-gif input.mp4 output.gif 73 87 10
+```
+
+图片序列转 GIF 时，所有帧会统一成第一帧的尺寸。视频转 GIF 需要系统中可以直接调用 `ffmpeg`；如果没有安装 FFmpeg，只使用前两个图片工具即可。
 
 **IntelliJ IDEA**：用 IDEA 打开 `java` 文件夹，等 Maven 导入完成后：
 
@@ -199,7 +209,7 @@ dist/MyPVZ/                 解压后就是这个文件夹，约 92MB
 
 ## 项目结构
 
-源码按主题分成 6 个包：
+源码按主题分成 7 个包：
 
 ```text
 src/main/java/pvz/
@@ -241,6 +251,8 @@ src/main/java/pvz/
 │   ├── CombatValues.java     血量、子弹伤害和僵尸伤害
 │   ├── Sprite.java           草坪上会动的东西的基类
 │   └── Bullet.java / Sun.java / Car.java   子弹、阳光、小推车
+├── tools/                素材预处理工具
+│   └── AssetToolkit.java     图片规范化、图片序列转 GIF、视频转 GIF
 └── editor/               关卡编辑器
     ├── LevelEditor.java      主窗口，兼拖放协调者
     ├── LevelDesign.java      波次网格数据和关卡文件读写
@@ -278,6 +290,7 @@ src/main/java/pvz/
 | 名字、卡片图、花费、冷却、初始血量 | `plant/PlantCatalog.java` 中对应的 `PlantDefinition` |
 | 图片绘制偏移（根部不在正中、图偏高） | 同一条 `PlantDefinition` 的 `rootShift` / `verticalShift` |
 | 攻击动画名（用于判断能不能被打断） | 同一条 `PlantDefinition` 的 `attackAnimation` |
+| 前方索敌范围（例如大嘴花提前一格攻击） | 同一条 `PlantDefinition` 的 `forwardAttackRange` |
 | 子弹、僵尸伤害和血量、植物血量 | `world/CombatValues.java` |
 | 射速、产阳光间隔、土豆雷出土时间等 | `world/Layout.java` 里对应的常量 |
 | 攻击范围、子弹种类等行为细节 | `plant/ShooterActions.java` 或其他行为处理器 |
@@ -290,9 +303,35 @@ src/main/java/pvz/
 
 以新增一个"寒冰双发射手"为例：
 
+下面的 TODO 按"不做就不能正常使用"和"只有需要时才做"分开。新增植物时可以逐项检查，完成一项就删掉对应 TODO。
+
+#### 必做 TODO
+
+- TODO【必做-植物-1】准备植物动画：把基础动画和实际会用到的状态动画放进 `assets/Plants/植物名/`。
+- TODO【必做-植物-2】准备卡片图片：把卡片放进 `assets/Cards/`，并让文件名和 `PlantDefinition.cardPicture` 完全一致。`Assets.loadCards()` 会自动读取 PNG，不需要为普通卡片再写一条登记代码。
+- TODO【必做-植物-3】登记植物动画：在 `world/Assets.java` 的 `loadPlants()` 中为每个动画调用 `animation()`、`sequence()` 或 `stretchedAnimation()`。
+- TODO【必做-植物-4】登记植物资料：在 `plant/PlantCatalog.java` 增加一条完整的 `PlantDefinition`，填写名字、卡片、花费、冷却、血量、白天是否睡觉、能否被吃、行为类别、产阳光数量、绘制偏移、攻击动画和子弹转换资料。
+- TODO【必做-植物-5】选择行为类别：优先复用已有的 `PlantActionType` 和行为处理器；如果现有处理器无法表达新规则，才新增处理器，并把它接到 `PlantActions`。
+- TODO【必做-植物-6】补自检：在 `SelfCheckTest.java` 的 `ANIMATIONS` 中加入新动画；如果新增了传送带卡片，还要加入 `CONVEYOR_CARDS`。
+- TODO【必做-植物-7】核对通用自检是否能覆盖新植物的素材、资料表、卡片和基本流程；不得在 `SelfCheckTest` 中加入植物专用分支，也不得新增植物专用测试类。
+- TODO【必做-植物-8】运行验证：运行 `run.bat test`，确认素材、资料表、卡片、渲染和行为测试都通过。
+
+#### 选做 TODO
+
+- TODO【选做-植物-1】新增传送带或保龄球卡片：准备 `card_植物名_move.png`，并在 `Assets.loadCards()` 中为它增加别名或登记；只有该植物会进入传送带/保龄球卡池时才需要。
+- TODO【选做-植物-2】新增白天睡觉状态：准备 `植物名Sleep` 动画，并在资料中把 `sleepsAtDay` 设为 `true`。
+- TODO【选做-植物-3】调整绘制位置：如果根部不在格子中心或图片底部偏高，在资料中填写 `rootShift` 或 `verticalShift`。
+- TODO【选做-植物-4】调整攻击保护：如果植物发动攻击后不能被小丑僵尸打断，在资料中填写 `attackAnimation`。
+- TODO【选做-植物-5】新增子弹素材：在 `assets/bullets/` 或 `assets/new_assets/` 准备图片，并在 `Assets.loadBullets()` 登记；然后在资料中填写 `BulletTransformation` 或在已有射手规则中复用对应子弹。
+- TODO【选做-植物-6】调整射手枪口：如果嘴的位置和现有射手不同，在 `Layout.java` 和 `ShooterActions.java` 中补充出射高度。
+- TODO【选做-植物-7】增加特殊绘制：只有普通 `Sprite.draw()` 无法满足需求时，才在 `GameRenderer.drawPlant()` 增加绘制方式。
+- TODO【选做-植物-8】更新说明：在 README 的更新日志、项目结构或植物新增说明中补充新植物的规则。
+
+#### 基本步骤
+
 1. **准备素材**：把植物**动图**放进 `assets/Plants/…`，卡片图放进 `assets/Cards/`。
 
-2. **登记动画**：`world/Assets.java` 的 `loadPlants()` 里加一行`animation("植物名", "Plants/…/1.gif");`。有额外状态（睡觉、爆炸等）的，每个状态各登记一个动画。新的卡片图在 `loadCards()` 里登记。
+2. **登记动画**：`world/Assets.java` 的 `loadPlants()` 里加一行 `animation("植物名", "Plants/…/1.gif");`。有额外状态（睡觉、爆炸等）的，每个状态各登记一个动画。
 
 3. **注册资料表**：在 `plant/PlantCatalog.java` 里新增一个完整的 `PlantDefinition`，插在最后两个保龄球之前。名字、卡片图、花费、冷却、初始血量和行为类别都写在同一条记录里，不再维护多组平行数组。
 

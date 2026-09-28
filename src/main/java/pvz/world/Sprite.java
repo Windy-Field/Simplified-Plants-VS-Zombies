@@ -48,13 +48,13 @@ public class Sprite {
      * 按底边对齐比按左上角对齐更自然。
      *
      * 参数：kind 是素材名；center 是期望的中心横坐标；bottom 是期望的底边纵坐标；
-     *       lane 是所在行；hitPoints 是最初的血量；assets 提供图片。
+     *       row 是所在行；hitPoints 是最初的血量；assets 提供图片。
      */
-    public Sprite(String kind, int center, int bottom, int lane, int hitPoints, Assets assets) {
+    public Sprite(String kind, int center, int bottom, int row, int hitPoints, Assets assets) {
         name = kind;
         animation = kind;
         animationStart = System.currentTimeMillis();
-        row = lane;
+        this.row = row;
         health = hitPoints;
         BufferedImage image = picture(assets, 0);
         x = center - image.getWidth() / 2.0;

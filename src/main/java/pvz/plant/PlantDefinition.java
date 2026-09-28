@@ -62,18 +62,22 @@ public class PlantDefinition {
     /** 这株植物每次产出几颗阳光。 */
     public final int sunCount;
 
+    /** 这株植物可以提前索敌的前方格子数。 */
+    public final int forwardAttackRange;
+
     /**
      * 创建一种植物的完整固定资料。
      *
-     * 参数：前面几个参数是植物基本资料；rootShift 和 verticalShift 是绘制偏移；
-     * attackAnimation 是攻击动画，没有时传 null；transformations 是子弹转换列表；
-     * sunAmount 是每次产出的阳光数。
+     * 参数：前面几个参数是植物基本资料；sunCount 是每次产出的阳光数；
+     * forwardRange 是提前索敌的前方格子数；
+     * rootShift 和 verticalShift 是绘制偏移；attackAnimation 是攻击动画，
+     * 没有时传 null；transformations 是子弹转换列表。
      */
     public PlantDefinition(String name, String cardPicture, int cost, int cooldown,
             int maxHealth, boolean sleepsAtDay, boolean canBeEaten,
-            PlantActionType actionType, boolean bowling, int rootShift, int verticalShift,
-            String attackAnimation, BulletTransformation[] transformations,
-            int sunAmount) {
+            PlantActionType actionType, boolean bowling, int sunCount,
+            int forwardRange, int rootShift, int verticalShift, String attackAnimation,
+            BulletTransformation[] transformations) {
         this.name = name;
         this.cardPicture = cardPicture;
         this.cost = cost;
@@ -87,7 +91,8 @@ public class PlantDefinition {
         this.verticalShift = verticalShift;
         this.attackAnimation = attackAnimation;
         bulletTransformations = transformations;
-        sunCount = sunAmount;
+        this.sunCount = sunCount;
+        forwardAttackRange = forwardRange;
     }
 
     /**

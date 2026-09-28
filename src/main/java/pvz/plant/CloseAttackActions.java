@@ -23,10 +23,10 @@ public class CloseAttackActions {
     /**
      * 创建CloseAttackActions。
      *
-     * 参数：originalAssets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据。
      */
-    public CloseAttackActions(Assets originalAssets, GameState gameState) {
-        assets = originalAssets;
+    public CloseAttackActions(Assets assets, GameState gameState) {
+        this.assets = assets;
         state = gameState;
     }
 
@@ -40,6 +40,7 @@ public class CloseAttackActions {
      */
     public void update(Plant plant) {
         String name = plant.name;
+        PlantDefinition definition = PlantCatalog.definitionOf(name);
         chargeUpPotatoMine(plant);
         if (PlantCatalog.isBowling(name)) {
             rollBowling(plant);
@@ -63,7 +64,9 @@ public class CloseAttackActions {
             if (!zombie.alive || zombie.dying || zombie.hypno || zombie.row != plant.row) {
                 continue;
             }
-            if (!Sprite.touches(plant, zombie, assets, state.time)) {
+            boolean touching = Sprite.touches(plant, zombie, assets, state.time);
+            boolean inForwardRange = inForwardRange(plant, zombie, definition);
+            if (!touching && !inForwardRange) {
                 continue;
             }
             if (handleCloseHit(plant, zombie)) {
@@ -75,35 +78,40 @@ public class CloseAttackActions {
     }
 
     /**
-     * 算出某个横坐标落在第几列。
+     * 判断僵尸是否进入植物资料规定的前方索敌范围。
      *
-     * 用 floorDiv 而不是普通除法：草坪左边外面一点点会用普通除法被算成第 0 列，
-     * floorDiv 向下取整得到 -1，才能判成越界。
-     *
-     * 参数：x 是要换算的横坐标。
-     * 返回：格子的列号，可能在草坪范围之外。
+     * 这个范围只向右计算，因为植物默认面向右边。
+     * 这里直接使用僵尸躯干中心的实时横坐标，不把它先换算成列号，
+     * 避免僵尸刚跨过格子边界时攻击判定突然跳变。
+     * 参数：plant 是正在攻击的植物；zombie 是待检查的僵尸；
+     * definition 是植物固定资料。
+     * 返回：僵尸在前方指定格子内时返回真。
      */
-    private static int columnOf(double x) {
-        return Math.floorDiv((int) x - Layout.GRID_LEFT, Layout.CELL_WIDTH);
+    private boolean inForwardRange(Plant plant, Zombie zombie,
+            PlantDefinition definition) {
+        if (definition.forwardAttackRange <= 0) {
+            return false;
+        }
+        return inPlantRange(plant, zombie, 0,
+            definition.forwardAttackRange);
     }
 
     /**
-     * 算出僵尸站在第几列。
+     * 判断僵尸躯干中心是否落在植物周围的连续横坐标范围内。
      *
-     * 不能拿 zombie.x 直接换算：那是整张图的左沿，而僵尸的图画布很宽（166 像素），
-     * 身体只占靠右的一截，普通僵尸的身体中心比画布左沿靠右 106 像素，超过一整格。
-     * 用画布左沿算出来的列号会比僵尸实际站的位置偏左一格多，
-     * 窝瓜就会在僵尸离得还远的时候就扑上去。
-     *
-     * 这里改用碰撞盒（躯干）的中心：躯干中心就是僵尸"站在哪儿"最贴近的位置，
-     * 而且和 Sprite.touches 用的是同一个盒子，两套判定不会各说各话。
-     *
-     * 参数：zombie 是要换算的僵尸。
-     * 返回：僵尸所在的列号，可能在草坪范围之外。
+     * 参数：plant 是范围中心植物；zombie 是待检查的僵尸；
+     * leftCells 是向左包含几格；rightCells 是向右包含几格。
+     * 返回：僵尸在范围内时返回真。
      */
-    private int columnOfZombie(Zombie zombie) {
-        Rectangle body = zombie.collisionBox(assets, state.time);
-        return columnOf(body.getCenterX());
+    private boolean inPlantRange(Plant plant, Zombie zombie,
+            int leftCells, int rightCells) {
+        Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+        double zombieCenter = zombieBody.getCenterX();
+        double left = Layout.GRID_LEFT
+            + (plant.column - leftCells) * Layout.CELL_WIDTH;
+        double right = Layout.GRID_LEFT
+            + (plant.column + rightCells + 1) * Layout.CELL_WIDTH;
+        return zombieCenter >= left && zombieCenter <= right;
     }
 
     /**
@@ -117,11 +125,7 @@ public class CloseAttackActions {
             if (!zombie.alive || zombie.dying || zombie.hypno || zombie.row != plant.row) {
                 continue;
             }
-            // 窝瓜的格子用种下去时记下的列号，不用它的横坐标反推：
-            // 触发后它的 x 会被挪到目标僵尸身上，那时候再反推就不准了。
-            int zombieColumn = columnOfZombie(zombie);
-            // 左中右三格都在范围内。
-            if (Math.abs(zombieColumn - plant.column) <= 1) {
+            if (inPlantRange(plant, zombie, 1, 1)) {
                 return zombie;
             }
         }
@@ -136,9 +140,7 @@ public class CloseAttackActions {
      * （僵尸的身体只占画布靠右的一截），按画布左沿对齐会让瓜身停在僵尸左边大半格，
      * 向左砸、向右砸都偏。
      *
-     * 用"窝瓜身体中心对准僵尸躯干中心"来定位：
-     * 躯干中心就是 columnOfZombie 用来判断僵尸在哪一列的那个点，
-     * 索敌和落点用同一个参照，砸下去才不会偏。
+     * 用"窝瓜身体中心对准僵尸躯干中心"来定位，索敌和落点使用同一个实时参照。
      *
      * 参数：plant 是那株窝瓜；zombie 是它盯上的僵尸。
      */
@@ -197,9 +199,9 @@ public class CloseAttackActions {
                 plant.attacking = false;
             }
             // 滚到哪一行就算在哪一行，这样才知道该撞谁。
-            int lane = ((int) plant.y + 35 - Layout.GRID_TOP) / Layout.CELL_HEIGHT;
-            if (Layout.insideGrid(lane, 0)) {
-                plant.row = lane;
+            int row = ((int) plant.y + 35 - Layout.GRID_TOP) / Layout.CELL_HEIGHT;
+            if (Layout.insideGrid(row, 0)) {
+                plant.row = row;
             }
         }
         plant.lastAction = state.time;
@@ -273,12 +275,7 @@ public class CloseAttackActions {
                     if (!zombie.alive || zombie.dying || zombie.row != plant.row) {
                         continue;
                     }
-                    // 窝瓜的格子始终用种下去时记下的列号。
-                    // 触发时 plant.x 已经被挪到目标僵尸身上，拿它反推列号会算出旁边一格，
-                    // 砸下去的范围就会和当初索敌的范围对不上，忽大忽小。
-                    int zombieColumn = columnOfZombie(zombie);
-                    // 同一格、左一格、右一格都在窝瓜攻击范围内。
-                    if (Math.abs(zombieColumn - plant.column) <= 1) {
+                    if (inPlantRange(plant, zombie, 1, 1)) {
                         ZombieEffects.die(zombie, assets, state, state.time, false);
                     }
                 }

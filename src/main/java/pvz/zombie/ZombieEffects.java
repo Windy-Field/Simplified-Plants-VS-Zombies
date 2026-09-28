@@ -131,10 +131,8 @@ public final class ZombieEffects {
         zombie.explosionOrigin = null;
         int centerX = (int) origin.getCenterX();
         int centerY = (int) origin.getMaxY();
-        int centerColumn = Layout.columnAt(centerX);
-
-        clearPlants(zombie.row, centerColumn, state);
-        damageHypnotizedZombies(zombie, centerColumn, assets, state, time);
+        clearPlants(zombie.row, centerX, assets, state, time);
+        damageHypnotizedZombies(zombie, centerX, assets, state, time);
 
         Sprite effect = new Sprite("JokerBoom", centerX, centerY,
             zombie.row, 0, assets);
@@ -146,10 +144,11 @@ public final class ZombieEffects {
     /**
      * 清除小丑 3×3 范围内的所有植物。
      *
-     * 参数：centerRow 和 centerColumn 是爆炸中心；state 是当前游戏数据。
+     * 参数：centerRow 和 centerX 是爆炸中心；assets 提供碰撞盒；
+     * state 是当前游戏数据；time 是当前时刻。
      */
-    private static void clearPlants(int centerRow, int centerColumn,
-            GameState state) {
+    private static void clearPlants(int centerRow, int centerX, Assets assets,
+            GameState state, long time) {
         for (Plant plant : state.plants) {
             if (!plant.alive) {
                 continue;
@@ -157,7 +156,10 @@ public final class ZombieEffects {
             if (Math.abs(plant.row - centerRow) > JOKER_EXPLOSION_RANGE) {
                 continue;
             }
-            if (Math.abs(plant.column - centerColumn) > JOKER_EXPLOSION_RANGE) {
+            Rectangle plantBody = plant.collisionBox(assets, time);
+            double horizontalDistance = Math.abs(plantBody.getCenterX() - centerX);
+            double horizontalRange = Layout.CELL_WIDTH * 1.5;
+            if (horizontalDistance > horizontalRange) {
                 continue;
             }
             plant.health = 0;
@@ -171,10 +173,10 @@ public final class ZombieEffects {
     /**
      * 只伤害爆炸范围内的魅惑僵尸，普通僵尸不会受到小丑爆炸伤害。
      *
-     * 参数：zombie 是爆炸中心的僵尸；centerColumn 是中心列；assets 提供素材；
+     * 参数：zombie 是爆炸中心的僵尸；centerX 是爆炸中心横坐标；assets 提供素材；
      * state 是当前游戏数据；time 是当前游戏时刻。
      */
-    private static void damageHypnotizedZombies(Zombie zombie, int centerColumn,
+    private static void damageHypnotizedZombies(Zombie zombie, int centerX,
             Assets assets, GameState state, long time) {
         for (Zombie other : state.zombies) {
             if (other == zombie || !other.alive || other.dying || !other.hypno) {
@@ -184,8 +186,9 @@ public final class ZombieEffects {
                 continue;
             }
             Rectangle body = other.collisionBox(assets, time);
-            int otherColumn = Layout.columnAt((int) body.getCenterX());
-            if (Math.abs(otherColumn - centerColumn) > JOKER_EXPLOSION_RANGE) {
+            double horizontalDistance = Math.abs(body.getCenterX() - centerX);
+            double horizontalRange = Layout.CELL_WIDTH * 1.5;
+            if (horizontalDistance > horizontalRange) {
                 continue;
             }
             other.health = other.health - CombatValues.JOKER_EXPLOSION_DAMAGE;

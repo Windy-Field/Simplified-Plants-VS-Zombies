@@ -25,10 +25,10 @@ public class LevelLoader {
     /**
      * 创建读取器。
      *
-     * 参数：originalAssets 用来找到某个关卡的 JSON 文件。
+     * 参数：assets 用来找到某个关卡的 JSON 文件。
      */
-    public LevelLoader(Assets originalAssets) {
-        assets = originalAssets;
+    public LevelLoader(Assets assets) {
+        this.assets = assets;
     }
 
     /**
@@ -78,9 +78,9 @@ public class LevelLoader {
             JsonElement item = wave.get(index);
             JsonObject entry = item.getAsJsonObject();
             int spawnTime = entry.get("time").getAsInt();
-            int lane = entry.get("map_y").getAsInt();
+            int row = entry.get("map_y").getAsInt();
             String name = entry.get("name").getAsString();
-            level.spawns.add(new ZombieSpawn(spawnTime, lane, name));
+            level.spawns.add(new ZombieSpawn(spawnTime, row, name));
         }
     }
 

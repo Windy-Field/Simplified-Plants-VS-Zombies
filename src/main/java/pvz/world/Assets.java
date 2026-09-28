@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import pvz.tools.AssetToolkit;
 import pvz.zombie.Zombie;
 
 /**
@@ -132,7 +133,8 @@ public class Assets {
     }
 
     /** 植物、阳光以及植物相关的特效。 */
-    // TODO：【必做-1】新增植物时需要调用 animation() 登记植物动画（名字必须和 PlantCatalog 中的一致）
+    // TODO【必做-植物-3】：新增植物时登记所有实际会用到的植物动画。
+    // 动画名必须和 PlantCatalog 中的资料一致；普通卡片图片由 loadCards() 自动读取。
     private void loadPlants() throws IOException {
         animation("Sun", "Screen/Sun.gif");
 
@@ -331,52 +333,9 @@ public class Assets {
     private void scaledAnimation(String name, String file, double scale) throws IOException {
         List<BufferedImage> list = new ArrayList<BufferedImage>();
         for (GifFrame frame : readGif(root.resolve(file))) {
-            list.add(resize(frame.image, scale));
+            list.add(AssetToolkit.resizeByScale(frame.image, scale));
         }
         frames.put(name, list);
-    }
-
-    /**
-     * 把一张图缩放到指定倍数。
-     *
-     * 参数：source 是原图；scale 是倍数。
-     * 返回：缩放后的新图，宽高至少留 1 像素。
-     */
-    private static BufferedImage resize(BufferedImage source, double scale) {
-        BufferedImage current = source;
-        double remaining = scale;
-        // 先反复对折到接近目标，最后再走一次带插值的缩放。
-        while (remaining <= 0.5) {
-            current = half(current);
-            remaining = remaining * 2;
-        }
-
-        int width = Math.max(1, (int) Math.round(current.getWidth() * remaining));
-        int height = Math.max(1, (int) Math.round(current.getHeight() * remaining));
-        if (width == current.getWidth() && height == current.getHeight()) {
-            return current;
-        }
-
-        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D painter = result.createGraphics();
-        painter.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
-            java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        painter.drawImage(current, 0, 0, width, height, null);
-        painter.dispose();
-        return result;
-    }
-
-    /** 把一张图宽高各取一半。 */
-    private static BufferedImage half(BufferedImage source) {
-        int width = Math.max(1, source.getWidth() / 2);
-        int height = Math.max(1, source.getHeight() / 2);
-        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D painter = result.createGraphics();
-        painter.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
-            java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        painter.drawImage(source, 0, 0, width, height, null);
-        painter.dispose();
-        return result;
     }
 
     /** GIF 里的一帧：合成后的完整画面和它的停留时间（毫秒）。 */
@@ -410,7 +369,7 @@ public class Assets {
         if (image == null) {
             throw new IOException("无法解码图片：" + path);
         }
-        list.add(toArgb(image));
+        list.add(AssetToolkit.toArgb(image));
         return list;
     }
 
@@ -476,13 +435,13 @@ public class Assets {
                 // "恢复到上一帧"要先把叠加前的画布存起来。
                 BufferedImage before = null;
                 if (disposal.equals("restoreToPrevious")) {
-                    before = copy(canvas);
+                    before = AssetToolkit.copyImage(canvas);
                 }
 
                 Graphics2D painter = canvas.createGraphics();
                 painter.drawImage(piece, left, top, null);
                 painter.dispose();
-                result.add(new GifFrame(copy(canvas), delay));
+                result.add(new GifFrame(AssetToolkit.copyImage(canvas), delay));
 
                 // 按处置方式为下一帧准备画布。
                 if (disposal.equals("restoreToBackgroundColor")) {
@@ -568,25 +527,6 @@ public class Assets {
             queue.add(new int[] {column, row + 1});
             queue.add(new int[] {column, row - 1});
         }
-    }
-
-    /** 复制一张图片。 */
-    private static BufferedImage copy(BufferedImage source) {
-        BufferedImage result = new BufferedImage(source.getWidth(), source.getHeight(),
-            BufferedImage.TYPE_INT_ARGB);
-        Graphics2D painter = result.createGraphics();
-        painter.setComposite(AlphaComposite.Src);
-        painter.drawImage(source, 0, 0, null);
-        painter.dispose();
-        return result;
-    }
-
-    /** 统一转成带透明通道的格式，方便后面逐像素判断透明度。 */
-    private static BufferedImage toArgb(BufferedImage source) {
-        if (source.getType() == BufferedImage.TYPE_INT_ARGB) {
-            return source;
-        }
-        return copy(source);
     }
 
     /** 取得单张界面素材；不存在时明确报错。 */

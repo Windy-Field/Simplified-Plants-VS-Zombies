@@ -193,14 +193,14 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /**
      * 创建并布置好编辑器窗口。
      *
-     * 参数：originalAssets 提供图片素材；root 是 assets 目录；
+     * 参数：assets 提供图片素材；root 是 assets 目录；
      *       levelNumber 是一开始要编辑第几关。
      */
-    public LevelEditor(Assets originalAssets, Path root, int levelNumber) {
+    public LevelEditor(Assets assets, Path root, int levelNumber) {
         super("植物大战僵尸 - 关卡编辑器 - Windy-Field / Octorange");
-        assets = originalAssets;
+        this.assets = assets;
         assetRoot = root;
-        icons = new EditorIcons(originalAssets);
+        icons = new EditorIcons(assets);
 
         grid = new EditorGrid(design, icons, this);
         palette = new EditorPalette(icons, this);

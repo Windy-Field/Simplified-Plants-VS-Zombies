@@ -27,11 +27,11 @@ public class ZombieSpawn {
     /**
      * 创建一条出场记录。
      *
-     * 参数：spawnTime 是出场时刻（毫秒）；lane 是行号；kind 是僵尸品种名。
+     * 参数：spawnTime 是出场时刻（毫秒）；row 是行号；name 是僵尸品种名。
      */
-    public ZombieSpawn(int spawnTime, int lane, String kind) {
+    public ZombieSpawn(int spawnTime, int row, String name) {
         this.spawnTime = spawnTime;
-        row = lane;
-        name = kind;
+        this.row = row;
+        this.name = name;
     }
 }

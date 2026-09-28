@@ -29,14 +29,14 @@ public class Bullet extends Sprite {
      * 在植物枪口位置产生一颗子弹。
      *
      * 参数：kind 是子弹素材名；left 和 top 是子弹左上角坐标；
-     *       lane 是所在行；target 是期望落到的纵坐标；assets 提供图片。
+     *       row 是所在行；targetY 是期望落到的纵坐标；assets 提供图片。
      */
-    public Bullet(String kind, int left, int top, int lane, int target, Assets assets) {
-        super(kind, left, top, lane, 1, assets);
+    public Bullet(String kind, int left, int top, int row, int targetY, Assets assets) {
+        super(kind, left, top, row, 1, assets);
         // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次。
         x = left;
         y = top;
-        targetY = target;
+        this.targetY = targetY;
         updateTypeData(kind);
     }
 

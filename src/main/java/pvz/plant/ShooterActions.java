@@ -21,10 +21,10 @@ public class ShooterActions {
     /**
      * 创建ShooterActions。
      *
-     * 参数：originalAssets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据。
      */
-    public ShooterActions(Assets originalAssets, GameState gameState) {
-        assets = originalAssets;
+    public ShooterActions(Assets assets, GameState gameState) {
+        this.assets = assets;
         state = gameState;
     }
 
@@ -121,12 +121,12 @@ public class ShooterActions {
 
         if (plant.name.equals("Threepeater")) {
             for (int offset = -1; offset <= 1; offset++) {
-                int lane = plant.row + offset;
-                if (lane < 0 || lane >= Layout.ROW_COUNT) {
+                int row = plant.row + offset;
+                if (row < 0 || row >= Layout.ROW_COUNT) {
                     continue;
                 }
                 int targetY = top + offset * Layout.CELL_HEIGHT;
-                state.bullets.add(new Bullet(bulletName, muzzleX, top, lane, targetY, assets));
+                state.bullets.add(new Bullet(bulletName, muzzleX, top, row, targetY, assets));
             }
             return;
         }
@@ -148,7 +148,7 @@ public class ShooterActions {
      * 参数：plant 是开火的射手。
      * 返回：嘴中心相对身体上沿的纵向偏移。
      */
-    // TODO：【选做-1】新增植物时可以调整子弹出射点
+    // TODO【选做-植物-6】：如果新射手的嘴位置不同，补充出射高度资料。
     private int muzzleOffset(Plant plant) {
         if (plant.name.equals("SnowPea")) {
             return Layout.SNOW_PEA_MUZZLE_OFFSET;
@@ -174,7 +174,7 @@ public class ShooterActions {
      * 参数：plant 是开火的射手。
      * 返回：子弹的素材名。
      */
-    // TODO：【选做-2】新增植物时可以改变子弹类型
+    // TODO【选做-植物-5】：如果新射手需要新的子弹素材，补充子弹资料和登记。
     private String bulletNameFor(Plant plant) {
         if (plant.name.equals("SnowPea")) {
             return "PeaIce";

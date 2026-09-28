@@ -84,28 +84,28 @@ public class Game extends JPanel {
     /**
      * 创建游戏画面，并自动开始计时刷新。
      *
-     * 参数：originalAssets 是资源对象；firstLevel 是从第几关开始。
+     * 参数：assets 是资源对象；firstLevel 是从第几关开始。
      */
     /**
      * 创建游戏画面。
      *
-     * 参数：originalAssets 是资源对象；firstLevel 是从第几关开始；
+     * 参数：assets 是资源对象；firstLevel 是从第几关开始；
      *       runTimer 表示要不要启动计时器。测试时传假，就能一帧一帧手动推进，
      *       不用真的等时间。
      */
     /**
      * 创建游戏画面，并决定是否自动推进和显示开发者调试信息。
      *
-     * 参数：originalAssets 提供素材；firstLevel 是起始关卡；
+     * 参数：assets 提供素材；firstLevel 是起始关卡；
      * runTimer 表示是否自动推进；showDeveloperInfo 表示是否显示调试叠层。
      */
-    public Game(Assets originalAssets, int firstLevel, boolean runTimer,
+    public Game(Assets assets, int firstLevel, boolean runTimer,
             boolean showDeveloperInfo) {
-        assets = originalAssets;
-        renderer = new GameRenderer(originalAssets);
+        this.assets = assets;
+        renderer = new GameRenderer(assets);
         developerMode = showDeveloperInfo;
-        levelLoader = new LevelLoader(originalAssets);
-        plantActions = new PlantActions(originalAssets, state);
+        levelLoader = new LevelLoader(assets);
+        plantActions = new PlantActions(assets, state);
         // 不启动计时器就说明是测试在手动推帧，这时跳过选卡的飞行动画更省事。
         testMode = !runTimer;
         state.levelNumber = firstLevel;

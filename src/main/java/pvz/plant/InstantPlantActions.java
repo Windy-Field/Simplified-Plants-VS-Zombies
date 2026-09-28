@@ -28,10 +28,10 @@ public class InstantPlantActions {
     /**
      * 创建InstantPlantActions。
      *
-     * 参数：originalAssets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据。
      */
-    public InstantPlantActions(Assets originalAssets, GameState gameState) {
-        assets = originalAssets;
+    public InstantPlantActions(Assets assets, GameState gameState) {
+        this.assets = assets;
         state = gameState;
     }
 

@@ -79,10 +79,10 @@ public class Zombie extends Sprite {
     /**
      * 创建一只僵尸，从屏幕右侧进场。
      *
-     * 参数：kind 是品种名；lane 是所在行；bottom 是脚下的纵坐标；assets 提供图片。
+     * 参数：kind 是品种名；row 是所在行；bottom 是脚下的纵坐标；assets 提供图片。
      */
-    public Zombie(String kind, int lane, int bottom, Assets assets) {
-        super(kind, Layout.ZOMBIE_START_X, bottom, lane,
+    public Zombie(String kind, int row, int bottom, Assets assets) {
+        super(kind, Layout.ZOMBIE_START_X, bottom, row,
             ZombieCatalog.definitionOf(kind).maxHealth, assets);
         ZombieDefinition definition = ZombieCatalog.definitionOf(kind);
         BufferedImage image = picture(assets, 0);

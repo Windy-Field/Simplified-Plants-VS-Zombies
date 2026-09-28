@@ -1,10 +1,9 @@
 package pvz.editor;
 
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
+import pvz.tools.AssetToolkit;
 import pvz.world.Assets;
 
 /**
@@ -24,10 +23,10 @@ public class EditorIcons {
     /**
      * 创建图标工具。
      *
-     * 参数：originalAssets 用来取僵尸动画的第一帧。
+     * 参数：assets 用来取僵尸动画的第一帧。
      */
-    public EditorIcons(Assets originalAssets) {
-        assets = originalAssets;
+    public EditorIcons(Assets assets) {
+        this.assets = assets;
     }
 
     /**
@@ -48,17 +47,13 @@ public class EditorIcons {
         int[] visible = assets.visibleBounds(kind, 0);
         int bodyWidth = visible[2] - visible[0];
         int bodyHeight = visible[3] - visible[1];
-        BufferedImage body = source.getSubimage(visible[0], visible[1], bodyWidth, bodyHeight);
+        BufferedImage body = AssetToolkit.crop(source, visible[0], visible[1],
+            bodyWidth, bodyHeight);
 
         // 按高度算出缩放比例，宽度跟着等比缩，图标才不会变形。
         double scale = (double) height / bodyHeight;
         int scaledWidth = Math.max(1, (int) Math.round(bodyWidth * scale));
-        BufferedImage result = new BufferedImage(scaledWidth, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D painter = result.createGraphics();
-        painter.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-            RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        painter.drawImage(body, 0, 0, scaledWidth, height, null);
-        painter.dispose();
+        BufferedImage result = AssetToolkit.resize(body, scaledWidth, height);
 
         cache.put(cacheKey, result);
         return result;

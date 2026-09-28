@@ -45,7 +45,8 @@ public class SelfCheckTest {
     };
 
     /** 关卡里会用到的动画名单。 */
-    // TODO：【必做-7】新增植物时需要把植物的所有动画状态名加到这个数组里，否则自检不会检查它
+    // TODO【必做-植物-6】：新增植物时把所有实际使用的动画名加入这个数组。
+    // TODO【必做-植物-7】：新增植物时只核对通用自检是否覆盖它，禁止加入品种专用测试分支。
     // TODO：【必做-10】新增僵尸时需要把僵尸的所有动画状态名加到这个数组里，否则自检不会检查它
     private static final String[] ANIMATIONS = {
         "Sun", "SunFlower", "TwinSunflower", "Peashooter", "SnowPea", "WallNut", "WallNut_cracked1",

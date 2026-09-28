@@ -40,10 +40,10 @@ public class GameRenderer {
     /**
      * 创建绘图器。
      *
-     * 参数：originalAssets 是已经加载好图片的资源对象。
+     * 参数：assets 是已经加载好图片的资源对象。
      */
-    public GameRenderer(Assets originalAssets) {
-        assets = originalAssets;
+    public GameRenderer(Assets assets) {
+        this.assets = assets;
     }
 
     /**
@@ -704,7 +704,7 @@ public class GameRenderer {
      * 有两种植物不用普通画法：樱桃炸弹用一张专门的爆炸图；
      * 保龄球要一边滚一边转，得先旋转画布。
      */
-    // TODO：【选做-4】新增植物时需要使用特殊画法
+    // TODO【选做-植物-7】：只有普通 Sprite.draw() 不能满足需求时，才在这里增加特殊绘制。
     private void drawPlant(Graphics2D painter, long time, Plant plant) {
         if (plant.name.equals("CherryBomb") && plant.triggered) {
             drawCherryBoom(painter, time, plant);

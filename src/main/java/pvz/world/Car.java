@@ -31,12 +31,12 @@ public class Car {
     /**
      * 在指定行的最左边放一辆小推车。
      *
-     * 参数：lane 是行号，0 是最上面一行。
+     * 参数：row 是行号，0 是最上面一行。
      */
-    public Car(int lane) {
-        row = lane;
+    public Car(int row) {
+        this.row = row;
         x = -25;
-        bottom = 180 + lane * Layout.CELL_HEIGHT;
+        bottom = 180 + row * Layout.CELL_HEIGHT;
     }
 
     /**

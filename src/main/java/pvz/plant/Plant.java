@@ -41,18 +41,18 @@ public class Plant extends Sprite {
      * 种下一株植物，并按品种设置血量、初始动画和透明色。
      *
      * 参数：kind 是品种名（如 "Peashooter"）；center 和 bottom 是期望的底边中央位置；
-     *       lane 是所在行；gridColumn 是所在列；assets 提供图片；
+     *       row 是所在行；column 是所在列；assets 提供图片；
      *       time 是种下的时刻；day 表示是不是白天关卡。
      */
-    public Plant(String kind, int center, int bottom, int lane, int gridColumn,
+    public Plant(String kind, int center, int bottom, int row, int column,
                  Assets assets, long time, boolean day) {
-        super(kind, center, bottom, lane,
+        super(kind, center, bottom, row,
             PlantCatalog.definitionOf(kind).maxHealth, assets);
         PlantDefinition definition = PlantCatalog.definitionOf(kind);
         // 父类是按整张图的正中对准格子中心的，根部不在正中的植物要再挪一下。
         x = x + rootShift(kind);
         y = y + verticalShift(kind);
-        column = gridColumn;
+        this.column = column;
         placed = time;
         stateStart = time;
 
@@ -67,9 +67,8 @@ public class Plant extends Sprite {
         }
     }
 
-    // TODO：【选做-5】新增植物时，如果它的根部不在网格正中（比如大嘴花），
-    //                需要在 PlantCatalog 对应那条资料里填 rootShift；
-    //                如果它的图偏高、底部会超出格子（比如窝瓜），就填 verticalShift
+    // TODO【选做-植物-3】：如果新植物的根部不在网格正中，
+    // 在 PlantCatalog 资料中填写 rootShift；图片底部偏高时填写 verticalShift。
     /**
      * 这种植物的图要往右挪多少，根部才正好落在格子中心。
      *

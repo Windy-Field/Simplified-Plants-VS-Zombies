@@ -18,10 +18,10 @@ public class WallNutActions {
     /**
      * 创建WallNutActions。
      *
-     * 参数：originalAssets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据。
      */
-    public WallNutActions(Assets originalAssets, GameState gameState) {
-        assets = originalAssets;
+    public WallNutActions(Assets assets, GameState gameState) {
+        this.assets = assets;
         state = gameState;
     }
 
