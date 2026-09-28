@@ -28,6 +28,12 @@
 
 ## 更新日志
 
+### V1.7
+
+- 新增双发向日葵，使用 `Plants/TwinSunflower/` 动画；每次生产阳光时同时生成两颗阳光；
+- 每种植物的产阳光数量写在 `PlantDefinition` 资料中，普通植物默认生成一颗阳光；
+- 优化项目结构，拆分类功能，统一常量名、变量名、方法名；
+
 ### V1.6
 
 - 新增火炬树桩，加入正常选卡的植物候选列表；火炬树桩使用 `Plants/Torchwood/Torchwood.gif` 动画和对应卡片；
@@ -237,8 +243,10 @@ src/main/java/pvz/
 │   ├── ZombieEffects.java    僵尸死亡和特殊爆炸效果
 │   ├── Zombie.java           僵尸对象：运行状态和各状态动画
 │   └── ZombieSpawn.java      一条出场记录：第几毫秒、第几行、什么僵尸
-├── game/                 游戏主循环
-│   ├── Game.java             总控：鼠标输入、出怪、僵尸行为、子弹、胜负
+├── game/                 游戏主循环和运行系统
+│   ├── Game.java             总控：鼠标输入、画面切换和系统调度
+│   ├── LevelSystem.java      出怪、传送带、天空阳光和通关判断
+│   ├── CombatSystem.java     僵尸、子弹、阳光、小推车和战斗特效
 │   ├── GameState.java        一局游戏里所有会变的数据
 │   ├── GameRenderer.java     把 GameState 画出来
 │   └── GameScreen.java       菜单 / 选卡 / 游戏中等画面的编号
@@ -266,6 +274,8 @@ src/main/java/pvz/
 - **逻辑、数据与画面**：`Game` 每帧把植物交给 `PlantActions`，自己处理僵尸和子弹，然后让 `GameRenderer` 画出来。
 
 - **植物行为分层**：`Plant` 只保存一株植物的运行状态；`PlantDefinition` 和 `PlantCatalog` 保存固定资料；`PlantActions` 只负责分发，具体行为放在 `SunProducerActions`、`ShooterActions`、`WallNutActions`、`InstantPlantActions` 和 `CloseAttackActions` 中。
+
+- **游戏逻辑分层**：`Game` 负责窗口输入、画面切换和总调度；`LevelSystem` 负责出怪、传送带、天空阳光和通关判断；`CombatSystem` 负责僵尸、子弹、阳光、小推车和战斗特效。
 
 - **品种差异写在资料里，不写成 `if (是某个植物)`**：一棵植物和别人不一样的地方——绘制偏移、要不要白天睡觉、能不能被吃掉、攻击动画叫什么——全部填在 `PlantCatalog` 那一条 `PlantDefinition` 里；僵尸同理，填在 `ZombieCatalog` 的 `ZombieDefinition` 里（血量、帽子、速度、专属动画名）。行为处理类只按通用规则办事，新增品种时通常不需要改它们。
 
