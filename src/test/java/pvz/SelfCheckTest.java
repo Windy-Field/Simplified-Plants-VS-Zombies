@@ -41,7 +41,8 @@ public class SelfCheckTest {
     /** 需要检查的界面图片名单。 */
     private static final String[] SCREEN_IMAGES = {
         "MainMenu", "Adventure_0", "Adventure_1", "ChooserBackground",
-        "MoveBackground", "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom"
+        "MoveBackground", "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom",
+        "shovelSlot", "shovel"
     };
 
     /** 关卡里会用到的动画名单。 */
@@ -339,6 +340,14 @@ public class SelfCheckTest {
         normal.click(90, 12);
         normal.click(75, 160);
         check(normal.getPlantCount() == 1, "选卡或种植失败，关卡 " + level);
+
+        // 铲子移除植物后，原来的格子必须重新变为空闲。
+        normal.click(Layout.SHOVEL_SLOT_LEFT + 10, Layout.SHOVEL_SLOT_TOP + 10);
+        normal.click(75, 130);
+        check(normal.getPlantCount() == 0, "铲子没有移除植物，关卡 " + level);
+        normal.click(Layout.cardSlotLeft(1) + 5, Layout.CARD_BAR_TOP + 5);
+        normal.click(75, 160);
+        check(normal.getPlantCount() == 1, "铲掉植物后原格子不能重新种植，关卡 " + level);
 
         // 推到这一关最早那只僵尸该出场之后，再看它到了没有。
         // 写死"过 1 秒就该有僵尸"的话，把出怪时间往后挪一点自检就会报错。

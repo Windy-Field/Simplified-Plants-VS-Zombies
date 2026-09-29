@@ -243,6 +243,23 @@ public class GameRenderer {
         for (Card card : state.cards) {
             card.draw(painter, assets, time, state.sunValue, Layout.CARD_SCALE, true);
         }
+        if (state.barType == GameState.BAR_NORMAL) {
+            drawShovelSlot(painter);
+        }
+    }
+
+    /**
+     * 画当前卡槽右边的铲子卡槽和铲子图标。
+     *
+     * 参数：painter 是画笔。
+     */
+    private void drawShovelSlot(Graphics2D painter) {
+        int left = Layout.SHOVEL_SLOT_LEFT;
+        painter.drawImage(assets.image("shovelSlot"),
+            left, Layout.SHOVEL_SLOT_TOP, null);
+        painter.drawImage(assets.image("shovel"),
+            left + Layout.SHOVEL_IMAGE_OFFSET_X,
+            Layout.SHOVEL_SLOT_TOP + Layout.SHOVEL_IMAGE_OFFSET_Y, null);
     }
 
     /**
@@ -364,6 +381,7 @@ public class GameRenderer {
             Card card = new Card(plantIndex, left, Layout.CARD_BAR_TOP);
             card.draw(painter, assets, time, Integer.MAX_VALUE, Layout.CARD_SCALE, true);
         }
+        drawShovelSlot(painter);
     }
 
     /**
@@ -442,7 +460,7 @@ public class GameRenderer {
                 sun.draw(painter, assets, time);
             }
         }
-        drawPreview(painter, time, state);
+        drawHeldItemPreview(painter, time, state);
         drawSpeedButton(painter, state);
         drawWatermark(painter);
     }
@@ -765,8 +783,17 @@ public class GameRenderer {
         painter.drawString(text, x + 32 - width, y + 15);
     }
 
-    /** 手里拿着卡片时，同时画出半透明的落点提示和跟着鼠标的图。 */
-    private void drawPreview(Graphics2D painter, long time, GameState state) {
+    /** 画手里拿着的卡片或铲子，保持两种工具的预览入口一致。 */
+    private void drawHeldItemPreview(Graphics2D painter, long time, GameState state) {
+        if (isShovelSwinging(time, state)) {
+            drawShovelSwing(painter, time, state);
+            return;
+        }
+        if (state.heldShovel) {
+            drawShovelPreview(painter, state);
+            return;
+        }
+
         Card heldCard = state.heldCard;
         if (heldCard == null) {
             return;
@@ -804,5 +831,48 @@ public class GameRenderer {
         int bodyCenterY = (visible[1] + visible[3]) / 2;
         painter.drawImage(preview, state.mouseX - bodyCenterX + Plant.rootShift(name),
             state.mouseY - bodyCenterY + Plant.verticalShift(name), null);
+    }
+
+    /** 让铲子图标跟着鼠标，作为铲除植物时的光标。 */
+    private void drawShovelPreview(Graphics2D painter, GameState state) {
+        BufferedImage shovel = assets.image("shovel");
+        int left = state.mouseX - shovel.getWidth() / 2;
+        int top = state.mouseY - shovel.getHeight() / 2;
+        painter.drawImage(shovel, left, top, null);
+    }
+
+    /**
+     * 判断铲动动画是否还没有结束。
+     *
+     * 参数：time 是当前游戏时刻；state 是当前游戏状态。
+     * 返回：动画仍在播放时返回真。
+     */
+    private boolean isShovelSwinging(long time, GameState state) {
+        if (state.shovelSwingStart == 0) {
+            return false;
+        }
+        long elapsed = time - state.shovelSwingStart;
+        return elapsed >= 0 && elapsed < Layout.SHOVEL_SWING_DURATION;
+    }
+
+    /**
+     * 画铲子从抬起到落下的短动画。
+     *
+     * 参数：painter 是画笔；time 是当前游戏时刻；state 是当前游戏状态。
+     */
+    private void drawShovelSwing(Graphics2D painter, long time, GameState state) {
+        BufferedImage shovel = assets.image("shovel");
+        long elapsed = time - state.shovelSwingStart;
+        double progress = (double) elapsed / Layout.SHOVEL_SWING_DURATION;
+        double angle = Math.toRadians(-55 + 110 * progress);
+        double centerX = state.shovelSwingX;
+        double centerY = state.shovelSwingY;
+
+        Graphics2D rotated = (Graphics2D) painter.create();
+        rotated.rotate(angle, centerX, centerY);
+        rotated.drawImage(shovel,
+            state.shovelSwingX - shovel.getWidth() / 2,
+            state.shovelSwingY - shovel.getHeight() / 2, null);
+        rotated.dispose();
     }
 }

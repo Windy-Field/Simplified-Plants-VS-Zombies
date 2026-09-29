@@ -59,6 +59,18 @@ public class GameState {
     /** 玩家手里拿着的卡片；没拿就是 null。 */
     public Card heldCard;
 
+    /** 玩家当前是否拿着铲子；铲子不是植物卡，所以单独记录。 */
+    public boolean heldShovel;
+
+    /** 最近一次铲动开始的时刻；0 表示当前没有铲动动画。 */
+    public long shovelSwingStart;
+
+    /** 最近一次铲动时鼠标的横坐标。 */
+    public int shovelSwingX;
+
+    /** 最近一次铲动时鼠标的纵坐标。 */
+    public int shovelSwingY;
+
     /** 是不是已经点了冒险模式、正在等进入关卡。 */
     public boolean startingMenu;
 
@@ -195,6 +207,10 @@ public class GameState {
         maxCards = Layout.DEFAULT_CARD_SLOTS;
         nextSpawnIndex = 0;
         heldCard = null;
+        heldShovel = false;
+        shovelSwingStart = 0;
+        shovelSwingX = 0;
+        shovelSwingY = 0;
     }
 
     /**

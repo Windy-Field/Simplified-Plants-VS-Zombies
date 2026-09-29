@@ -222,6 +222,24 @@ public final class Layout {
     /** 卡槽上阳光数字框的上沿纵坐标。 */
     public static final int CARD_BAR_SUN_TOP = 66;
 
+    /** 铲子卡槽左沿的横坐标，紧接在普通卡槽右边。 */
+    public static final int SHOVEL_SLOT_LEFT = 540;
+
+    /** 铲子卡槽的上沿纵坐标。 */
+    public static final int SHOVEL_SLOT_TOP = 7;
+
+    /** 铲子卡槽的宽度。 */
+    public static final int SHOVEL_SLOT_WIDTH = 68;
+
+    /** 铲子卡槽的高度。 */
+    public static final int SHOVEL_SLOT_HEIGHT = 72;
+
+    /** 铲子图标左上角相对卡槽左上角的横向偏移。 */
+    public static final int SHOVEL_IMAGE_OFFSET_X = -1;
+
+    /** 铲子图标左上角相对卡槽左上角的纵向偏移。 */
+    public static final int SHOVEL_IMAGE_OFFSET_Y = -1;
+
     /**
      * 算出卡槽里第 position 张卡的左沿横坐标。
      *
@@ -233,6 +251,25 @@ public final class Layout {
     public static int cardSlotLeft(int position) {
         return CARD_BAR_START + (position + 1) * CARD_BAR_SPACING;
     }
+
+    /**
+     * 判断鼠标是否点中了铲子卡槽。
+     *
+     * 参数：x 和 y 是鼠标坐标。
+     * 返回：点中卡槽时返回真。
+     */
+    public static boolean insideShovelSlot(int x, int y) {
+        if (x < SHOVEL_SLOT_LEFT || x >= SHOVEL_SLOT_LEFT + SHOVEL_SLOT_WIDTH) {
+            return false;
+        }
+        if (y < SHOVEL_SLOT_TOP || y >= SHOVEL_SLOT_TOP + SHOVEL_SLOT_HEIGHT) {
+            return false;
+        }
+        return true;
+    }
+
+    /** 铲子挥动动画的时长。 */
+    public static final long SHOVEL_SWING_DURATION = 220;
 
     /** 卡槽数量最少也得有 1 张，否则玩家一张卡都带不了。 */
     public static final int MIN_CARD_SLOTS = 1;

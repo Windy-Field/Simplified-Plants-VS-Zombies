@@ -84,6 +84,7 @@ public class Assets {
         String[] names = {
             "MainMenu", "Adventure_0", "Adventure_1", "ChooserBackground", "MoveBackground",
             "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom",
+            "shovelSlot", "shovel",
             // 开局倒计时用的"准备-安放-开始"三张图，镜头移回草坪后按顺序显示。
             "ReadySetPlant1", "ReadySetPlant2", "ReadySetPlant3"
         };

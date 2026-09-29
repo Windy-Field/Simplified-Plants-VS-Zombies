@@ -95,6 +95,16 @@ public class PlantActions {
      * 参数：plant 是已经死亡的植物。
      */
     private void killPlant(Plant plant) {
+        removePlant(plant);
+    }
+
+    /**
+     * 从场上移除一株植物，并释放它占用的格子。
+     *
+     * 参数：plant 是要移除的植物。
+     * 铲子和植物死亡都使用这条入口，避免两边各写一份清理逻辑。
+     */
+    public void removePlant(Plant plant) {
         plant.alive = false;
         if (state.barType == GameState.BAR_BOWLING) {
             return;

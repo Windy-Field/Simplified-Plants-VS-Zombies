@@ -131,6 +131,7 @@ public class Game extends JPanel {
             public void mousePressed(MouseEvent event) {
                 if (event.getButton() == MouseEvent.BUTTON3) {
                     state.heldCard = null;
+                    state.heldShovel = false;
                 } else if (event.getButton() == MouseEvent.BUTTON1) {
                     click(event.getX(), event.getY());
                 }
@@ -681,9 +682,19 @@ public class Game extends JPanel {
         }
     }
 
-    /** 处理游戏中的点击：先看加速按钮，再收阳光，再选卡，手里有卡就是种植。 */
+    /** 处理游戏中的点击：先看加速按钮和铲子，再收阳光、选卡或种植。 */
     private void clickPlay(int x, int y) {
         if (clickSpeedButton(x, y)) {
+            return;
+        }
+        if (clickShovelSlot(x, y)) {
+            return;
+        }
+        if (state.heldShovel) {
+            boolean removedPlant = removePlantAt(x, y);
+            if (removedPlant || isEmptyGridCell(x, y)) {
+                state.heldShovel = false;
+            }
             return;
         }
         if (state.heldCard == null) {
@@ -694,6 +705,42 @@ public class Game extends JPanel {
             return;
         }
         plantHeldCard(x, y);
+    }
+
+    /**
+     * 处理铲子卡槽的点击。
+     *
+     * 参数：x 和 y 是鼠标坐标。
+     * 返回：点中铲子卡槽时返回真。
+     */
+    private boolean clickShovelSlot(int x, int y) {
+        if (state.barType != GameState.BAR_NORMAL) {
+            return false;
+        }
+        if (!Layout.insideShovelSlot(x, y)) {
+            return false;
+        }
+        state.heldCard = null;
+        state.heldShovel = !state.heldShovel;
+        return true;
+    }
+
+    /**
+     * 判断鼠标是否点中了没有植物的草坪格子。
+     *
+     * 参数：x 和 y 是鼠标坐标。
+     * 返回：点中空格子时返回真；否则返回假。
+     */
+    private boolean isEmptyGridCell(int x, int y) {
+        int column = Layout.columnAt(x);
+        int row = Layout.rowAt(y);
+        if (x < Layout.GRID_LEFT || y < Layout.LAWN_TOP) {
+            return false;
+        }
+        if (!Layout.insideGrid(row, column)) {
+            return false;
+        }
+        return !state.occupied[row][column];
     }
 
     /**
@@ -805,6 +852,30 @@ public class Game extends JPanel {
         state.heldCard = null;
     }
 
+    /**
+     * 找到鼠标指向的植物并用铲子移除它。
+     *
+     * 参数：x 和 y 是鼠标坐标。
+     * 只有点到植物实际可见的碰撞范围时才会移除，点在空草地上不会误伤相邻格子。
+     */
+    private boolean removePlantAt(int x, int y) {
+        for (int position = state.plants.size() - 1; position >= 0; position--) {
+            Plant plant = state.plants.get(position);
+            if (!plant.alive) {
+                continue;
+            }
+            Rectangle bounds = plant.collisionBox(assets, state.time);
+            if (bounds.contains(x, y)) {
+                plantActions.removePlant(plant);
+                state.shovelSwingStart = state.time;
+                state.shovelSwingX = x;
+                state.shovelSwingY = y;
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** 推进关卡一帧：出僵尸、出卡、掉阳光，然后更新所有物体。 */
     private void updateLevel() {
         levelSystem.updateSpawnsAndDrops();
@@ -857,7 +928,13 @@ public class Game extends JPanel {
 
     /** 返回已经种下的植物数量，供测试核对。 */
     public int getPlantCount() {
-        return state.plants.size();
+        int count = 0;
+        for (Plant plant : state.plants) {
+            if (plant.alive) {
+                count = count + 1;
+            }
+        }
+        return count;
     }
 
     /** 返回已经出场的僵尸数量，供测试核对。 */
