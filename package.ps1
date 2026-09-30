@@ -23,12 +23,11 @@ $result = @{
     Assets = Join-Path $root 'assets'
     Levels = Join-Path $root 'assets\levels'
     Classes = Join-Path $root 'build\classes'
-    Library = Join-Path $root 'build\gson-2.11.0.jar'
+    Library = Join-Path $root 'lib\gson-2.11.0.jar'
     Target = Join-Path $root ('dist\' + $Name)
 }
 
-# 和 build.ps1 一样固定下载这个版本的 JSON 解析器，附带来历和完整性校验。
-$libraryAddress = 'https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar'
+# 和 build.ps1 一样校验项目自带的 JSON 解析器。
 $librarySha256 = '57928D6E5A6EDEB2ABD3770A8F95BA44DCE45F3B23B7A9DC2B309C581552A78B'
 
 # 启动脚本的内容随发行包一起生成，保证脚本和打包出的目录结构永远对得上。
@@ -105,7 +104,7 @@ function Find-JavaCompiler {
 }
 
 <#
-    下载一份 gson 到 build 目录，并校验它的 SHA256。
+    检查项目自带的 Gson 文件，并校验它的 SHA256。
     参数 state 是保存路径的字典。
 #>
 function Get-JsonLibrary {
@@ -113,14 +112,11 @@ function Get-JsonLibrary {
 
     $library = $state.Library
     if (-not (Test-Path $library)) {
-        Write-Host '正在下载 Gson 解析库……'
-        $parent = Split-Path -Parent $library
-        New-Item -ItemType Directory -Force -Path $parent | Out-Null
-        Invoke-WebRequest -Uri $libraryAddress -OutFile $library
+        throw '找不到 lib\gson-2.11.0.jar，请重新获取完整的项目文件夹。'
     }
     $actual = (Get-FileHash -Path $library -Algorithm SHA256).Hash
     if ($actual -ne $librarySha256) {
-        throw '下载的 Gson 文件校验失败，请删除 build\gson-2.11.0.jar 后重新运行。'
+        throw 'Gson 文件校验失败，请用完整项目中的 lib\gson-2.11.0.jar 替换当前文件。'
     }
 }
 
@@ -197,7 +193,8 @@ function New-Runtime {
         Remove-Item -Recurse -Force $runtime
     }
     Write-Host '正在生成精简 Java 运行时……'
-    & (Join-Path $state.Jdk 'jlink.exe') '--add-modules' 'java.desktop' '--strip-debug' '--no-header-files' '--no-man-pages' '--compress=zip-6' '--output' $runtime
+    # 压缩级别 2 同时适用于 JDK 17 和较新的 JDK。
+    & (Join-Path $state.Jdk 'jlink.exe') '--add-modules' 'java.desktop' '--strip-debug' '--no-header-files' '--no-man-pages' '--compress=2' '--output' $runtime
     if ($LASTEXITCODE -ne 0) {
         throw '生成精简运行时失败，请确认当前使用的 JDK 自带 jlink 工具。'
     }
@@ -397,6 +394,9 @@ New-Item -ItemType Directory -Force -Path $result.Target | Out-Null
 New-GameJar -state $result
 New-Runtime -state $result
 Copy-Item -Path $result.Library -Destination (Join-Path $result.Target 'gson-2.11.0.jar')
+# 第三方依赖的原始许可随发行包一起保留。
+$libraryLicense = Join-Path $result.Root 'lib\GSON-LICENSE'
+Copy-Item -LiteralPath $libraryLicense -Destination (Join-Path $result.Target 'GSON-LICENSE')
 Copy-Assets -state $result
 New-Launchers -state $result
 New-Readme -state $result

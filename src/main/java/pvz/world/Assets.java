@@ -244,6 +244,18 @@ public class Assets {
         animation("NewspaperZombieHead", "Zombies/NewspaperZombie/Head.gif");
         animation("NewspaperZombieBoomDie", "Zombies/NewspaperZombie/BoomDie.gif");
 
+        animation("FootballZombie", "Zombies/FootballZombie/FootballZombie.gif");
+        animation("FootballZombieAttack", "Zombies/FootballZombie/FootballZombieAttack.gif");
+        animation("FootballZombieOrnLost", "Zombies/FootballZombie/FootballZombieOrnLost.gif");
+        animation("FootballZombieOrnLostAttack",
+            "Zombies/FootballZombie/FootballZombieOrnLostAttack.gif");
+        animationWithFallback("FootballZombieLostHead",
+            "Zombies/FootballZombie/LostHead.gif", "ZombieLostHead");
+        animationWithFallback("FootballZombieLostHeadAttack",
+            "Zombies/FootballZombie/LostHeadAttack.gif", "ZombieLostHeadAttack");
+        animation("FootballZombieDie", "Zombies/FootballZombie/Die.gif");
+        animation("FootballZombieBoomDie", "Zombies/FootballZombie/BoomDie.gif");
+
         animation("JokerZombie", "new_assets/joker/joker_walking.gif");
         animation("JokerZombieExplode", "new_assets/joker/joker_exploding.gif");
         animation("JokerBoom", "new_assets/joker/Boom.gif");
@@ -291,6 +303,21 @@ public class Assets {
             list.add(frame.image);
         }
         frames.put(name, list);
+    }
+
+    /**
+     * 登记可选动画，缺少专属素材时使用普通僵尸的动画。
+     *
+     * 参数：name 是游戏里的动画名；file 是专属素材路径；fallbackName 是已加载的动画名。
+     */
+    private void animationWithFallback(String name, String file, String fallbackName)
+            throws IOException {
+        Path animationPath = root.resolve(file);
+        if (Files.isRegularFile(animationPath)) {
+            animation(name, file);
+            return;
+        }
+        frames.put(name, animationFrames(fallbackName));
     }
 
     /** 登记一段由若干单独图片按顺序组成的动画。 */

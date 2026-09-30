@@ -95,6 +95,20 @@ public class Plant extends Sprite {
     }
 
     /**
+     * 判断这株植物是否正在播放不可被爆炸僵尸打断的攻击动画。
+     *
+     * 返回：正在播放资料中登记的攻击动画时返回真，否则返回假。
+     */
+    public boolean isProtectedFromExplodingZombie() {
+        PlantDefinition definition = PlantCatalog.definitionOf(name);
+        String attackAnimation = definition.attackAnimation;
+        if (attackAnimation == null) {
+            return false;
+        }
+        return animation.equals(attackAnimation);
+    }
+
+    /**
      * 算出这株植物的子弹转换区域。
      *
      * 参数：transformation 是转换资料。

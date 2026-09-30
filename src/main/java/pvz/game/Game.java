@@ -80,18 +80,6 @@ public class Game extends JPanel {
     private final Timer timer;
 
     /**
-     * 创建游戏画面，并自动开始计时刷新。
-     *
-     * 参数：assets 是资源对象；firstLevel 是从第几关开始。
-     */
-    /**
-     * 创建游戏画面。
-     *
-     * 参数：assets 是资源对象；firstLevel 是从第几关开始；
-     *       runTimer 表示要不要启动计时器。测试时传假，就能一帧一帧手动推进，
-     *       不用真的等时间。
-     */
-    /**
      * 创建游戏画面，并决定是否自动推进和显示开发者调试信息。
      *
      * 参数：assets 提供素材；firstLevel 是起始关卡；

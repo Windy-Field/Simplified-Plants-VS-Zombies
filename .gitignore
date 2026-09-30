@@ -34,5 +34,5 @@ Thumbs.db
 *.tar.gz
 *.rar
 
-# 但保留依赖的 jar
-!build/gson-*.jar
+# 保留随源码分发的固定版本依赖。
+!lib/gson-2.11.0.jar

@@ -31,8 +31,11 @@
 ### V1.8
 
 - 增加铲子卡槽，使用 `Screen/shovelSlot.png` 和 `Screen/shovel.png`；
-- 铲子可以跟随鼠标选择植物，点击植物后移除植物并释放原来的种植格，铲除后自动收回；
+- 铲子跟随鼠标；点击植物会移除植物并释放种植格，点击空草坪格也会自动收回，右键可取消；
 - 开场选卡动画中的铲子卡槽与普通卡槽一起显示；传送带和保龄球卡槽不显示铲子，避免遮挡移动卡片；
+- 新增橄榄球僵尸，使用 `Zombies/FootballZombie/` 的行走、攻击、掉头和死亡动画，移速为每步 1.5 像素；缺少专属掉头动画时使用普通僵尸动画。可在关卡编辑器中选择；
+- 优化窝瓜攻击模式：窝瓜仍在所在行的左、中、右三格内索敌，优先锁定距离最近的僵尸；砸下时以目标当前位置为中心，左右各半格内所有躯干碰到范围的僵尸都会被压扁；
+- 整理僵尸和植物的公共逻辑，清除未使用的资料字段、常量与重复方法；
 
 ### V1.7
 
@@ -73,7 +76,7 @@
 
 - 建议在 **Windows** 系统上运行（启动脚本基于 PowerShell 编写），其他系统不保证能够正常运行。
 - 需要 **JDK 17 或更高版本**。
-- 首次运行需要联网，脚本会自动下载并校验 JSON 解析库 Gson 2.11.0，此后即可离线运行。
+- 项目在 `lib/gson-2.11.0.jar` 中自带 JSON 解析库 Gson 2.11.0，IDEA 和启动脚本均使用此文件，无需单独下载 Gson。
 
 > 如果只是**想玩**、不想安装 Java，可以直接使用打包好的免安装版，见下文「分发给朋友（免安装版）」。
 
@@ -111,26 +114,22 @@ run.bat editor 3   :: 打开关卡编辑器并载入第 4 关
 
 **PowerShell**：在**根目录**执行 `.\java\build.ps1`，可附加 `-Level 5`、`-Test`、`-Editor`。
 
-**素材工具**：素材预处理工具位于 `src/main/java/pvz/tools/AssetToolkit.java`，可以规范图片尺寸、把图片序列合成 GIF，也可以调用本机的 FFmpeg 把视频转成 GIF。请先编译项目，再在 `java` 目录下执行：
-
-```bat
-java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit normalize input.png output.png 64 89
-java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit images-to-gif output.gif 100 frame1.png frame2.png frame3.png
-java -cp "build\classes;build\gson-2.11.0.jar" pvz.tools.AssetToolkit video-to-gif input.mp4 output.gif 73 87 10
-```
-
-图片序列转 GIF 时，所有帧会统一成第一帧的尺寸；视频转 GIF 需要系统中能够直接调用 `ffmpeg`。如果没有安装 FFmpeg，只使用前两个图片工具即可。
+**素材工具**：`src/main/java/pvz/tools/AssetToolkit.java` 提供图片缩放、裁剪、复制和格式转换方法，供素材加载与编辑器图标使用；它不是可直接运行的命令行程序。
 
 **IntelliJ IDEA**：用 IDEA 打开 `java` 文件夹，等待 Maven 导入完成：
+
+请保留 `pom.xml` 和整个 `lib` 目录。IDEA 会根据 `pom.xml` 引用项目内的 Gson 文件；如果打开的是旧项目，请在 Maven 面板中点击「重新加载所有 Maven 项目」。首次导入时，Maven 插件等其他组件仍可能需要联网下载。
 
 - 游玩游戏：运行 `src/main/java/pvz/Main.java`；
 - 编辑关卡：运行 `src/main/java/pvz/EditorMain.java`。
 
 运行配置的工作目录必须是 `java` 文件夹（IDEA 默认为此），否则程序找不到 `assets`。
 
+**分发源码**：打包时请包含 `src/`、`lib/`、`pom.xml` 和启动脚本；需要直接运行时还应包含准备好的 `assets/`。不必包含 `.idea/`、`build/`、`target/` 和 `.git/`，这些目录属于本机配置或生成结果。接收者应使用 IDEA 打开解压后的 `java` 文件夹，并选择自己的 JDK 17 或更高版本。
+
 ## 自检
 
-`run.bat test` 会在不开窗口的情况下运行 `SelfCheckTest`，检查**素材能否读取、植物和僵尸资料是否对齐、战斗数值是否正确、关卡文件格式是否正确、选卡和种植流程能否走通、固定战斗小步是否一致、编辑器存盘再读回是否一致**等内容。
+`run.bat test` 会在不开窗口的情况下运行 `SelfCheckTest`，检查**素材能否读取、植物和僵尸资料是否对齐、橄榄球僵尸速度与动画、窝瓜索敌与压扁范围、战斗数值、关卡文件格式、选卡和种植流程、固定战斗小步、编辑器存盘再读回**等内容。
 全部通过时输出 `PASS`，**并把各画面的截图存到 `build` 目录**。
 
 自检会借用 `assets/levels/level_99.json` 作为临时文件，跑完即删；**若该编号已被占用，自检会停下并给出提醒，不会覆盖原有文件**。
@@ -212,8 +211,8 @@ dist/MyPVZ/                 解压后就是这个文件夹，约 92MB
 
 | 操作 | 说明 |
 | --- | --- |
-| 鼠标右键 | 取消手中的卡片 |
-| 点击普通卡槽右侧的铲子 | 选择铲子；再点击植物将其移除，完成后自动收回 |
+| 鼠标右键 | 取消手中的卡片或铲子 |
+| 点击普通卡槽右侧的铲子 | 选择或收回铲子；点击植物将其移除，点击空草坪格也会收回 |
 | 点击右上角倍速按钮 | 切换 1x、1.5x、2x 速度 |
 
 ## 项目结构
@@ -229,20 +228,18 @@ src/main/java/pvz/
 │   ├── PlantCatalog.java      全部植物资料表和编号查询
 │   ├── BulletTransformation.java 子弹经过植物时的转换资料
 │   ├── PlantActionType.java   植物行为类别
-│   ├── Cards.java             卡片生成和资料查询工具
-│   ├── PlantRules.java        植物之间的公共判断规则
+│   ├── Cards.java             静态卡槽和传送带卡片生成
 │   ├── PlantActions.java      遍历植物并分发行为
 │   ├── SunProducerActions.java 向日葵和阳光菇行为
 │   ├── ShooterActions.java    射手植物行为
 │   ├── WallNutActions.java    坚果裂纹行为
 │   ├── InstantPlantActions.java 一次性植物行为
 │   ├── CloseAttackActions.java 近战和保龄球行为
-│   ├── Plant.java            植物对象，血量和初始状态
+│   ├── Plant.java            植物对象、运行状态和攻击保护判断
 │   └── Card.java             一张卡片（卡槽、传送带、选卡飞行）
 ├── zombie/               僵尸
-│   ├── ZombieDefinition.java 僵尸固定资料：血量、帽子、速度、动画能力
+│   ├── ZombieDefinition.java 僵尸固定资料：血量、帽子、速度、动画名
 │   ├── ZombieCatalog.java    僵尸资料表和编辑器名单
-│   ├── ZombieAbility.java    僵尸特殊能力类别
 │   ├── ZombieEffects.java    僵尸死亡和特殊爆炸效果
 │   ├── Zombie.java           僵尸对象：运行状态和各状态动画
 │   └── ZombieSpawn.java      一条出场记录：第几毫秒、第几行、什么僵尸
@@ -263,7 +260,7 @@ src/main/java/pvz/
 │   ├── Sprite.java           草坪上会动的东西的基类
 │   └── Bullet.java / Sun.java / Car.java   子弹、阳光、小推车
 ├── tools/                素材预处理工具
-│   └── AssetToolkit.java     图片规范化、图片序列转 GIF、视频转 GIF
+│   └── AssetToolkit.java     图片缩放、裁剪、复制和格式转换
 └── editor/               关卡编辑器
     ├── LevelEditor.java      主窗口，兼拖放协调者
     ├── LevelDesign.java      波次网格数据和关卡文件读写
@@ -276,15 +273,15 @@ src/main/java/pvz/
 
 - **逻辑、数据与画面**：`Game` 每帧把植物交给 `PlantActions`，自身处理僵尸和子弹，然后由 `GameRenderer` 绘制画面。
 
-- **植物行为分层**：`Plant` 只保存一株植物的运行状态；`PlantDefinition` 和 `PlantCatalog` 保存固定资料；`PlantActions` 只负责分发，具体行为放在 `SunProducerActions`、`ShooterActions`、`WallNutActions`、`InstantPlantActions` 和 `CloseAttackActions` 中。
+- **植物行为分层**：`Plant` 保存一株植物的运行状态，并判断它是否正在播放受保护的攻击动画；`PlantDefinition` 和 `PlantCatalog` 保存固定资料；`PlantActions` 负责分发，具体行为放在 `SunProducerActions`、`ShooterActions`、`WallNutActions`、`InstantPlantActions` 和 `CloseAttackActions` 中。
 
 - **游戏逻辑分层**：`Game` 负责窗口输入、画面切换和总调度；`LevelSystem` 负责出怪、传送带、天空阳光和通关判断；`CombatSystem` 负责僵尸、子弹、阳光、小推车和战斗特效。
 
 - **品种差异写在资料里，不写成 `if (是某个植物)`**：一株植物与其他植物不同之处——绘制偏移、是否白天睡觉、能否被吃掉、攻击动画的名称——全部填在 `PlantCatalog` 中对应的那条 `PlantDefinition` 里；僵尸同理，填在 `ZombieCatalog` 的 `ZombieDefinition` 里（血量、帽子、速度、专属动画名）。行为处理类只按通用规则办事，新增品种时通常不必修改它们。
 
-- **僵尸资料分层**：`Zombie` 保存单只僵尸的运行状态，`ZombieDefinition` 和 `ZombieCatalog` 保存初始血量、帽子、速度和动画能力。相似僵尸不重复建立子类，固定差异放在定义资料中。
+- **僵尸资料分层**：`Zombie` 保存单只僵尸的运行状态，`ZombieDefinition` 和 `ZombieCatalog` 保存初始血量、帽子、速度和专属动画名。相似僵尸不重复建立子类，固定差异放在定义资料中。
 
-- **僵尸的能力**：`ZombieAbility` 说明「这只僵尸具有哪项额外技能」，`ZombieDefinition.abilityAnimation` 说明「该技能对应哪段动画」。判断一只僵尸是否为小丑时，无需比较名字，查看它的资料即可（`hasOwnAnimation()` 即「该品种是否具有专属动画」这条通用判断）。
+- **僵尸的特殊动画**：`ZombieDefinition.abilityAnimation` 记录特殊动作的动画名。判断是否走这类流程时，调用 `hasOwnAnimation()` 查看资料，无需比较僵尸名字。
 
 - **战斗数值**：`CombatValues` 集中保存植物血量、僵尸血量、子弹伤害和僵尸伤害。所有基础血量和伤害均按 10 倍保存，修改战斗数值时请优先查看此处。
 
@@ -368,11 +365,11 @@ src/main/java/pvz/
 
 1. **准备素材**：把僵尸动画放进 `assets/Zombies/`，特殊或新增素材也可以放进 `assets/new_assets/`。
 2. **登记动画**：在 `world/Assets.java` 的 `loadZombies()` 中登记走路、攻击、死亡和特殊效果动画。
-3. **注册资料**：在 `zombie/ZombieCatalog.java` 中增加一个 `ZombieDefinition`，填写血量、帽子、速度和 `ZombieAbility`。若该品种的动画名不符合通用规律（通用规律为「名字 / 名字+Attack / 名字+LostHead」），就把专属的那段填入 `idleAnimation`（平常播放的）和 `abilityAnimation`（触发技能时播放的）；两者均填 null 表示走通用规律。**不应为了某个品种而在各处的判断中增加 `if (是小丑)`。**
+3. **注册资料**：在 `zombie/ZombieCatalog.java` 中增加一个 `ZombieDefinition`，填写血量、帽子和速度。若该品种需要专属的基础或特殊动作动画，就填写 `idleAnimation` 和 `abilityAnimation`；失去头盔、掉头后的专属动画则填写对应的动画基础名。不需要专属动画时填 null，沿用通用规则。**不应为了某个品种而在各处的判断中增加 `if (是小丑)`。**
 4. **加入自检**：在 `SelfCheckTest.java` 的动画名单中加入新的动画名。
 5. **编辑器名单**：编辑器支持的僵尸名字和中文名会从 `ZombieCatalog` 自动取得，无需再单独修改 `LevelDesign.java` 的两组名单。
 
-小丑僵尸在 `ZombieCatalog` 中填写的是 `ZombieAbility.EXPLODES_ON_PLANT`，外加两个动画名（`JokerZombie` / `JokerZombieExplode`）：接触第一株普通植物或因其他原因死亡时，先播放打开盒子的动画；动画结束后，以小丑触发时自身所在格为中心爆炸，清除 3×3 范围内的植物，不伤害普通僵尸，但会伤害范围内的魅惑僵尸。正在攻击的大嘴花和窝瓜不会触发它（判断依据是「该植物正在播放自己的攻击动画」，而非「它是大嘴花」）。子弹、小推车和植物效果杀死小丑时，也遵循同一顺序。
+小丑僵尸在 `ZombieCatalog` 中填写两个专属动画名（`JokerZombie` / `JokerZombieExplode`）：接触第一株普通植物或因其他原因死亡时，先播放打开盒子的动画；动画结束后，以小丑触发时自身所在格为中心爆炸，清除 3×3 范围内的植物，不伤害普通僵尸，但会伤害范围内的魅惑僵尸。正在攻击的大嘴花和窝瓜不会触发它（判断依据是「该植物正在播放自己的攻击动画」，而非「它是大嘴花」）。子弹、小推车和植物效果杀死小丑时，也遵循同一顺序。
 
 所有僵尸死亡时都会先播放掉头动画，再进入死亡动画；填写了 `abilityAnimation` 的品种（目前只有小丑）以自己那段动画替代普通掉头动画。**整个流程中没有任何一处比较僵尸的名字**——判断一只僵尸是否具有专属动画，调用 `hasOwnAnimation()` 查看资料即可。只有行为规则完全不同的僵尸，才应考虑新增专门的类。
 
@@ -393,6 +390,7 @@ src/main/java/pvz/
 | 现象 | 解决办法 |
 | --- | --- |
 | 提示「找不到素材目录 assets」 | **请先联系作者**，再按「准备资源包」一节把素材放到 `java/assets` 下 |
+| IDEA 提示缺少 Gson 或 `com.google.gson` | 确认 `lib/gson-2.11.0.jar` 已随源码完整解压，再在 Maven 面板中重新加载项目；不要只打开 `src` 目录 |
 
 ## 版权与许可
 

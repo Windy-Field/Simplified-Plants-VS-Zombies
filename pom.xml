@@ -41,6 +41,9 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.11.0</version>
+            <!-- 使用项目自带的文件，解压源码后不必单独下载 Gson。 -->
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/gson-2.11.0.jar</systemPath>
         </dependency>
     </dependencies>
 

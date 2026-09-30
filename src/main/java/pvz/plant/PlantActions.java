@@ -51,7 +51,7 @@ public class PlantActions {
                 continue;
             }
             if (plant.health <= 0) {
-                killPlant(plant);
+                removePlant(plant);
                 continue;
             }
             if (plant.sleeping) {
@@ -87,15 +87,6 @@ public class PlantActions {
         if (definition.actionType == PlantActionType.CLOSE_ATTACK) {
             closeAttackActions.update(plant);
         }
-    }
-
-    /**
-     * 植物死亡后释放它占用的格子。
-     *
-     * 参数：plant 是已经死亡的植物。
-     */
-    private void killPlant(Plant plant) {
-        removePlant(plant);
     }
 
     /**

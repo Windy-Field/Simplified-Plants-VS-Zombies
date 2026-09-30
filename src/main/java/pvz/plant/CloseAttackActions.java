@@ -50,14 +50,13 @@ public class CloseAttackActions {
         if (name.equals("Squash") && !plant.triggered) {
             Zombie target = findSquashTarget(plant);
             if (target != null) {
-                plant.change("SquashAttack", assets, state.time);
-                plant.triggered = true;
-                plant.stateStart = state.time;
-                plant.target = target;
-                // 换完动画再挪位置：change 会因为画布大小不同而调整 x、y。
-                placeSquashOnTarget(plant, target);
+                triggerSquash(plant, target);
                 return;
             }
+        }
+        if (name.equals("Squash") && plant.triggered) {
+            resolveCloseAttackTimeout(plant);
+            return;
         }
 
         for (Zombie zombie : state.zombies) {
@@ -105,31 +104,79 @@ public class CloseAttackActions {
      */
     private boolean inPlantRange(Plant plant, Zombie zombie,
             int leftCells, int rightCells) {
-        Rectangle zombieBody = zombie.collisionBox(assets, state.time);
-        double zombieCenter = zombieBody.getCenterX();
         double left = Layout.GRID_LEFT
             + (plant.column - leftCells) * Layout.CELL_WIDTH;
         double right = Layout.GRID_LEFT
             + (plant.column + rightCells + 1) * Layout.CELL_WIDTH;
+        return inHorizontalRange(zombie, left, right);
+    }
+
+    /**
+     * 判断僵尸的躯干中心是否落在指定横向范围内。
+     *
+     * 参数：zombie 是待检查的僵尸；left 和 right 是范围两端的横坐标。
+     * 返回：在范围内返回真。
+     */
+    private boolean inHorizontalRange(Zombie zombie, double left, double right) {
+        Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+        double zombieCenter = zombieBody.getCenterX();
         return zombieCenter >= left && zombieCenter <= right;
     }
 
     /**
-     * 窝瓜检测左中右三格内的僵尸。
+     * 判断僵尸躯干是否碰到窝瓜的压扁范围。
+     *
+     * 参数：zombie 是待检查的僵尸；left 和 right 是压扁范围的两端。
+     * 返回：躯干与范围相交时返回真。
+     */
+    private boolean touchesHorizontalRange(Zombie zombie, double left, double right) {
+        Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+        if (zombieBody.getMaxX() < left) {
+            return false;
+        }
+        return zombieBody.getMinX() <= right;
+    }
+
+    /**
+     * 窝瓜检测左中右三格内距离种植格中心最近的僵尸。
      *
      * 参数：plant 是那株窝瓜。
-     * 返回：找到的第一个目标僵尸，没找到返回 null。
+     * 返回：最近的目标僵尸，没找到返回 null。
      */
     private Zombie findSquashTarget(Plant plant) {
+        Zombie nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        double plantCenter = Layout.columnCenter(plant.column);
         for (Zombie zombie : state.zombies) {
             if (!zombie.alive || zombie.dying || zombie.hypno || zombie.row != plant.row) {
                 continue;
             }
-            if (inPlantRange(plant, zombie, 1, 1)) {
-                return zombie;
+            if (!inPlantRange(plant, zombie, 1, 1)) {
+                continue;
+            }
+            Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+            double zombieCenter = zombieBody.getCenterX();
+            double distance = Math.abs(zombieCenter - plantCenter);
+            if (distance < nearestDistance) {
+                nearest = zombie;
+                nearestDistance = distance;
             }
         }
-        return null;
+        return nearest;
+    }
+
+    /**
+     * 让窝瓜开始攻击，并把它的身体对准选中的僵尸。
+     *
+     * 参数：plant 是窝瓜；target 是即将被砸的僵尸。
+     */
+    private void triggerSquash(Plant plant, Zombie target) {
+        plant.change("SquashAttack", assets, state.time);
+        plant.triggered = true;
+        plant.stateStart = state.time;
+        plant.target = target;
+        // 换完动画再挪位置：change 会因为画布大小不同而调整坐标。
+        placeSquashOnTarget(plant, target);
     }
 
     /**
@@ -227,14 +274,8 @@ public class CloseAttackActions {
             return true;
         }
         if (name.equals("Squash") && !plant.triggered) {
-            plant.change("SquashAttack", assets, state.time);
-            plant.triggered = true;
-            plant.stateStart = state.time;
-            plant.target = zombie;
-            // 这条分支虽然少见（僵尸躯干边缘搭上来、中心还在隔壁列时才会走到），
-            // 但触发后的落点必须和 findSquashTarget 那条路一致，否则会出现
-            // "扑过去却砸在僵尸旁边"的情况。
-            placeSquashOnTarget(plant, zombie);
+            // 躯干边缘先碰到窝瓜时，也要和主动索敌走同一套攻击动作。
+            triggerSquash(plant, zombie);
         }
         if (name.equals("Chomper") && !plant.triggered) {
             plant.change("ChomperAttack", assets, state.time);
@@ -270,12 +311,22 @@ public class CloseAttackActions {
 
         if (name.equals("Squash") && plant.triggered) {
             if (state.time - plant.stateStart > Layout.SQUASH_HIT_DELAY) {
-                // 窝瓜砸下时秒杀范围内所有僵尸（左中右三列都算在攻击范围内）。
+                // 目标起跳后仍会移动，砸下时跟上它，让周围的僵尸一起受击。
+                if (plant.target != null && plant.target.alive && !plant.target.dying) {
+                    placeSquashOnTarget(plant, plant.target);
+                }
+
+                // 目标提前死亡时沿用起跳位置；其他情况以目标当前的位置为中心。
+                Rectangle landingBody = plant.bounds(assets, state.time);
+                double landingCenter = landingBody.getCenterX();
+                double halfCell = Layout.CELL_WIDTH / 2.0;
+                double left = landingCenter - halfCell;
+                double right = landingCenter + halfCell;
                 for (Zombie zombie : state.zombies) {
                     if (!zombie.alive || zombie.dying || zombie.row != plant.row) {
                         continue;
                     }
-                    if (inPlantRange(plant, zombie, 1, 1)) {
+                    if (touchesHorizontalRange(zombie, left, right)) {
                         ZombieEffects.die(zombie, assets, state, state.time, false);
                     }
                 }

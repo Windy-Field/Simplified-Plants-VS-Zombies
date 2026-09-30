@@ -56,10 +56,10 @@ public class Zombie extends Sprite {
     public long deathTime;
 
     /** 每走一步前进的像素；报纸僵尸掉报纸后加速变快。 */
-    public int speed = 1;
+    public double speed = 1;
 
     /** 失去头盔或报纸后每走一步前进的像素。 */
-    public int speedAfterHelmet = 1;
+    public double speedAfterHelmet = 1;
 
     /** 小丑开盒前的躯干位置，动画结束时用它确定爆炸中心。 */
     public Rectangle explosionOrigin;
@@ -104,17 +104,15 @@ public class Zombie extends Sprite {
     // TODO：【选做-6】新增僵尸时如果换装规则和默认不同（比如掉帽子后用特殊动画而非退化成普通僵尸），
     //                需要在这里加判断返回正确的动画名
     public String stateAnimation(boolean fight) {
+        ZombieDefinition zombieDefinition = definition();
         // 有专属立绘的品种（比如小丑）先用它，不走后面那套"名字加后缀"的规律。
-        if (definition().idleAnimation != null) {
-            return definition().idleAnimation;
+        if (zombieDefinition.idleAnimation != null) {
+            return zombieDefinition.idleAnimation;
         }
 
-        // 还戴着帽子的僵尸，动图已经把帽子画进身体里了，不用换名字。
+        // 还戴着头盔的僵尸，动图已经把头盔画进身体里了。
         if (helmet) {
-            if (fight) {
-                return name + "Attack";
-            }
-            return name;
+            return animationWithAttack(name, fight);
         }
 
         // 掉了臂的普通僵尸、路障和铁桶换成独臂那套图。
@@ -125,15 +123,14 @@ public class Zombie extends Sprite {
             if (headLost) {
                 base = base + "LostHead";
             }
-            if (fight) {
-                base = base + "Attack";
-            }
-            return base;
+            return animationWithAttack(base, fight);
         }
 
         String base = name;
-        // 帽子和身体是分开的图，掉了帽子之后就退化成普通僵尸。
-        if (name.equals("ConeheadZombie") || name.equals("BucketheadZombie")) {
+        if (zombieDefinition.helmetLostAnimation != null) {
+            base = zombieDefinition.helmetLostAnimation;
+        } else if (name.equals("ConeheadZombie") || name.equals("BucketheadZombie")) {
+            // 路障和铁桶没有掉帽子后的专属图，用普通僵尸的身体。
             base = "Zombie";
         }
         // 报纸僵尸掉报纸之后要用 NoPaper 那套图。
@@ -141,10 +138,24 @@ public class Zombie extends Sprite {
             base = "NewspaperZombieNoPaper";
         }
         if (headLost) {
-            base = base + "LostHead";
+            if (zombieDefinition.headLostAnimation != null) {
+                base = zombieDefinition.headLostAnimation;
+            } else {
+                base = base + "LostHead";
+            }
         }
+        return animationWithAttack(base, fight);
+    }
+
+    /**
+     * 根据是否正在啃食，返回基础动画名或对应的攻击动画名。
+     *
+     * 参数：base 是基础动画名；fight 表示是否正在攻击。
+     * 返回：应该播放的动画名。
+     */
+    private String animationWithAttack(String base, boolean fight) {
         if (fight) {
-            base = base + "Attack";
+            return base + "Attack";
         }
         return base;
     }
@@ -190,17 +201,7 @@ public class Zombie extends Sprite {
             return;
         }
 
-        String next = "ZombieDie";
-        if (name.equals("NewspaperZombie")) {
-            next = "NewspaperZombieDie";
-        }
-        if (explosion) {
-            next = "BoomDie";
-            // 报纸僵尸有自己的一套灰烬图，画布大小和它的其他动画一致。
-            if (name.equals("NewspaperZombie")) {
-                next = "NewspaperZombieBoomDie";
-            }
-        }
+        String next = deathAnimation(assets, explosion);
         // 独臂僵尸有自己的一套倒地动作；被炸死时仍然用通用的灰烬图，
         // 因为那套图是所有僵尸共用的。
         if (!explosion && hasNoArmArt()) {
@@ -209,6 +210,27 @@ public class Zombie extends Sprite {
 
         frameInterval = animationIntervalFor(next);
         change(next, assets, time);
+    }
+
+    /**
+     * 根据死亡方式选本品种的素材；缺少专属素材时使用通用素材。
+     *
+     * 参数：assets 是已加载的素材；explosion 表示是否被炸死。
+     * 返回：应该播放的死亡动画名。
+     */
+    private String deathAnimation(Assets assets, boolean explosion) {
+        String suffix = "Die";
+        if (explosion) {
+            suffix = "BoomDie";
+        }
+        String preferred = name + suffix;
+        if (assets.hasAnimation(preferred)) {
+            return preferred;
+        }
+        if (explosion) {
+            return "BoomDie";
+        }
+        return "ZombieDie";
     }
 
     /**
@@ -258,8 +280,7 @@ public class Zombie extends Sprite {
             return Layout.ZOMBIE_NO_ARM_ANIMATION_INTERVAL;
         }
         // 倒地那几段（含被炸死的灰烬图）播得慢一些。
-        if (animation.equals("ZombieDie") || animation.equals("NewspaperZombieDie")
-                || animation.equals("BoomDie") || animation.equals("NewspaperZombieBoomDie")) {
+        if (animation.endsWith("Die")) {
             return (int) Layout.ZOMBIE_DIE_ANIMATION_INTERVAL;
         }
         // 剩下的"啃食"那几段统一是 Attack 结尾。

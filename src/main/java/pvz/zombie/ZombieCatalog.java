@@ -10,18 +10,22 @@ import pvz.world.CombatValues;
 public final class ZombieCatalog {
     /** 编辑器目前支持的僵尸资料。 */
     public static final ZombieDefinition[] DEFINITIONS = {
-        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, ZombieAbility.NONE, null, null),
-        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE, null, null),
-        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, ZombieAbility.NONE, null, null),
-        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, ZombieAbility.NONE, null, null),
-        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 3, ZombieAbility.NONE, null, null),
+        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, null, null),
+        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
+        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
+        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, null, null),
+        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 2, null, null),
         new ZombieDefinition("JokerZombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
-            ZombieAbility.EXPLODES_ON_PLANT, "JokerZombie", "JokerZombieExplode")
+            "JokerZombie", "JokerZombieExplode"),
+        new ZombieDefinition("FootballZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH,
+            true, false, 1.5, 1.5, null, null,
+            "FootballZombieOrnLost", "FootballZombieLostHead")
     };
 
     /** 和 DEFINITIONS 一一对应的编辑器中文名。 */
     public static final String[] LABELS = {
-        "普通僵尸", "路障僵尸", "铁桶僵尸", "旗帜僵尸", "读报僵尸", "小丑僵尸"
+        "普通僵尸", "路障僵尸", "铁桶僵尸", "旗帜僵尸", "读报僵尸", "小丑僵尸",
+        "橄榄球僵尸"
     };
 
     /** 这个类只提供固定资料，不允许创建对象。 */
@@ -59,15 +63,5 @@ public final class ZombieCatalog {
             labels[index] = LABELS[index];
         }
         return labels;
-    }
-
-    /** 查一种僵尸是否是编辑器支持的品种。 */
-    public static boolean isKnown(String zombieName) {
-        for (int index = 0; index < DEFINITIONS.length; index++) {
-            if (DEFINITIONS[index].name.equals(zombieName)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

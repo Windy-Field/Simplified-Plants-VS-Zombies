@@ -4,7 +4,6 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import pvz.plant.Plant;
 import pvz.plant.PlantCatalog;
-import pvz.plant.PlantRules;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Car;
@@ -159,7 +158,7 @@ public class CombatSystem {
             if (!plant.alive || plant.health <= 0 || plant.row != zombie.row) {
                 continue;
             }
-            if (PlantRules.isProtectedFromExplodingZombie(plant)) {
+            if (plant.isProtectedFromExplodingZombie()) {
                 continue;
             }
             if (!Sprite.touches(zombie, plant, assets, state.time)) {
@@ -182,7 +181,7 @@ public class CombatSystem {
             if (!plant.alive || plant.health <= 0 || plant.row != zombie.row) {
                 continue;
             }
-            if (!PlantRules.isProtectedFromExplodingZombie(plant)) {
+            if (!plant.isProtectedFromExplodingZombie()) {
                 continue;
             }
             if (Sprite.touches(zombie, plant, assets, state.time)) {

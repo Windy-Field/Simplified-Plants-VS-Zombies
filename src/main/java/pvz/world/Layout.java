@@ -126,15 +126,6 @@ public final class Layout {
     /** 每个格子的高度。 */
     public static final int CELL_HEIGHT = 100;
 
-    /** 草坪最下一行的行号。 */
-    public static final int LAST_ROW = ROW_COUNT - 1;
-
-    /** 草坪最下一行的底部纵坐标。 */
-    public static final int LAWN_BOTTOM = GRID_TOP + (LAST_ROW + 1) * CELL_HEIGHT;
-
-    /** 草坪最下一行可以上下弹动的纵坐标上限（保龄球用）。 */
-    public static final int BOWLING_BOUNCE_LIMIT = LAWN_BOTTOM - CELL_HEIGHT;
-
     /** 植物绘制时相对格子中心向右偏移的像素。 */
     public static final int PLANT_CENTER_OFFSET = 40;
 

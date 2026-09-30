@@ -71,18 +71,17 @@ if (-not (Test-Path (Join-Path $project 'levels'))) {
     throw '找不到素材目录 assets（或其中的 levels 关卡目录），请先获取资源包并放到 java\assets 下。'
 }
 $output = Join-Path $PSScriptRoot 'build\classes'
-$library = Join-Path $PSScriptRoot 'build\gson-2.11.0.jar'
+$library = Join-Path $PSScriptRoot 'lib\gson-2.11.0.jar'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 
-# 下载固定版本的 JSON 解析器，避免自己拼凑 JSON 字符串解析。
+# IDEA 和启动脚本使用同一份依赖，避免换电脑后缺少 Gson。
 if (-not (Test-Path $library)) {
-    $address = 'https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar'
-    Invoke-WebRequest -Uri $address -OutFile $library
+    throw '找不到 lib\gson-2.11.0.jar，请重新获取完整的项目文件夹。'
 }
 $expected = '57928D6E5A6EDEB2ABD3770A8F95BA44DCE45F3B23B7A9DC2B309C581552A78B'
 $actual = (Get-FileHash -Path $library -Algorithm SHA256).Hash
 if ($actual -ne $expected) {
-    throw '下载的 Gson 文件校验失败，请删除 build\gson-2.11.0.jar 后重新运行。'
+    throw 'Gson 文件校验失败，请用完整项目中的 lib\gson-2.11.0.jar 替换当前文件。'
 }
 
 # 编译源文件与随项目保留的验证程序。
