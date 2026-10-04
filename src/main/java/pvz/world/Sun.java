@@ -119,15 +119,17 @@ public class Sun extends Sprite {
      * 参数：assets 提供图片；time 是当前时刻。
      */
     private void updateFlyingToCounter(Assets assets, long time) {
-        // 目标是左上角阳光数字的中心。
-        final double GOAL_X = 50.0;
-        final double GOAL_Y = 50.0;
+        // 目标是卡槽上阳光数字框的中心。这两个值由数字框的位置和尺寸算出来，
+        // 不再像以前那样在这里写死，免得改了卡槽布局而这里没跟着改、阳光飞到框外面去。
+        double goalX = Layout.CARD_BAR_SUN_CENTER_X;
+        double goalY = Layout.CARD_BAR_SUN_CENTER_Y;
 
         // 起点到终点的直线距离，以及按速度换算出的飞行时长。
-        double totalDistX = GOAL_X - collectStartX;
-        double totalDistY = GOAL_Y - collectStartY;
+        double totalDistX = goalX - collectStartX;
+        double totalDistY = goalY - collectStartY;
         double totalDist = Math.sqrt(totalDistX * totalDistX + totalDistY * totalDistY);
-        double durationMs = totalDist / Layout.SUN_COLLECT_SPEED * 16;
+        // SUN_COLLECT_SPEED 是"每一步走多少像素"，乘固定步长才换算成"每毫秒走多少"。
+        double durationMs = totalDist / Layout.SUN_COLLECT_SPEED * Layout.FIXED_STEP_MS;
 
         // 和卡片飞入卡槽用同一条曲线：前 80% 匀速，后 20% 缓出停住。
         double traveled = Layout.flyProgress(time - collectStartTime, durationMs) * totalDist;

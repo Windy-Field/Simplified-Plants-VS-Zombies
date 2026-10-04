@@ -38,9 +38,6 @@ import pvz.zombie.ZombieSpawn;
  * 也不负责"数据存在哪"（那是 GameState 的事）。
  */
 public class Game extends JPanel {
-    /** 画面每秒重绘多少次对应的毫秒间隔，约 60 帧。 */
-    private static final int FRAME_DELAY = 16;
-
     /** 提供图片素材。 */
     private final Assets assets;
 
@@ -104,8 +101,8 @@ public class Game extends JPanel {
         setPreferredSize(new Dimension(Layout.WINDOW_WIDTH, Layout.WINDOW_HEIGHT));
         setFocusable(true);
 
-        timer = new Timer(FRAME_DELAY, new ActionListener() {
-            /** 每隔 16 毫秒推进一帧。 */
+        timer = new Timer(Layout.FIXED_STEP_MS, new ActionListener() {
+            /** 每隔一个固定步长（Layout.FIXED_STEP_MS）推进一帧。 */
             public void actionPerformed(ActionEvent event) {
                 tick();
             }
@@ -272,7 +269,7 @@ public class Game extends JPanel {
         for (int row = 0; row < Layout.ROW_COUNT; row++) {
             state.cars.add(new Car(row));
             for (int column = 0; column < Layout.COLUMN_COUNT; column++) {
-                boolean reserved = state.barType == GameState.BAR_BOWLING && column >= 3;
+                boolean reserved = state.barType == Layout.BAR_BOWLING && column >= 3;
                 state.occupied[row][column] = reserved;
             }
         }
@@ -331,7 +328,7 @@ public class Game extends JPanel {
     private void startPlay() {
         pendingPlayTime = 0;
         state.cards.clear();
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             state.cards.addAll(Cards.staticBar(state.selected));
         }
         // 演出用的展示僵尸只在开场露个脸，真正开打前清掉，免得混进战斗里。
@@ -358,7 +355,7 @@ public class Game extends JPanel {
      */
     private void startIntro() {
         if (testMode) {
-            if (state.barType == GameState.BAR_NORMAL) {
+            if (state.barType == Layout.BAR_NORMAL) {
                 // 正常关卡还是要过一遍选卡界面，自检要点卡槽。
                 state.screen = GameScreen.CHOOSE;
                 launchRequiredCards();
@@ -387,7 +384,7 @@ public class Game extends JPanel {
     private void beginIntroReturn() {
         // 镜头移回草坪时卡槽要已经摆好，所以这里先把玩家挑的卡放进卡槽。
         state.cards.clear();
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             state.cards.addAll(Cards.staticBar(state.selected));
         }
         state.introChooser = false;
@@ -420,7 +417,8 @@ public class Game extends JPanel {
             int bottom = Layout.ZOMBIE_FOOT_BASE + row * Layout.CELL_HEIGHT;
 
             Zombie zombie = new Zombie(kinds.get(index), row, bottom, assets);
-            // 僵尸是"从右边走进来"的，构造时横坐标固定在 ZOMBIE_START_X，
+            // 僵尸是"从右边走进来"的，构造时把画布中心对在 ZOMBIE_START_X
+            // （字段 x 存的是左沿，所以那儿存的是 ZOMBIE_START_X 减去半个画布宽）。
             // 这里挪到展示位；用画布左沿对齐，和它出场时的摆法保持一致。
             zombie.x = x;
             state.introZombies.add(zombie);
@@ -462,7 +460,7 @@ public class Game extends JPanel {
 
         // 推到位了。正常关卡切到选卡界面，玩家对着僵尸挑卡。
         state.cameraOffset = Layout.CAMERA_RIGHT_OFFSET;
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             state.introChooser = true;
             state.screenStart = state.time;
             state.screen = GameScreen.CHOOSE;
@@ -575,9 +573,9 @@ public class Game extends JPanel {
             return;
         }
         pendingPlayTime = pendingPlayTime + elapsed;
-        while (pendingPlayTime >= FRAME_DELAY && state.screen == GameScreen.PLAY) {
-            pendingPlayTime = pendingPlayTime - FRAME_DELAY;
-            state.time = state.time + FRAME_DELAY;
+        while (pendingPlayTime >= Layout.FIXED_STEP_MS && state.screen == GameScreen.PLAY) {
+            pendingPlayTime = pendingPlayTime - Layout.FIXED_STEP_MS;
+            state.time = state.time + Layout.FIXED_STEP_MS;
             updateLevel();
         }
     }
@@ -702,7 +700,7 @@ public class Game extends JPanel {
      * 返回：点中铲子卡槽时返回真。
      */
     private boolean clickShovelSlot(int x, int y) {
-        if (state.barType != GameState.BAR_NORMAL) {
+        if (state.barType != Layout.BAR_NORMAL) {
             return false;
         }
         if (!Layout.insideShovelSlot(x, y)) {
@@ -783,7 +781,7 @@ public class Game extends JPanel {
                 continue;
             }
             // 传送带和保龄球模式不花阳光、也没有冷却，直接就能拿。
-            if (state.barType != GameState.BAR_NORMAL) {
+            if (state.barType != Layout.BAR_NORMAL) {
                 state.heldCard = card;
                 return;
             }
@@ -825,11 +823,11 @@ public class Game extends JPanel {
         state.plants.add(plant);
 
         // 保龄球模式不占格子，因为球是要滚走的。
-        if (state.barType != GameState.BAR_BOWLING) {
+        if (state.barType != Layout.BAR_BOWLING) {
             state.occupied[row][column] = true;
         }
 
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             PlantDefinition definition = PlantCatalog.definitionAt(state.heldCard.index);
             state.sunValue = state.sunValue - definition.cost;
             state.heldCard.lastUsed = state.time;
@@ -864,12 +862,16 @@ public class Game extends JPanel {
         return false;
     }
 
-    /** 推进关卡一帧：出僵尸、出卡、掉阳光，然后更新所有物体。 */
+    /** 推进关卡一帧：出僵尸、出卡、掉阳光，然后更新所有物体，最后回收死掉的。 */
     private void updateLevel() {
         levelSystem.updateSpawnsAndDrops();
 
         plantActions.updateAll();
         combatSystem.updateAll();
+
+        // 回收必须放在所有更新之后：这一帧里死亡的物体只有等没人再遍历它们了才能删，
+        // 否则正在跑的那个 for 循环会因为下标错位而漏掉后面的物体。
+        state.reapDeadObjects();
 
         if (levelSystem.isVictoryReady()) {
             state.levelNumber = state.levelNumber + 1;
@@ -925,7 +927,12 @@ public class Game extends JPanel {
         return count;
     }
 
-    /** 返回已经出场的僵尸数量，供测试核对。 */
+    /**
+     * 返回此刻还在场上的僵尸数量，供测试核对。
+     *
+     * 正在播死亡动画的僵尸仍然算数（它还站着、还占着画面），
+     * 已经倒下的则会在每帧末尾被 reapDeadObjects 清掉，不再计入。
+     */
     public int getZombieCount() {
         return state.zombies.size();
     }

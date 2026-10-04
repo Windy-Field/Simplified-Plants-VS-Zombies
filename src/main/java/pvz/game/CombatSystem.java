@@ -7,7 +7,6 @@ import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Car;
-import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.world.Sun;
@@ -76,7 +75,7 @@ public class CombatSystem {
             return;
         }
         if (zombie.helmet
-                && zombie.health <= CombatValues.ZOMBIE_HELMET_LOST_HEALTH) {
+                && zombie.health <= Layout.ZOMBIE_HELMET_LOST_HEALTH) {
             zombie.helmet = false;
             zombie.speed = zombie.speedAfterHelmet;
             zombie.change(zombie.stateAnimation(zombie.attacking), assets, state.time);
@@ -111,7 +110,7 @@ public class CombatSystem {
         if (state.time - zombie.lastBleed <= Layout.ZOMBIE_BLEED_INTERVAL) {
             return;
         }
-        zombie.health = zombie.health - CombatValues.ZOMBIE_BLEED_DAMAGE;
+        zombie.health = zombie.health - Layout.ZOMBIE_BLEED_DAMAGE;
         zombie.lastBleed = state.time;
     }
 
@@ -255,14 +254,14 @@ public class CombatSystem {
             return;
         }
         if (prey != null) {
-            prey.health = prey.health - CombatValues.ZOMBIE_BITE_DAMAGE;
+            prey.health = prey.health - Layout.ZOMBIE_BITE_DAMAGE;
             boolean isHypnoShroom = prey.name.equals("HypnoShroom");
             if (prey.health <= 0 && isHypnoShroom && !prey.sleeping) {
                 zombie.hypno = true;
             }
         }
         if (opponent != null) {
-            opponent.health = opponent.health - CombatValues.ZOMBIE_BITE_DAMAGE;
+            opponent.health = opponent.health - Layout.ZOMBIE_BITE_DAMAGE;
         }
         zombie.lastAttack = state.time;
     }
@@ -334,7 +333,7 @@ public class CombatSystem {
             if (!Sprite.touches(bullet, zombie, assets, state.time)) {
                 continue;
             }
-            zombie.health = zombie.health - bullet.damageAmount(CombatValues.BULLET_DAMAGE);
+            zombie.health = zombie.health - bullet.damage;
             if (bullet.ice) {
                 zombie.slowedUntil = state.time + Layout.ZOMBIE_SLOW_DURATION;
             }

@@ -83,12 +83,12 @@ public class Plant extends Sprite {
     }
 
     /**
-     * 这种植物的图要往上挪多少，底部才正好落在合适位置。
+     * 这种植物的图要在纵向上挪多少，底部才正好落在合适位置。
      *
      * 偏移量记在品种资料里，大多数植物是 0。
      *
      * 参数：kind 是植物名。
-     * 返回：向上挪的像素数（负数表示向上）。
+     * 返回：纵坐标偏移量；正数往下挪，负数往上挪。
      */
     public static int verticalShift(String kind) {
         return PlantCatalog.definitionOf(kind).verticalShift;
@@ -150,7 +150,7 @@ public class Plant extends Sprite {
         }
 
         bullet.transform(transformation.targetBullet,
-            transformation.damageMultiplier, assets, time);
+            transformation.damage, assets, time);
         bullet.lastTransformationSource = this;
         return true;
     }

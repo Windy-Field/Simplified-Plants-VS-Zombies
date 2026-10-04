@@ -1,7 +1,7 @@
 package pvz.world;
 
 /**
- * 存放整个游戏的坐标和时间常量。
+ * 存放整个游戏的坐标、时间、血量和伤害常量。
  *
  * 如果把 80、100、35 这样的数字直接写在逻辑里，读者看不出它们代表什么，
  * 改一处漏一处还会出难查的错误。所以都集中到这里，起个名字再用。
@@ -141,6 +141,23 @@ public final class Layout {
     public static final int ZOMBIE_FOOT_BASE = GRID_TOP + PLANT_BOTTOM_OFFSET;
 
     /**
+     * 小推车车轮落在的基准线，也就是第 0 行草皮的底边。
+     *
+     * 比分出怪用的 ZOMBIE_FOOT_BASE（160）低 20 像素，这是有意为之、不是笔误：
+     * 僵尸是站在草皮上的，小推车是沿着草皮下方那条路开过去的，两者本来就不该共线。
+     * 第 row 行的位置是 CAR_FOOT_BASE + row * CELL_HEIGHT。
+     */
+    public static final int CAR_FOOT_BASE = LAWN_TOP + CELL_HEIGHT;
+
+    /**
+     * 小推车没有启动时车头停在的横坐标。
+     *
+     * 取负数表示停在屏幕左边外面，平时看不见；等僵尸走到跟前才开进来。
+     * 启动之后的行驶位置也从它算起，两处必须是同一个值。
+     */
+    public static final int CAR_START_X = -25;
+
+    /**
      * 大嘴花的图要往右挪多少像素。
      * 它的图宽 130 像素，根部却在从左数第 37 像素左右，比正中（65）偏左 28 像素。
      */
@@ -157,6 +174,57 @@ public final class Layout {
 
     /** 僵尸碰撞盒从后面去掉可见宽度的百分之几，把甩在身后的脚跟排除掉。 */
     public static final int ZOMBIE_BACK_TRIM_PERCENT = 20;
+
+    /** 普通植物的初始血量，直接使用游戏内部数值。 */
+    public static final int DEFAULT_PLANT_HEALTH = 50;
+
+    /** 坚果的初始血量，直接使用游戏内部数值。 */
+    public static final int WALL_NUT_HEALTH = 300;
+
+    /** 魅惑菇和保龄球的初始血量，直接使用游戏内部数值。 */
+    public static final int FRAGILE_PLANT_HEALTH = 10;
+
+    /** 普通僵尸的初始血量，直接使用游戏内部数值。 */
+    public static final int NORMAL_ZOMBIE_HEALTH = 100;
+
+    /** 僵尸失去头盔或报纸时的血量阈值。 */
+    public static final int ZOMBIE_HELMET_LOST_HEALTH = 100;
+
+    /** 坚果进入第一种裂纹状态时的血量阈值。 */
+    public static final int WALL_NUT_FIRST_CRACK_HEALTH = 200;
+
+    /** 坚果进入第二种裂纹状态时的血量阈值。 */
+    public static final int WALL_NUT_SECOND_CRACK_HEALTH = 100;
+
+    /** 路障僵尸的初始血量。 */
+    public static final int CONEHEAD_ZOMBIE_HEALTH = 200;
+
+    /** 铁桶僵尸的初始血量。 */
+    public static final int BUCKETHEAD_ZOMBIE_HEALTH = 300;
+
+    /** 旗帜僵尸和读报僵尸的初始血量。 */
+    public static final int LIGHT_ARMOR_ZOMBIE_HEALTH = 150;
+
+    /** 普通、冰冻和蘑菇子弹每次命中的伤害。 */
+    public static final int BULLET_DAMAGE = 10;
+
+    /** 火焰豌豆每次命中的伤害。 */
+    public static final int FIRE_PEA_DAMAGE = 20;
+
+    /** 僵尸每次啃咬造成的伤害。 */
+    public static final int ZOMBIE_BITE_DAMAGE = 10;
+
+    /** 僵尸掉头后的持续流血伤害。 */
+    public static final int ZOMBIE_BLEED_DAMAGE = 10;
+
+    /** 地刺每次扎出的伤害。 */
+    public static final int SPIKEWEED_DAMAGE = 10;
+
+    /** 坚果保龄球每次撞击的伤害。 */
+    public static final int BOWLING_DAMAGE = 100;
+
+    /** 小丑爆炸对魅惑僵尸造成的伤害。 */
+    public static final int JOKER_EXPLOSION_DAMAGE = 100;
 
     // TODO：【选做-1】新增射手植物时，如果嘴的高度和豌豆射手不同，需要在这里加一个常量，
     //                再去 ShooterActions.muzzleOffset() 里加对应的 if 分支返回这个常量
@@ -190,7 +258,7 @@ public final class Layout {
     /** 僵尸从屏幕右侧这个横坐标出现。 */
     public static final int ZOMBIE_START_X = 850;
 
-    /** 静态卡槽里第一张卡的右沿横坐标。 */
+    /** 卡槽排布的横向基准点；第一张卡的左沿是它再加一个卡间距。 */
     public static final int CARD_BAR_START = 32;
 
     /** 卡槽中相邻两张卡的水平间距。 */
@@ -212,6 +280,27 @@ public final class Layout {
 
     /** 卡槽上阳光数字框的上沿纵坐标。 */
     public static final int CARD_BAR_SUN_TOP = 66;
+
+    /** 卡槽上阳光数字框的宽度。 */
+    public static final int CARD_BAR_SUN_WIDTH = 32;
+
+    /** 卡槽上阳光数字框的高度。 */
+    public static final int CARD_BAR_SUN_HEIGHT = 17;
+
+    /** 数字在阳光数字框里的基线纵坐标。 */
+    public static final int CARD_BAR_SUN_BASELINE = 15;
+
+    /**
+     * 阳光被收走之后飞向的终点：阳光数字框的中心。
+     *
+     * 之前这个终点是在 Sun 里写死的 (50, 50)，和数字框的真实位置对不上，
+     * 阳光会飞过头到框上方 24 像素左右才消失。改成从数字框的位置和尺寸算出来，
+     * 以后挪动卡槽或改框的大小，终点会自动跟着走，不会再各走各的。
+     */
+    public static final int CARD_BAR_SUN_CENTER_X = CARD_BAR_SUN_LEFT + CARD_BAR_SUN_WIDTH / 2;
+
+    /** 阳光数字框中心的纵坐标，同上。 */
+    public static final int CARD_BAR_SUN_CENTER_Y = CARD_BAR_SUN_TOP + CARD_BAR_SUN_HEIGHT / 2;
 
     /** 铲子卡槽左沿的横坐标，紧接在普通卡槽右边。 */
     public static final int SHOVEL_SLOT_LEFT = 540;
@@ -268,8 +357,10 @@ public final class Layout {
     /**
      * 卡槽数量最多 8 张，和原版一致。
      *
-     * 卡槽底板的宽度就是窗口宽度，一排正好排得下 8 张缩放后的卡片，
-     * 再多就会画到屏幕外面，所以卡槽数量只能往少里调。
+     * 这个上限是底板图定的：卡槽底板（ChooserBackground.png）宽 522，
+     * 从 CARD_BAR_LEFT 起按原尺寸画，右沿落在 532。第 8 张卡的左沿是 472、
+     * 右沿约 523，正好压在底板里；第 9 张左沿 527 就会伸到底板外面盖住草坪，
+     * 所以卡槽数量只能往少里调。
      */
     public static final int MAX_CARD_SLOTS = 8;
 
@@ -295,11 +386,38 @@ public final class Layout {
         return value;
     }
 
+    /**
+     * 卡槽模式：正常选卡，左边有一排固定卡片。
+     *
+     * 这个值和下面两个，就是关卡文件里 choosebar_type 字段能填的全部取值。
+     * 它们和上面的卡槽数量常量放在一起，因为说的都是"这一关的卡槽长什么样"。
+     *
+     * 为什么不放在 GameState 里：它们是关卡配置，不是"一局游戏里会变的东西"。
+     * 放在 GameState 里的时候，Level、LevelLoader、LevelDesign 为了读这三个数字
+     * 都得 import 整个 GameState，让关卡和编辑器平白反过来依赖游戏运行时。
+     * 放在 Layout 则不会给任何包增加新依赖——Layout 谁都不依赖，而大家都依赖它。
+     */
+    public static final int BAR_NORMAL = 0;
+
+    /** 卡槽模式：传送带，卡片从右边慢慢送过来。 */
+    public static final int BAR_CONVEYOR = 1;
+
+    /** 卡槽模式：坚果保龄球，棋盘上直接摆着球。 */
+    public static final int BAR_BOWLING = 2;
+
     /** 传送带区域的左边界。 */
     public static final int CONVEYOR_LEFT = 90;
 
     /** 传送带上卡片的初始横坐标。 */
     public static final int CONVEYOR_CARD_START_X = 601;
+
+    /**
+     * 传送带上卡片本身占的宽度。
+     *
+     * 补新卡之前要先看看最右边那张卡挪开了没有：它挪出 CONVEYOR_CARD_START_X 这个位置
+     * 才腾得出地方，判断时用的就是这张卡的宽度。
+     */
+    public static final int CONVEYOR_CARD_WIDTH = 42;
 
     /** 传送带上卡片的纵坐标。 */
     public static final int CONVEYOR_CARD_Y = 6;
@@ -328,8 +446,21 @@ public final class Layout {
     /** 选卡界面里卡片区的行间距。 */
     public static final int CHOOSER_ROW_SPACING = 74;
 
-    /** 点击种植时，横坐标小于它就算点到右上角卡槽了。 */
+    /** 点击种植时，纵坐标小于它就算点到右上角卡槽了。 */
     public static final int PLAY_CARD_BAR_BOTTOM = 62;
+
+    /**
+     * 战斗逻辑的固定步长，单位毫秒。
+     *
+     * 战斗不是"来多少毫秒就一次性推进多少"，而是攒够了就走一步、每步都是这么长，
+     * 这样不同帧率和不同倍速下，僵尸的移动、射击和啃食规则完全一致。
+     * 界面刷新间隔用的也是它。
+     *
+     * 小推车和阳光收集动画都是"每一步走固定距离"，换算成时长时要用这个值
+     * （见 Car.update 和 Sun.updateFlyingToCounter），所以必须是同一个数，
+     * 否则改了刷新率而这两处没跟着改，车速和阳光飞行速度就会悄悄变样。
+     */
+    public static final int FIXED_STEP_MS = 16;
 
     /** 一帧最多按多少毫秒推进游戏时钟，防止窗口卡顿后僵尸瞬间冲过去。 */
     public static final long MAX_FRAME_ELAPSED = 50;
@@ -455,7 +586,7 @@ public final class Layout {
     /** 土豆雷埋好后需要多久才能出土。 */
     public static final long POTATO_MINE_ARM_TIME = 15000;
 
-    /** 僵尸吃植物的间隔倍率：减速状态下乘 2。 */
+    /** 僵尸吃植物的间隔（毫秒）：减速状态下乘 2。 */
     public static final long ZOMBIE_ATTACK_INTERVAL = 1000;
 
     /** 僵尸走一步的毫秒间隔；减速状态下乘 2。 */
@@ -488,14 +619,14 @@ public final class Layout {
      * 普通僵尸、路障和铁桶的本体血量都是 10，所以这就是"本体掉到一半"。
      * 比掉头（见下）早，玩家能先看到它变成独臂，再看到它掉头。
      */
-    public static final int ZOMBIE_ARM_LOST_HEALTH = 5 * CombatValues.HEALTH_MULTIPLIER;
+    public static final int ZOMBIE_ARM_LOST_HEALTH = 50;
 
     /**
      * 僵尸掉头的血量。
      *
      * 特意比掉臂（见上）晚一步：两者同时触发的话，独臂动画根本来不及看清。
      */
-    public static final int ZOMBIE_HEAD_LOST_HEALTH = 3 * CombatValues.HEALTH_MULTIPLIER;
+    public static final int ZOMBIE_HEAD_LOST_HEALTH = 30;
 
     /**
      * 独臂素材的帧间隔。
@@ -523,7 +654,7 @@ public final class Layout {
     /**
      * "独臂且掉头后继续啃"那张图的缩放倍数。
      *
-     * 它的导出分辨率只有别的四分之一（画布 138x149，别的都是 500x700 以上），
+     * 它的导出分辨率比别人小得多（画布 138x149，别的四张都在 500x600 以上），
      * 所以得单独一个倍数，同样是按站立高度算：103 / 141 ≈ 0.7305。
      */
     public static final double ZOMBIE_NO_ARM_SMALL_SCALE = 0.7305;
@@ -552,7 +683,7 @@ public final class Layout {
     /** 黄油爆米花之类特效图的播放时长。 */
     public static final long SHORT_EFFECT_DURATION = 500;
 
-    /** 这个类只提供常量，不允许创建对象。 */
+    /** 这个类只提供坐标、时间、血量和伤害常量，不允许创建对象。 */
     private Layout() {
     }
 

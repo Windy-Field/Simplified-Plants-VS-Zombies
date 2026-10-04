@@ -170,7 +170,7 @@ public class GameRenderer {
      * 参数：painter 是画笔；time 是当前时刻；state 里装着演出进度。
      */
     private void drawIntroBar(Graphics2D painter, long time, GameState state) {
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             drawPlayBar(painter, time, state);
             return;
         }
@@ -233,7 +233,7 @@ public class GameRenderer {
      * 参数：painter 是画笔；time 是当前时刻；state 里装着卡槽数据。
      */
     private void drawPlayBar(Graphics2D painter, long time, GameState state) {
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             painter.drawImage(assets.image("ChooserBackground"), Layout.CARD_BAR_LEFT, 0, null);
             drawSunNumber(painter, state.sunValue,
                 Layout.CARD_BAR_SUN_LEFT, Layout.CARD_BAR_SUN_TOP);
@@ -243,7 +243,7 @@ public class GameRenderer {
         for (Card card : state.cards) {
             card.draw(painter, assets, time, state.sunValue, Layout.CARD_SCALE, true);
         }
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             drawShovelSlot(painter);
         }
     }
@@ -406,7 +406,7 @@ public class GameRenderer {
     private void drawChooserPanel(Graphics2D painter, long time, GameState state) {
         painter.drawImage(assets.image("PanelBackground"), 0, Layout.CHOOSER_PANEL_TOP, null);
 
-        // 候选卡按 8 张一行往下排；现在是 17 张，所以第 17 张单独占第三行第一个。
+        // 候选卡按 8 张一行往下排；现在是 19 张，所以第三行排的是第 17～19 张共三张。
         // 已选中或正在飞行（飞往卡槽、飞回候选区）的卡，在原位显示为灰色锁定状态。
         // 提示：选卡界面最多能放 24 张卡（3 行），超过需要改布局。
         for (int index = 0; index < PlantCatalog.CHOOSER_COUNT; index++) {
@@ -772,15 +772,21 @@ public class GameRenderer {
         rotated.dispose();
     }
 
-    /** 画阳光数量：先铺一块浅色底，再把数字靠右写上去。 */
+    /**
+     * 画阳光数量：先铺一块浅色底，再把数字靠右写上去。
+     *
+     * 底块的尺寸也放在 Layout 里，因为收集阳光的动画要把阳光正好飞到这块底的中心，
+     * 两边得用同一组数字，不然阳光又会飞到框外面去。
+     */
     private void drawSunNumber(Graphics2D painter, int amount, int x, int y) {
         painter.setColor(new Color(234, 233, 171));
-        painter.fillRect(x, y, 32, 17);
+        painter.fillRect(x, y, Layout.CARD_BAR_SUN_WIDTH, Layout.CARD_BAR_SUN_HEIGHT);
         painter.setColor(new Color(60, 60, 100));
         painter.setFont(new Font("SansSerif", Font.PLAIN, 19));
         String text = Integer.toString(amount);
         int width = painter.getFontMetrics().stringWidth(text);
-        painter.drawString(text, x + 32 - width, y + 15);
+        painter.drawString(text, x + Layout.CARD_BAR_SUN_WIDTH - width,
+            y + Layout.CARD_BAR_SUN_BASELINE);
     }
 
     /** 画手里拿着的卡片或铲子，保持两种工具的预览入口一致。 */

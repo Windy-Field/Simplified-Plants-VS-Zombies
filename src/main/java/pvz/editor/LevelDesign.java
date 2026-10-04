@@ -8,7 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import pvz.game.GameState;
+import pvz.level.LevelJson;
 import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
@@ -79,7 +79,7 @@ public class LevelDesign {
     public int backgroundIndex;
 
     /** 卡槽模式：正常选卡、传送带还是坚果保龄球。 */
-    public int barType = GameState.BAR_NORMAL;
+    public int barType = Layout.BAR_NORMAL;
 
     /** 开局赠送的阳光。 */
     public int initialSun = 50;
@@ -311,12 +311,6 @@ public class LevelDesign {
     }
 
     /**
-     * 查一种僵尸在 ZOMBIE_KINDS 里排第几。
-     *
-     * 参数：kind 是僵尸品种名。
-     * 返回：找到就返回下标；找不到返回 -1。
-     */
-    /**
      * 切换某个格子的随机行状态。
      *
      * 参数：row 是行号；wave 是波号。
@@ -454,25 +448,8 @@ public class LevelDesign {
                 }
             }
         }
-        sortByTime(result);
+        LevelJson.sortByTime(result);
         return result;
-    }
-
-    /**
-     * 按出场时间给僵尸表排序，用的是最直观的插入排序。
-     *
-     * 参数：spawns 是待排序的出场表，排完直接改在原列表上。
-     */
-    private static void sortByTime(List<ZombieSpawn> spawns) {
-        for (int index = 1; index < spawns.size(); index++) {
-            ZombieSpawn current = spawns.get(index);
-            int position = index - 1;
-            while (position >= 0 && spawns.get(position).spawnTime > current.spawnTime) {
-                spawns.set(position + 1, spawns.get(position));
-                position = position - 1;
-            }
-            spawns.set(position + 1, current);
-        }
     }
 
     /**
@@ -487,34 +464,34 @@ public class LevelDesign {
     public String toJsonText() {
         StringBuilder text = new StringBuilder();
         text.append("{\n");
-        text.append("    \"background_type\":" + backgroundIndex + ",\n");
-        text.append("    \"choosebar_type\":" + barType + ",\n");
-        text.append("    \"init_sun_value\":" + initialSun + ",\n");
-        text.append("    \"sky_sun_interval\":" + skySunInterval + ",\n");
+        writeField(text, LevelJson.BACKGROUND_TYPE, backgroundIndex + "");
+        writeField(text, LevelJson.CHOOSEBAR_TYPE, barType + "");
+        writeField(text, LevelJson.INIT_SUN_VALUE, initialSun + "");
+        writeField(text, LevelJson.SKY_SUN_INTERVAL, skySunInterval + "");
 
         // 只有传送带和保龄球模式才有卡池，正常选卡模式写了反而多余。
-        if (barType != GameState.BAR_NORMAL) {
-            writePlantList(text, "card_pool", cardPool);
+        if (barType != Layout.BAR_NORMAL) {
+            writePlantList(text, LevelJson.CARD_POOL, cardPool);
         }
         // 两份清单只对正常选卡模式有意义，空着就不写，免得老关卡文件平白多两行。
         if (!bannedPlants.isEmpty()) {
-            writePlantList(text, "banned_plants", bannedPlants);
+            writePlantList(text, LevelJson.BANNED_PLANTS, bannedPlants);
         }
         if (!requiredPlants.isEmpty()) {
-            writePlantList(text, "required_plants", requiredPlants);
+            writePlantList(text, LevelJson.REQUIRED_PLANTS, requiredPlants);
         }
         // 卡槽数量等于默认值时不必写，这样不改它的关卡存档和以前一模一样。
         if (maxCards != Layout.DEFAULT_CARD_SLOTS) {
-            text.append("    \"max_cards\":" + maxCards + ",\n");
+            writeField(text, LevelJson.MAX_CARDS, maxCards + "");
         }
 
         List<ZombieSpawn> spawns = buildSpawns();
-        text.append("    \"zombie_list\":[\n");
+        text.append("    \"" + LevelJson.ZOMBIE_LIST + "\":[\n");
         for (int index = 0; index < spawns.size(); index++) {
             ZombieSpawn spawn = spawns.get(index);
-            text.append("        {\"time\":" + spawn.spawnTime);
-            text.append(", \"map_y\":" + spawn.row);
-            text.append(", \"name\":\"" + spawn.name + "\"}");
+            text.append("        {\"" + LevelJson.TIME + "\":" + spawn.spawnTime);
+            text.append(", \"" + LevelJson.MAP_Y + "\":" + spawn.row);
+            text.append(", \"" + LevelJson.NAME + "\":\"" + spawn.name + "\"}");
             text.append(lineEnd(index, spawns.size()));
         }
         text.append("    ],\n");
@@ -537,10 +514,20 @@ public class LevelDesign {
         text.append("    \"" + field + "\":[\n");
         for (int index = 0; index < plants.size(); index++) {
             int plantIndex = plants.get(index).intValue();
-            text.append("        {\"name\":\"" + PlantCatalog.nameAt(plantIndex) + "\"}");
+            text.append("        {\"" + LevelJson.NAME + "\":\""
+                + PlantCatalog.nameAt(plantIndex) + "\"}");
             text.append(lineEnd(index, plants.size()));
         }
         text.append("    ],\n");
+    }
+
+    /**
+     * 往 JSON 里写一行"字段名:数值"。
+     *
+     * 参数：text 是正在拼的 JSON 文本；field 是字段名；value 是已经转成文本的值。
+     */
+    private static void writeField(StringBuilder text, String field, String value) {
+        text.append("    \"" + field + "\":" + value + ",\n");
     }
 
     /**
@@ -569,7 +556,7 @@ public class LevelDesign {
         }
 
         StringBuilder text = new StringBuilder();
-        text.append("    \"editor\":{\n");
+        text.append("    \"" + LevelJson.EDITOR + "\":{\n");
         text.append("        \"wave_count\":" + waveCount + ",\n");
         text.append("        \"first_wave_delay\":" + firstWaveDelay + ",\n");
         text.append("        \"wave_interval\":" + waveInterval + ",\n");
@@ -635,60 +622,59 @@ public class LevelDesign {
      */
     public static LevelDesign fromJson(JsonObject json) {
         LevelDesign design = new LevelDesign();
-        if (json.has("background_type")) {
-            design.backgroundIndex = json.get("background_type").getAsInt();
+        if (json.has(LevelJson.BACKGROUND_TYPE)) {
+            design.backgroundIndex = json.get(LevelJson.BACKGROUND_TYPE).getAsInt();
         }
-        if (json.has("choosebar_type")) {
-            design.barType = json.get("choosebar_type").getAsInt();
+        if (json.has(LevelJson.CHOOSEBAR_TYPE)) {
+            design.barType = json.get(LevelJson.CHOOSEBAR_TYPE).getAsInt();
         }
-        if (json.has("init_sun_value")) {
-            design.initialSun = json.get("init_sun_value").getAsInt();
+        if (json.has(LevelJson.INIT_SUN_VALUE)) {
+            design.initialSun = json.get(LevelJson.INIT_SUN_VALUE).getAsInt();
         }
-        if (json.has("sky_sun_interval")) {
-            long interval = json.get("sky_sun_interval").getAsLong();
-            design.skySunInterval = Math.max(Layout.MIN_SKY_SUN_INTERVAL, interval);
-        }
-        if (json.has("card_pool")) {
-            readPlantList(json.getAsJsonArray("card_pool"), design.cardPool);
-        }
-        if (json.has("banned_plants")) {
-            readPlantList(json.getAsJsonArray("banned_plants"), design.bannedPlants);
-        }
-        if (json.has("required_plants")) {
-            readPlantList(json.getAsJsonArray("required_plants"), design.requiredPlants);
-        }
-        // 老关卡文件没有这一项，留着默认值 8 就行。
-        if (json.has("max_cards")) {
-            design.maxCards = Layout.clampCardSlots(json.get("max_cards").getAsInt());
+        design.skySunInterval = LevelJson.readSkySunInterval(json);
+        design.maxCards = LevelJson.readCardSlots(json);
+
+        // 认不出的植物名跳过、不报错：编辑器得能打开任何文件，包括别的版本写出来的、
+        // 带了新植物的关卡，好让用户看到问题再自己把那项删掉。
+        // 但跳过不能一声不吭，所以先把名字攒着，最后并进 importNote 显示给用户。
+        List<String> unknownPlants = new ArrayList<String>();
+        design.cardPool.addAll(LevelJson.readPlantListSkippingUnknown(
+            json, LevelJson.CARD_POOL, unknownPlants));
+        design.bannedPlants.addAll(LevelJson.readPlantListSkippingUnknown(
+            json, LevelJson.BANNED_PLANTS, unknownPlants));
+        design.requiredPlants.addAll(LevelJson.readPlantListSkippingUnknown(
+            json, LevelJson.REQUIRED_PLANTS, unknownPlants));
+
+        if (json.has(LevelJson.EDITOR)) {
+            design.readEditorBlock(json.getAsJsonObject(LevelJson.EDITOR));
+        } else if (json.has(LevelJson.ZOMBIE_LIST)) {
+            design.rebuildFromSpawns(json.getAsJsonArray(LevelJson.ZOMBIE_LIST));
         }
 
-        if (json.has("editor")) {
-            design.readEditorBlock(json.getAsJsonObject("editor"));
-            return design;
-        }
-        if (json.has("zombie_list")) {
-            design.rebuildFromSpawns(json.getAsJsonArray("zombie_list"));
-        }
+        // rebuildFromSpawns 也会写 importNote（同一格合并了品种、有不认识的僵尸），
+        // 所以这里得往后接，不能直接赋值把前一句盖掉。
+        design.importNote = design.importNote + unknownPlantNote(unknownPlants);
         return design;
     }
 
     /**
-     * 读一段植物清单。
+     * 把认不出的植物名拼成一句给用户看的提示。
      *
-     * 卡池、禁用清单、必选清单的格式一样，所以共用这一个方法。
-     * 认不出的植物直接跳过，总比让整个关卡打不开强。
-     *
-     * 参数：array 是关卡文件里的清单数组；target 是读到哪个列表里。
+     * 参数：unknownPlants 是读文件时跳过的植物名，已经去过重。
+     * 返回：提示文字；一个名字都没跳过就返回空字符串。
      */
-    private static void readPlantList(JsonArray array, List<Integer> target) {
-        for (int index = 0; index < array.size(); index++) {
-            JsonObject entry = array.get(index).getAsJsonObject();
-            String name = entry.get("name").getAsString();
-            int cardIndex = PlantCatalog.indexOf(name);
-            if (cardIndex >= 0) {
-                target.add(Integer.valueOf(cardIndex));
-            }
+    private static String unknownPlantNote(List<String> unknownPlants) {
+        if (unknownPlants.isEmpty()) {
+            return "";
         }
+        String names = "";
+        for (int index = 0; index < unknownPlants.size(); index++) {
+            if (index > 0) {
+                names = names + "、";
+            }
+            names = names + unknownPlants.get(index);
+        }
+        return "存在本编辑器不认识的植物（" + names + "），已跳过。";
     }
 
     /**
@@ -746,19 +732,12 @@ public class LevelDesign {
      * 参数：list 是关卡文件里的 zombie_list 数组。
      */
     private void rebuildFromSpawns(JsonArray list) {
-        List<ZombieSpawn> spawns = new ArrayList<ZombieSpawn>();
-        for (int index = 0; index < list.size(); index++) {
-            JsonObject entry = list.get(index).getAsJsonObject();
-            int spawnTime = entry.get("time").getAsInt();
-            int row = entry.get("map_y").getAsInt();
-            String name = entry.get("name").getAsString();
-            spawns.add(new ZombieSpawn(spawnTime, row, name));
-        }
+        List<ZombieSpawn> spawns = LevelJson.readSpawns(list);
         if (spawns.isEmpty()) {
             clearAllCells();
             return;
         }
-        sortByTime(spawns);
+        LevelJson.sortByTime(spawns);
 
         List<List<ZombieSpawn>> waves = splitIntoWaves(spawns);
         readTimingFromWaves(spawns, waves);
@@ -949,10 +928,10 @@ public class LevelDesign {
             return "网格里一只僵尸都没有，进入关卡后会立刻通关。";
         }
         // 游戏读传送带和保龄球关卡时一定会去取卡池，没有卡池会直接读不下去。
-        if (barType != GameState.BAR_NORMAL && cardPool.isEmpty()) {
+        if (barType != Layout.BAR_NORMAL && cardPool.isEmpty()) {
             return "传送带和保龄球模式必须至少选一张卡池里的植物，否则关卡无法载入。";
         }
-        if (barType == GameState.BAR_NORMAL && backgroundIndex != 0) {
+        if (barType == Layout.BAR_NORMAL && backgroundIndex != 0) {
             return "只有白天草坪（背景 0）的正常选卡关卡会从天上掉阳光，当前设置下阳光生成速度不起作用。";
         }
         // 必选超过卡槽数量时，游戏只能放入前几张，不能按关卡原计划选卡。

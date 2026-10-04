@@ -1,22 +1,20 @@
 package pvz.level;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
-import pvz.game.GameState;
-import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
-import pvz.zombie.ZombieSpawn;
 
 /**
  * 负责把关卡 JSON 文件读成 Level 对象。
  *
  * 读文件、认字段、排顺序这些事都放在这里，
  * 游戏主类就不必关心 JSON 长什么样了。
+ *
+ * 字段名、默认值和容错规则本身不在这里，而在 {@link LevelJson}：
+ * 那份约定是游戏和编辑器共用的，改格式只要改那一个地方。
+ * 这个类只管一件事——游戏要的 Level 对象长什么样。
  */
 public class LevelLoader {
     /** 提供关卡文件的位置。 */
@@ -36,7 +34,10 @@ public class LevelLoader {
      *
      * 参数：levelNumber 是关卡编号，从 0 开始。
      * 返回：读好的关卡数据。
-     * 异常：文件读不了或格式不对时抛出 IllegalStateException。
+     * 异常：文件读不了、或缺少 zombie_list 字段时抛 IllegalStateException；
+     *       其余字段缺失或格式非法时不做包装，按 Gson 与解析逻辑各自抛出
+     *       （例如缺 background_type 时的 NPE、JSON 语法错时的 JsonSyntaxException、
+     *       植物名认不出时的 IllegalArgumentException）。
      */
     public Level load(int levelNumber) {
         try {
@@ -44,123 +45,39 @@ public class LevelLoader {
             JsonObject json = Assets.readObject(path);
 
             Level level = new Level();
-            level.backgroundIndex = json.get("background_type").getAsInt();
-            level.barType = GameState.BAR_NORMAL;
-            if (json.has("choosebar_type")) {
-                level.barType = json.get("choosebar_type").getAsInt();
+            level.backgroundIndex = json.get(LevelJson.BACKGROUND_TYPE).getAsInt();
+            level.barType = Layout.BAR_NORMAL;
+            if (json.has(LevelJson.CHOOSEBAR_TYPE)) {
+                level.barType = json.get(LevelJson.CHOOSEBAR_TYPE).getAsInt();
             }
             level.initialSun = 0;
-            if (json.has("init_sun_value")) {
-                level.initialSun = json.get("init_sun_value").getAsInt();
+            if (json.has(LevelJson.INIT_SUN_VALUE)) {
+                level.initialSun = json.get(LevelJson.INIT_SUN_VALUE).getAsInt();
             }
-            // 关卡编辑器可以调快或调慢天空阳光。间隔太小会导致一帧掉一颗，这里兜底。
-            if (json.has("sky_sun_interval")) {
-                level.skySunInterval = Math.max(Layout.MIN_SKY_SUN_INTERVAL,
-                    json.get("sky_sun_interval").getAsLong());
-            }
+            level.skySunInterval = LevelJson.readSkySunInterval(json);
+            level.maxCards = LevelJson.readCardSlots(json);
 
-            readSpawns(json, level);
-            sortSpawnsByTime(level.spawns);
-            readCardPool(json, level);
-            readPlantList(json, "banned_plants", level.bannedPlants);
-            readPlantList(json, "required_plants", level.requiredPlants);
-            readCardSlots(json, level);
+            // 出场表是这一关的骨架。一条都没有的话，这关会在开场演出结束后立刻判定通关，
+            // 玩家看到的是一个刚亮起来就结束的关卡。与其这样，不如在这里把话说明白。
+            if (!json.has(LevelJson.ZOMBIE_LIST)) {
+                throw new IllegalStateException("第 " + (levelNumber + 1)
+                    + " 关的关卡文件里没有 " + LevelJson.ZOMBIE_LIST + " 字段");
+            }
+            level.spawns.addAll(
+                LevelJson.readSpawns(json.getAsJsonArray(LevelJson.ZOMBIE_LIST)));
+            LevelJson.sortByTime(level.spawns);
+
+            // 卡池只有传送带和保龄球关卡才有；正常选卡关卡没有这一项，
+            // 读出来自然是空的，所以不必再按卡槽模式判断一次。
+            level.cardPool.addAll(LevelJson.readPlantList(json, LevelJson.CARD_POOL));
+            level.bannedPlants.addAll(
+                LevelJson.readPlantList(json, LevelJson.BANNED_PLANTS));
+            level.requiredPlants.addAll(
+                LevelJson.readPlantList(json, LevelJson.REQUIRED_PLANTS));
             return level;
         } catch (IOException exception) {
-            throw new IllegalStateException("无法读取第 " + (levelNumber + 1) + " 关的关卡文件", exception);
-        }
-    }
-
-    /** 把 JSON 里的僵尸出场表读进 level.spawns。 */
-    private void readSpawns(JsonObject json, Level level) {
-        JsonArray wave = json.getAsJsonArray("zombie_list");
-        for (int index = 0; index < wave.size(); index++) {
-            JsonElement item = wave.get(index);
-            JsonObject entry = item.getAsJsonObject();
-            int spawnTime = entry.get("time").getAsInt();
-            int row = entry.get("map_y").getAsInt();
-            String name = entry.get("name").getAsString();
-            level.spawns.add(new ZombieSpawn(spawnTime, row, name));
-        }
-    }
-
-    /**
-     * 按出场时间给僵尸表排序。
-     *
-     * 原关卡文件通常已经排好了，但这里再排一次更保险，
-     * 万一以后手改了 JSON 顺序也不会出问题。用的是插入排序，逻辑最直观。
-     */
-    private void sortSpawnsByTime(List<ZombieSpawn> spawns) {
-        for (int index = 1; index < spawns.size(); index++) {
-            ZombieSpawn current = spawns.get(index);
-            int position = index - 1;
-            while (position >= 0 && spawns.get(position).spawnTime > current.spawnTime) {
-                spawns.set(position + 1, spawns.get(position));
-                position = position - 1;
-            }
-            spawns.set(position + 1, current);
-        }
-    }
-
-    /**
-     * 读传送带或保龄球模式的可出卡列表。
-     *
-     * 正常选卡模式没有这个字段，所以先判断有没有再读。
-     */
-    private void readCardPool(JsonObject json, Level level) {
-        if (level.isNormalMode()) {
-            return;
-        }
-        JsonArray choices = json.getAsJsonArray("card_pool");
-        for (int index = 0; index < choices.size(); index++) {
-            JsonElement item = choices.get(index);
-            JsonObject entry = item.getAsJsonObject();
-            String name = entry.get("name").getAsString();
-            int cardIndex = PlantCatalog.indexOf(name);
-            if (cardIndex < 0) {
-                throw new IllegalArgumentException("关卡里出现了未知的卡片：" + name);
-            }
-            level.cardPool.add(Integer.valueOf(cardIndex));
-        }
-    }
-
-    /**
-     * 读本关的卡槽数量。
-     *
-     * 老关卡文件没有这一项，那就保持默认的 8 张，和原版一样。
-     * 文件里的数字可能被手改到离谱的值，所以夹回游戏允许的范围再收下。
-     */
-    private static void readCardSlots(JsonObject json, Level level) {
-        if (!json.has("max_cards")) {
-            return;
-        }
-        int slots = json.get("max_cards").getAsInt();
-        level.maxCards = Layout.clampCardSlots(slots);
-    }
-
-    /**
-     * 读一份植物清单，比如禁用清单或必选清单。
-     *
-     * 没有这个字段就当清单是空的，老关卡文件照常能玩。
-     * 编辑器写进去的植物名一定认得出，认不出就是文件被手改坏了，
-     * 所以这里和卡池不一样：不跳过，直接报错，免得玩家莫名其妙少了一张卡。
-     *
-     * 参数：json 是关卡文件的根对象；field 是字段名；target 是读到哪个清单里。
-     */
-    private static void readPlantList(JsonObject json, String field, List<Integer> target) {
-        if (!json.has(field)) {
-            return;
-        }
-        JsonArray choices = json.getAsJsonArray(field);
-        for (int index = 0; index < choices.size(); index++) {
-            JsonElement item = choices.get(index);
-            JsonObject entry = item.getAsJsonObject();
-            String name = entry.get("name").getAsString();
-            int plantIndex = PlantCatalog.indexOf(name);
-            if (plantIndex < 0) {
-                throw new IllegalArgumentException("关卡里的 " + field + " 出现了未知的植物：" + name);
-            }
-            target.add(Integer.valueOf(plantIndex));
+            throw new IllegalStateException(
+                "无法读取第 " + (levelNumber + 1) + " 关的关卡文件", exception);
         }
     }
 }

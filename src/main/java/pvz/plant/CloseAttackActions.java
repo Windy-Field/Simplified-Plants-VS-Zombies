@@ -3,7 +3,6 @@ package pvz.plant;
 import java.awt.Rectangle;
 import pvz.game.GameState;
 import pvz.world.Assets;
-import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sprite;
 import pvz.zombie.Zombie;
@@ -284,11 +283,11 @@ public class CloseAttackActions {
             plant.target = zombie;
         }
         if (name.equals("Spikeweed") && state.time - plant.lastAction > Layout.SPIKEWEED_DAMAGE_INTERVAL) {
-            zombie.health = zombie.health - CombatValues.SPIKEWEED_DAMAGE;
+            zombie.health = zombie.health - Layout.SPIKEWEED_DAMAGE;
             plant.lastAction = state.time;
         }
         if (name.equals("WallNutBowling") && state.time - plant.stateStart > Layout.BOWLING_HIT_INTERVAL) {
-            zombie.health = zombie.health - CombatValues.BOWLING_DAMAGE;
+            zombie.health = zombie.health - Layout.BOWLING_DAMAGE;
             plant.triggered = true;
             plant.stateStart = state.time;
         }

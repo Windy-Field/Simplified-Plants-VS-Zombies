@@ -35,8 +35,8 @@ public class Car {
      */
     public Car(int row) {
         this.row = row;
-        x = -25;
-        bottom = 180 + row * Layout.CELL_HEIGHT;
+        x = Layout.CAR_START_X;
+        bottom = Layout.CAR_FOOT_BASE + row * Layout.CELL_HEIGHT;
     }
 
     /**
@@ -50,7 +50,8 @@ public class Car {
                 startTime = time;
             }
             long elapsed = time - startTime;
-            x = -25 + (int) (elapsed * Layout.CAR_SPEED / 16);
+            // CAR_SPEED 是"每一步走多少像素"，除以固定步长才换算成"每毫秒走多少"。
+            x = Layout.CAR_START_X + (int) (elapsed * Layout.CAR_SPEED / Layout.FIXED_STEP_MS);
         }
         if (x > Layout.WINDOW_WIDTH) {
             alive = false;

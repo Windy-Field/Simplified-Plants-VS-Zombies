@@ -18,17 +18,14 @@ import pvz.zombie.ZombieSpawn;
  *
  * Game 只负责"怎么变"，GameRenderer 只负责"怎么画"，
  * 两边都从这个对象里取需要的数据，互相并不认识。
+ *
+ * 这个类只该放"一局游戏里会变的东西"。与某一关绑定的配置（比如卡槽模式
+ * BAR_NORMAL / BAR_CONVEYOR / BAR_BOWLING，它们其实是关卡文件里
+ * choosebar_type 的取值）放在 {@link pvz.world.Layout}，不属于这里：
+ * 放这儿的时候，Level、LevelLoader、LevelDesign 为了读这几个数字
+ * 都得 import 整个 GameState，让关卡和编辑器平白反过来指向游戏运行时。
  */
 public class GameState {
-    /** 卡槽模式：正常选卡，左边有一排固定卡片。 */
-    public static final int BAR_NORMAL = 0;
-
-    /** 卡槽模式：传送带，卡片从右边慢慢送过来。 */
-    public static final int BAR_CONVEYOR = 1;
-
-    /** 卡槽模式：坚果保龄球，棋盘上直接摆着球。 */
-    public static final int BAR_BOWLING = 2;
-
     /** 当前画面的编号，取值见 GameScreen。 */
     public int screen = GameScreen.MENU;
 
@@ -211,6 +208,49 @@ public class GameState {
         shovelSwingStart = 0;
         shovelSwingX = 0;
         shovelSwingY = 0;
+    }
+
+    /**
+     * 把这一帧里已经死掉的物体从各个清单里清出去。
+     *
+     * 每帧的更新全部跑完之后调用一次。之所以不在物体死亡的那一刻就从清单里删，
+     * 是因为死亡往往发生在遍历这个清单的 for 循环内部（僵尸咬死植物、子弹打中僵尸、
+     * 小推车碾死一排……），边遍历边删会让后面的元素整体前移，下标错位、漏掉或重复处理。
+     * 所以死亡时只把 alive 置成假留在原地，等这一帧谁都不再遍历了，再统一回收。
+     *
+     * 不收的话这些死物体会一直堆着：一关打下来，每一颗打掉的子弹、每一次爆炸特效、
+     * 每一个掉下来的僵尸头都会永久留在清单里，越到后期每一帧要空转的循环越长。
+     * 画面不受影响——渲染时本来就会跳过 alive 为假的物体。
+     */
+    public void reapDeadObjects() {
+        removeDeadSprites(plants);
+        removeDeadSprites(zombies);
+        removeDeadSprites(bullets);
+        removeDeadSprites(effects);
+        removeDeadSprites(heads);
+        removeDeadSprites(suns);
+        // 小推车不是 Sprite 的子类，所以它单独走一遍；逻辑和上面完全一样。
+        for (int position = cars.size() - 1; position >= 0; position--) {
+            if (!cars.get(position).alive) {
+                cars.remove(position);
+            }
+        }
+    }
+
+    /**
+     * 从清单里删掉所有已经死掉的精灵。
+     *
+     * 从后往前删：删掉第 position 个之后，它前面的元素下标都不变，
+     * 所以倒着走不会漏掉任何一个。
+     *
+     * 参数：sprites 是要清理的精灵清单，直接改在原清单上。
+     */
+    private static void removeDeadSprites(List<? extends Sprite> sprites) {
+        for (int position = sprites.size() - 1; position >= 0; position--) {
+            if (!sprites.get(position).alive) {
+                sprites.remove(position);
+            }
+        }
     }
 
     /**

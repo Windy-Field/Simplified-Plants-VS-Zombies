@@ -2,6 +2,7 @@ package pvz.plant;
 
 import pvz.game.GameState;
 import pvz.world.Assets;
+import pvz.world.Layout;
 
 /**
  * 植物行为的总入口。
@@ -97,7 +98,7 @@ public class PlantActions {
      */
     public void removePlant(Plant plant) {
         plant.alive = false;
-        if (state.barType == GameState.BAR_BOWLING) {
+        if (state.barType == Layout.BAR_BOWLING) {
             return;
         }
         state.occupied[plant.row][plant.column] = false;

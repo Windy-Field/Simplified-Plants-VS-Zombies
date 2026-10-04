@@ -10,8 +10,8 @@ public class Bullet extends Sprite {
     /** 是否是冰冻子弹，打中僵尸会让它减速。 */
     public boolean ice;
 
-    /** 子弹造成的伤害倍率，普通子弹是 1。 */
-    public int damageMultiplier = 1;
+    /** 子弹造成的直接伤害。 */
+    public int damage = Layout.BULLET_DAMAGE;
 
     /** 上一次触发转换的对象，防止子弹在同一对象里重复转换。 */
     public Sprite lastTransformationSource;
@@ -43,24 +43,14 @@ public class Bullet extends Sprite {
     /**
      * 把子弹变成另一种子弹。
      *
-     * 参数：next 是转换后的子弹名；multiplier 是转换后的伤害倍率；
+     * 参数：next 是转换后的子弹名；nextDamage 是转换后的直接伤害；
      * assets 提供子弹图片；time 是当前游戏时刻。
      */
-    public void transform(String next, int multiplier, Assets assets, long time) {
+    public void transform(String next, int nextDamage, Assets assets, long time) {
         name = next;
         updateTypeData(next);
-        damageMultiplier = multiplier;
+        damage = nextDamage;
         change(next, assets, time);
-    }
-
-    /**
-     * 按当前伤害倍率计算子弹造成的伤害。
-     *
-     * 参数：baseDamage 是普通子弹的基础伤害。
-     * 返回：应用伤害倍率之后的伤害。
-     */
-    public int damageAmount(int baseDamage) {
-        return baseDamage * damageMultiplier;
     }
 
     /**

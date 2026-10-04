@@ -1,6 +1,6 @@
 package pvz.zombie;
 
-import pvz.world.CombatValues;
+import pvz.world.Layout;
 
 /**
  * 游戏中已经实现的僵尸固定资料表。
@@ -10,14 +10,14 @@ import pvz.world.CombatValues;
 public final class ZombieCatalog {
     /** 编辑器目前支持的僵尸资料。 */
     public static final ZombieDefinition[] DEFINITIONS = {
-        new ZombieDefinition("Zombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, null, null),
-        new ZombieDefinition("ConeheadZombie", CombatValues.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
-        new ZombieDefinition("BucketheadZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
-        new ZombieDefinition("FlagZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, null, null),
-        new ZombieDefinition("NewspaperZombie", CombatValues.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 2, null, null),
-        new ZombieDefinition("JokerZombie", CombatValues.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
+        new ZombieDefinition("Zombie", Layout.NORMAL_ZOMBIE_HEALTH, false, true, 1, 1, null, null),
+        new ZombieDefinition("ConeheadZombie", Layout.CONEHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
+        new ZombieDefinition("BucketheadZombie", Layout.BUCKETHEAD_ZOMBIE_HEALTH, true, true, 1, 1, null, null),
+        new ZombieDefinition("FlagZombie", Layout.LIGHT_ARMOR_ZOMBIE_HEALTH, false, false, 1, 1, null, null),
+        new ZombieDefinition("NewspaperZombie", Layout.LIGHT_ARMOR_ZOMBIE_HEALTH, true, false, 1, 2, null, null),
+        new ZombieDefinition("JokerZombie", Layout.NORMAL_ZOMBIE_HEALTH, false, false, 1, 1,
             "JokerZombie", "JokerZombieExplode"),
-        new ZombieDefinition("FootballZombie", CombatValues.BUCKETHEAD_ZOMBIE_HEALTH,
+        new ZombieDefinition("FootballZombie", Layout.BUCKETHEAD_ZOMBIE_HEALTH,
             true, false, 1.5, 1.5, null, null,
             "FootballZombieOrnLost", "FootballZombieLostHead")
     };

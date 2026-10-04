@@ -376,7 +376,7 @@ function Format-Size {
 # ===== 以下是主流程，按顺序执行上面的各个步骤 =====
 
 if (-not (Test-Path $result.Levels)) {
-    throw '找不到素材目录 assets（或其中的 levels 关卡目录），请先获取资源包并放到 java\assets 下。'
+    throw '找不到素材目录 assets（或其中的 levels 关卡目录），请从仓库完整克隆，确保仓库根目录下的 assets 存在。'
 }
 
 $result.Jdk = Find-JavaCompiler

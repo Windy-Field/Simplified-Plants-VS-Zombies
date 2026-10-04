@@ -4,7 +4,6 @@ import java.awt.Rectangle;
 import pvz.game.GameState;
 import pvz.plant.Plant;
 import pvz.world.Assets;
-import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sprite;
 
@@ -164,7 +163,7 @@ public final class ZombieEffects {
             }
             plant.health = 0;
             plant.alive = false;
-            if (state.barType != GameState.BAR_BOWLING) {
+            if (state.barType != Layout.BAR_BOWLING) {
                 state.occupied[plant.row][plant.column] = false;
             }
         }
@@ -191,7 +190,7 @@ public final class ZombieEffects {
             if (horizontalDistance > horizontalRange) {
                 continue;
             }
-            other.health = other.health - CombatValues.JOKER_EXPLOSION_DAMAGE;
+            other.health = other.health - Layout.JOKER_EXPLOSION_DAMAGE;
         }
     }
 }

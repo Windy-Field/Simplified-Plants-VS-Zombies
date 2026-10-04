@@ -43,7 +43,7 @@ public interface EditorDragController {
     /**
      * 查询僵尸列表里当前选中的是哪一种。
      *
-     * 返回：僵尸品种名；一种都没选时返回 null。
+     * 返回：僵尸品种名；实现保证不为 null（初始就是僵尸列表的第一项）。
      */
     String selectedKind();
 

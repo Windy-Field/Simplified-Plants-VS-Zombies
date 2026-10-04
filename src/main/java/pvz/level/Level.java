@@ -2,7 +2,6 @@ package pvz.level;
 
 import java.util.ArrayList;
 import java.util.List;
-import pvz.game.GameState;
 import pvz.world.Layout;
 import pvz.zombie.ZombieSpawn;
 
@@ -41,12 +40,12 @@ public class Level {
      * 本关要求玩家恰好选中的卡片数量。
      *
      * 只对正常选卡模式生效；选中数量必须等于这个值才能开始战斗。
-     * 关卡文件没写这一项时保持和原版一致的 8。
+     * 关卡文件没写这一项时用 Layout.DEFAULT_CARD_SLOTS，也就是和原版一致的 8 张。
      */
-    public int maxCards = 8;
+    public int maxCards = Layout.DEFAULT_CARD_SLOTS;
 
     /** 这个关卡有没有阳光条（也就是正常选卡模式）。 */
     public boolean isNormalMode() {
-        return barType == GameState.BAR_NORMAL;
+        return barType == Layout.BAR_NORMAL;
     }
 }

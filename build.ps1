@@ -68,7 +68,7 @@ if (-not $jdk) {
 # 图片素材和关卡配置都放在 assets 目录里；它不随代码仓库分发，缺少时给出明确提示。
 $project = Join-Path $PSScriptRoot 'assets'
 if (-not (Test-Path (Join-Path $project 'levels'))) {
-    throw '找不到素材目录 assets（或其中的 levels 关卡目录），请先获取资源包并放到 java\assets 下。'
+    throw '找不到素材目录 assets（或其中的 levels 关卡目录），请从仓库完整克隆，确保仓库根目录下的 assets 存在。'
 }
 $output = Join-Path $PSScriptRoot 'build\classes'
 $library = Join-Path $PSScriptRoot 'lib\gson-2.11.0.jar'

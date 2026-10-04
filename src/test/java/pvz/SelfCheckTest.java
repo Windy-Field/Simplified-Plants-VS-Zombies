@@ -39,7 +39,6 @@ import pvz.plant.SunProducerActions;
 import pvz.plant.WallNutActions;
 import pvz.world.Assets;
 import pvz.world.Bullet;
-import pvz.world.CombatValues;
 import pvz.world.Layout;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
@@ -302,7 +301,7 @@ public class SelfCheckTest {
             "缺少转换前子弹：" + transformation.sourceBullet);
         check(assets.hasAnimation(transformation.targetBullet),
             "缺少转换后子弹：" + transformation.targetBullet);
-        check(transformation.damageMultiplier > 0, "子弹伤害倍率无效");
+        check(transformation.damage > 0, "子弹伤害无效");
         check(transformation.zoneWidth > 0, "子弹转换区域宽度无效");
         check(transformation.zoneHeight > 0, "子弹转换区域高度无效");
     }
@@ -345,7 +344,7 @@ public class SelfCheckTest {
             if (map.has("choosebar_type")) {
                 mode = map.get("choosebar_type").getAsInt();
             }
-            check(mode >= GameState.BAR_NORMAL && mode <= GameState.BAR_BOWLING,
+            check(mode >= Layout.BAR_NORMAL && mode <= Layout.BAR_BOWLING,
                 "卡槽模式是游戏不认识的值，关卡 " + level);
 
             for (int index = 0; index < wave.size(); index++) {
@@ -562,10 +561,10 @@ public class SelfCheckTest {
         Plant wallNut = new Plant("WallNut", Layout.columnCenter(TEST_COLUMN),
             Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, state.time, false);
         WallNutActions actions = new WallNutActions(assets, state);
-        wallNut.health = CombatValues.WALL_NUT_FIRST_CRACK_HEALTH;
+        wallNut.health = Layout.WALL_NUT_FIRST_CRACK_HEALTH;
         actions.update(wallNut);
         check(wallNut.animation.equals("WallNut_cracked1"), "坚果第一层裂纹没有出现");
-        wallNut.health = CombatValues.WALL_NUT_SECOND_CRACK_HEALTH;
+        wallNut.health = Layout.WALL_NUT_SECOND_CRACK_HEALTH;
         actions.update(wallNut);
         check(wallNut.animation.equals("WallNut_cracked2"), "坚果第二层裂纹没有出现");
     }
@@ -712,7 +711,7 @@ public class SelfCheckTest {
         int healthBefore = zombie.health;
         CloseAttackActions actions = new CloseAttackActions(assets, state);
         actions.update(spikeweed);
-        check(healthBefore - zombie.health == CombatValues.SPIKEWEED_DAMAGE,
+        check(healthBefore - zombie.health == Layout.SPIKEWEED_DAMAGE,
             "地刺没有造成预定伤害");
     }
 
@@ -720,7 +719,7 @@ public class SelfCheckTest {
     private static void checkBowlingPlants(Assets assets) {
         GameState state = new GameState();
         state.time = Layout.BOWLING_HIT_INTERVAL + Layout.BOWLING_MOVE_INTERVAL + TEST_TIME;
-        state.barType = GameState.BAR_BOWLING;
+        state.barType = Layout.BAR_BOWLING;
         Plant bowling = new Plant("WallNutBowling", Layout.columnCenter(TEST_COLUMN),
             Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, 0, false);
         Zombie target = new Zombie("Zombie", TEST_ROW, Layout.rowBottom(TEST_ROW), assets);
@@ -731,12 +730,12 @@ public class SelfCheckTest {
         CloseAttackActions actions = new CloseAttackActions(assets, state);
         actions.update(bowling);
         check(bowling.x > startingX, "保龄球没有向右滚动");
-        check(startingHealth - target.health == CombatValues.BOWLING_DAMAGE,
+        check(startingHealth - target.health == Layout.BOWLING_DAMAGE,
             "普通保龄球没有造成预定伤害");
 
         GameState redState = new GameState();
         redState.time = TEST_TIME;
-        redState.barType = GameState.BAR_BOWLING;
+        redState.barType = Layout.BAR_BOWLING;
         Plant redBowling = new Plant("RedWallNutBowling", Layout.columnCenter(TEST_COLUMN),
             Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, 0, false);
         Zombie redTarget = new Zombie("Zombie", TEST_ROW, Layout.rowBottom(TEST_ROW), assets);
@@ -755,7 +754,7 @@ public class SelfCheckTest {
         state.time = TEST_TIME;
         Plant mushroom = new Plant("HypnoShroom", Layout.columnCenter(TEST_COLUMN),
             Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, state.time, false);
-        mushroom.health = CombatValues.ZOMBIE_BITE_DAMAGE;
+        mushroom.health = Layout.ZOMBIE_BITE_DAMAGE;
         state.plants.add(mushroom);
         Zombie zombie = new Zombie("Zombie", TEST_ROW, Layout.rowBottom(TEST_ROW), assets);
         placeZombieAt(zombie, Layout.columnCenter(TEST_COLUMN), assets, state.time);
@@ -811,7 +810,7 @@ public class SelfCheckTest {
             CombatSystem combat = new CombatSystem(state, assets);
 
             if (definition.helmet) {
-                zombie.health = CombatValues.ZOMBIE_HELMET_LOST_HEALTH;
+                zombie.health = Layout.ZOMBIE_HELMET_LOST_HEALTH;
                 combat.updateAll();
                 check(!zombie.helmet, "僵尸失去装备后仍戴着装备：" + zombie.name);
                 check(zombie.speed == definition.speedAfterHelmet,
@@ -1046,7 +1045,7 @@ public class SelfCheckTest {
      * 异常：关卡读取失败时抛出异常。
      */
     private static void checkFixedStepMovement(Assets assets) throws Exception {
-        int level = findLevelWithBar(assets, GameState.BAR_NORMAL);
+        int level = findLevelWithBar(assets, Layout.BAR_NORMAL);
         if (level < 0) {
             return;
         }
@@ -1127,7 +1126,7 @@ public class SelfCheckTest {
 
     /** 正常关卡：按配置选卡、种植和收铲，再核对僵尸出场。 */
     private static void checkNormalLevel(Assets assets, Path project) throws Exception {
-        int level = findLevelWithBar(assets, GameState.BAR_NORMAL);
+        int level = findLevelWithBar(assets, Layout.BAR_NORMAL);
         if (level < 0) {
             System.out.println("跳过选卡流程检查：现在没有哪一关是正常选卡模式");
             return;
@@ -1197,7 +1196,7 @@ public class SelfCheckTest {
 
     /** 传送带关卡：推进一秒应该自动出一张卡。 */
     private static void checkConveyorLevel(Assets assets, Path project) throws Exception {
-        int level = findLevelWithBar(assets, GameState.BAR_CONVEYOR);
+        int level = findLevelWithBar(assets, Layout.BAR_CONVEYOR);
         if (level < 0) {
             System.out.println("跳过传送带检查：现在没有哪一关是传送带模式");
             return;
@@ -1212,7 +1211,7 @@ public class SelfCheckTest {
 
     /** 保龄球关卡：出一张卡，点在草坪上应该能种下球。 */
     private static void checkBowlingLevel(Assets assets, Path project) throws Exception {
-        int level = findLevelWithBar(assets, GameState.BAR_BOWLING);
+        int level = findLevelWithBar(assets, Layout.BAR_BOWLING);
         if (level < 0) {
             System.out.println("跳过保龄球检查：现在没有哪一关是保龄球模式");
             return;
@@ -1276,7 +1275,7 @@ public class SelfCheckTest {
      */
     private static void renderLevel(Assets assets, Path project, int level) throws Exception {
         JsonObject map = Assets.readObject(assets.levelPath(level));
-        int expected = GameState.BAR_NORMAL;
+        int expected = Layout.BAR_NORMAL;
         if (map.has("choosebar_type")) {
             expected = map.get("choosebar_type").getAsInt();
         }
@@ -1302,7 +1301,7 @@ public class SelfCheckTest {
         int levelCount = countLevels(assets);
         for (int level = 0; level < levelCount; level++) {
             JsonObject map = Assets.readObject(assets.levelPath(level));
-            int mode = GameState.BAR_NORMAL;
+            int mode = Layout.BAR_NORMAL;
             if (map.has("choosebar_type")) {
                 mode = map.get("choosebar_type").getAsInt();
             }

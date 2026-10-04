@@ -5,6 +5,7 @@ import pvz.plant.Card;
 import pvz.plant.Cards;
 import pvz.world.Assets;
 import pvz.world.Layout;
+import pvz.world.Sprite;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
 import pvz.zombie.ZombieSpawn;
@@ -67,7 +68,7 @@ public class LevelSystem {
 
     /** 传送带和保龄球模式每六秒补一张卡，位置够放才补。 */
     private void refillConveyor() {
-        if (state.barType == GameState.BAR_NORMAL || state.pool.isEmpty()) {
+        if (state.barType == Layout.BAR_NORMAL || state.pool.isEmpty()) {
             return;
         }
         if (state.time - state.lastCardTime <= Layout.CONVEYOR_CARD_INTERVAL) {
@@ -76,7 +77,7 @@ public class LevelSystem {
         boolean roomLeft = true;
         if (!state.cards.isEmpty()) {
             Card last = state.cards.get(state.cards.size() - 1);
-            if (last.x + 42 >= Layout.CONVEYOR_CARD_START_X) {
+            if (last.x + Layout.CONVEYOR_CARD_WIDTH >= Layout.CONVEYOR_CARD_START_X) {
                 roomLeft = false;
             }
         }
@@ -89,7 +90,7 @@ public class LevelSystem {
 
     /** 传送带上的卡片慢慢往左挪，挪到自己的位置上。 */
     private void slideConveyorCards() {
-        if (state.barType == GameState.BAR_NORMAL) {
+        if (state.barType == Layout.BAR_NORMAL) {
             return;
         }
         for (int index = 0; index < state.cards.size(); index++) {
@@ -106,7 +107,7 @@ public class LevelSystem {
 
     /** 白天的正常选卡关卡每隔一段时间从天上掉一颗阳光。 */
     private void dropSkySun() {
-        if (state.backgroundIndex != 0 || state.barType != GameState.BAR_NORMAL) {
+        if (state.backgroundIndex != 0 || state.barType != Layout.BAR_NORMAL) {
             return;
         }
         if (state.time - state.lastSkySun <= state.skySunInterval) {
@@ -139,7 +140,7 @@ public class LevelSystem {
 
     /** 判断是否还有正在播放的场上特效。 */
     private boolean hasActiveEffects() {
-        for (pvz.world.Sprite effect : state.effects) {
+        for (Sprite effect : state.effects) {
             if (effect.alive) {
                 return true;
             }

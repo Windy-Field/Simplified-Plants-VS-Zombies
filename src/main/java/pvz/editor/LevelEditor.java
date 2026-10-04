@@ -49,7 +49,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import pvz.game.Game;
-import pvz.game.GameState;
 import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
@@ -162,7 +161,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 勾上后，下次试玩会显示碰撞箱和战斗状态。 */
     private final JCheckBox developerModeBox = new JCheckBox("开发者模式");
 
-    /** 僵尸列表里当前选中的品种，在空格子上点左键就放它。 */
+    /** 僵尸列表里当前选中的品种；在空格子上 Ctrl + 左键，或往上滚滚轮，就把它放下去。 */
     private String selectedKind = LevelDesign.ZOMBIE_KINDS[0];
 
     /**
@@ -539,7 +538,6 @@ public class LevelEditor extends JFrame implements EditorDragController {
         statusBar.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 12f));
         clockLabel.setFont(clockLabel.getFont().deriveFont(Font.PLAIN, 12f));
-        // 时间数字宽度一直在变，固定成等宽数字，免得整行文字每秒左右晃。
         clockLabel.setForeground(Color.GRAY);
         statusBar.add(statusLabel, BorderLayout.WEST);
         statusBar.add(clockLabel, BorderLayout.EAST);
@@ -714,7 +712,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
      * 不该看的就变灰，免得用户以为选了有用。
      */
     private void updateListAvailability() {
-        boolean normal = design.barType == GameState.BAR_NORMAL;
+        boolean normal = design.barType == Layout.BAR_NORMAL;
         poolList.setEnabled(!normal);
         bannedList.setEnabled(normal);
         requiredList.setEnabled(normal);
