@@ -6,45 +6,48 @@ import pvz.world.Layout;
 import pvz.zombie.ZombieSpawn;
 
 /**
- * 从关卡 JSON 里读出来的全部关卡数据。
+ * 从关卡 JSON 里读出来的全部关卡数据
  *
  * 一个关卡需要知道：用哪张背景图、卡槽是哪一种、开局给多少阳光、
- * 僵尸什么时候出场、传送带能出哪些卡。这些数据全部装在这个对象里。
+ * 僵尸什么时候出场、传送带能出哪些卡。这些数据全部装在这个对象里
  */
 public class Level {
-    /** 使用第几张背景图，对应 Background 动画的第几帧。 */
+    /** 使用第几张背景图，对应 Background 动画的第几帧 */
     public int backgroundIndex;
 
-    /** 卡槽模式：0 是正常选卡，1 是传送带，2 是坚果保龄球。 */
+    /** 卡槽模式：0 是正常选卡，1 是传送带，2 是坚果保龄球 */
     public int barType;
 
-    /** 开局赠送的阳光数量。 */
+    /** 开局赠送的阳光数量 */
     public int initialSun;
 
-    /** 天空每隔多少毫秒掉一颗阳光；关卡文件没写时用 Layout 里的默认值。 */
+    /** 自定义截图相对于 assets 的路径，空字符串表示自动生成封面 */
+    public String screenshot = "";
+
+    /** 天空每隔多少毫秒掉一颗阳光；关卡文件没写时用 Layout 里的默认值 */
     public long skySunInterval = Layout.SKY_SUN_INTERVAL;
 
-    /** 按时间排好序的僵尸出场表。 */
+    /** 按时间排好序的僵尸出场表 */
     public final List<ZombieSpawn> spawns = new ArrayList<ZombieSpawn>();
 
-    /** 传送带或保龄球模式可以出的卡片编号，正常关卡是空的。 */
+    /** 传送带或保龄球模式可以出的卡片编号，正常关卡是空的 */
     public final List<Integer> cardPool = new ArrayList<Integer>();
 
-    /** 本关禁止使用的植物编号；只对正常选卡模式生效。 */
+    /** 本关禁止使用的植物编号；只对正常选卡模式生效 */
     public final List<Integer> bannedPlants = new ArrayList<Integer>();
 
-    /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效。 */
+    /** 本关强制携带、玩家不能取消的植物编号；只对正常选卡模式生效 */
     public final List<Integer> requiredPlants = new ArrayList<Integer>();
 
     /**
-     * 本关要求玩家恰好选中的卡片数量。
+     * 本关要求玩家恰好选中的卡片数量
      *
-     * 只对正常选卡模式生效；选中数量必须等于这个值才能开始战斗。
-     * 关卡文件没写这一项时用 Layout.DEFAULT_CARD_SLOTS，也就是和原版一致的 8 张。
+     * 只对正常选卡模式生效；选中数量必须等于这个值才能开始战斗
+     * 关卡文件没写这一项时用 Layout.DEFAULT_CARD_SLOTS，也就是和原版一致的 8 张
      */
     public int maxCards = Layout.DEFAULT_CARD_SLOTS;
 
-    /** 这个关卡有没有阳光条（也就是正常选卡模式）。 */
+    /** 这个关卡有没有阳光条（也就是正常选卡模式） */
     public boolean isNormalMode() {
         return barType == Layout.BAR_NORMAL;
     }

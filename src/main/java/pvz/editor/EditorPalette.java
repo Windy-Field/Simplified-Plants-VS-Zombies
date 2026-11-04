@@ -14,46 +14,46 @@ import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
 
 /**
- * 编辑器左边那一列可供选用的僵尸。
+ * 编辑器左边那一列可供选用的僵尸
  *
  * 每种僵尸占一行，显示图标和中文名。点一下表示选中它，
- * 之后可以按住 Ctrl 用右键将它放进空格，或者直接把它拖进格子。
+ * 之后可以按住 Ctrl 用右键将它放进空格，或者直接把它拖进格子
  */
 public class EditorPalette extends JPanel {
-    /** 每种僵尸占的高度。 */
+    /** 每种僵尸占的高度 */
     public static final int ITEM_HEIGHT = 74;
 
-    /** 整列的宽度。 */
+    /** 整列的宽度 */
     public static final int PANEL_WIDTH = 152;
 
-    /** 列表里僵尸图标的高度。 */
+    /** 列表里僵尸图标的高度 */
     private static final int ICON_HEIGHT = 56;
 
-    /** 鼠标按下后要移动超过这么多像素，才算是在拖动而不是点击。 */
+    /** 鼠标按下后要移动超过这么多像素，才算是在拖动而不是点击 */
     private static final int DRAG_THRESHOLD = 4;
 
-    /** 提供僵尸图标。 */
+    /** 提供僵尸图标 */
     private final EditorIcons icons;
 
-    /** 拖动由主窗口统一处理，这里只负责报告。 */
+    /** 拖动由主窗口统一处理，这里只负责报告 */
     private final EditorDragController controller;
 
-    /** 鼠标正悬在第几种僵尸上，没有就是 -1。 */
+    /** 鼠标正悬在第几种僵尸上，没有就是 -1 */
     private int hovered = -1;
 
-    /** 鼠标按下时按在第几种僵尸上，没有就是 -1。 */
+    /** 鼠标按下时按在第几种僵尸上，没有就是 -1 */
     private int pressedItem = -1;
 
-    /** 鼠标按下时的位置，用来判断有没有移动够距离。 */
+    /** 鼠标按下时的位置，用来判断有没有移动够距离 */
     private Point pressPoint;
 
-    /** 这一次按下之后是否已经进入拖动状态。 */
+    /** 这一次按下之后是否已经进入拖动状态 */
     private boolean dragStarted;
 
     /**
-     * 创建僵尸列表。
+     * 创建僵尸列表
      *
-     * 参数：editorIcons 提供图标；dragController 接收点击和拖动的报告。
+     * 参数：editorIcons 提供图标；dragController 接收点击和拖动的报告
      */
     public EditorPalette(EditorIcons editorIcons, EditorDragController dragController) {
         icons = editorIcons;
@@ -66,48 +66,22 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 装上鼠标处理。
+     * 装上鼠标处理
      *
-     * 这里只把事件转交给下面几个有名字的方法，真正做事的代码都在那些方法里。
+     * 这里只把事件转交给下面几个有名字的方法，真正做事的代码都在那些方法里
      */
     private void installMouseHandlers() {
-        addMouseListener(new MouseAdapter() {
-            /** 按下鼠标。 */
-            public void mousePressed(MouseEvent event) {
-                handlePress(event);
-            }
+        addMouseListener(new PaletteMouseListener());
 
-            /** 松开鼠标。 */
-            public void mouseReleased(MouseEvent event) {
-                handleRelease(event);
-            }
-
-            /** 鼠标离开面板。 */
-            public void mouseExited(MouseEvent event) {
-                hovered = -1;
-                repaint();
-            }
-        });
-
-        addMouseMotionListener(new MouseMotionAdapter() {
-            /** 鼠标在面板里移动。 */
-            public void mouseMoved(MouseEvent event) {
-                updateHover(event);
-            }
-
-            /** 按住鼠标拖动。 */
-            public void mouseDragged(MouseEvent event) {
-                handleDrag(event);
-            }
-        });
+        addMouseMotionListener(new PaletteMotionListener());
     }
 
     /**
-     * 按下鼠标：先把这种僵尸设为选中。
+     * 按下鼠标：先把这种僵尸设为选中
      *
-     * 到底是点一下还是要拖出去，等松手或者移动够距离才知道。
+     * 到底是点一下还是要拖出去，等松手或者移动够距离才知道
      *
-     * 参数：event 是鼠标事件。
+     * 参数：event 是鼠标事件
      */
     private void handlePress(MouseEvent event) {
         pressedItem = itemAt(event.getY());
@@ -120,9 +94,9 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 松开鼠标：如果之前已经拖起来了，就告诉主窗口在这里放下。
+     * 松开鼠标：如果之前已经拖起来了，就告诉主窗口在这里放下
      *
-     * 参数：event 是鼠标事件。
+     * 参数：event 是鼠标事件
      */
     private void handleRelease(MouseEvent event) {
         if (dragStarted) {
@@ -135,9 +109,9 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 鼠标移动：记住它悬在哪一行，用来画高亮。
+     * 鼠标移动：记住它悬在哪一行，用来画高亮
      *
-     * 参数：event 是鼠标事件。
+     * 参数：event 是鼠标事件
      */
     private void updateHover(MouseEvent event) {
         int item = itemAt(event.getY());
@@ -148,9 +122,9 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 拖动鼠标：按住不放并移动够距离，就算开始把这种僵尸拖出去了。
+     * 拖动鼠标：按住不放并移动够距离，就算开始把这种僵尸拖出去了
      *
-     * 参数：event 是鼠标事件。
+     * 参数：event 是鼠标事件
      */
     private void handleDrag(MouseEvent event) {
         if (pressedItem < 0 || pressPoint == null) {
@@ -172,10 +146,10 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 把鼠标纵坐标换算成第几种僵尸。
+     * 把鼠标纵坐标换算成第几种僵尸
      *
-     * 参数：y 是鼠标在这块面板里的纵坐标。
-     * 返回：僵尸下标；点在空白处返回 -1。
+     * 参数：y 是鼠标在这块面板里的纵坐标
+     * 返回：僵尸下标；点在空白处返回 -1
      */
     private int itemAt(int y) {
         int item = y / ITEM_HEIGHT;
@@ -186,9 +160,9 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 画出整列僵尸。
+     * 画出整列僵尸
      *
-     * 参数：graphics 是画笔。
+     * 参数：graphics 是画笔
      */
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
@@ -199,7 +173,7 @@ public class EditorPalette extends JPanel {
             RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         String selected = controller.selectedKind();
-        for (int item = 0; item < LevelDesign.ZOMBIE_KINDS.length; item++) {
+        for (int item = 0; item < LevelDesign.ZOMBIE_KINDS.length; item = item + 1) {
             String kind = LevelDesign.ZOMBIE_KINDS[item];
             int top = item * ITEM_HEIGHT;
             drawItemBackground(painter, kind, selected, item, top);
@@ -219,10 +193,10 @@ public class EditorPalette extends JPanel {
     }
 
     /**
-     * 画一行的底色：选中的画绿底加边框，鼠标悬着的画浅底。
+     * 画一行的底色：选中的画绿底加边框，鼠标悬着的画浅底
      *
      * 参数：painter 是画笔；kind 是这一行的僵尸品种；selected 是当前选中的品种；
-     *       item 是这一行的下标；top 是这一行的上沿。
+     *       item 是这一行的下标；top 是这一行的上沿
      */
     private void drawItemBackground(Graphics2D painter, String kind, String selected,
             int item, int top) {
@@ -236,6 +210,38 @@ public class EditorPalette extends JPanel {
         if (item == hovered) {
             painter.setColor(new Color(0xE6, 0xEE, 0xE1));
             painter.fillRect(0, top, getWidth(), ITEM_HEIGHT);
+        }
+    }
+
+    /** 分派列表的选择和释放事件，让拖放与单击共用原来的状态判断 */
+    private class PaletteMouseListener extends MouseAdapter {
+        /** 按下鼠标 */
+        public void mousePressed(MouseEvent event) {
+            handlePress(event);
+        }
+
+        /** 松开鼠标 */
+        public void mouseReleased(MouseEvent event) {
+            handleRelease(event);
+        }
+
+        /** 鼠标离开面板 */
+        public void mouseExited(MouseEvent event) {
+            hovered = -1;
+            repaint();
+        }
+    }
+
+    /** 记录列表悬停并触发拖动，复用处理方法以保持两种输入一致 */
+    private class PaletteMotionListener extends MouseMotionAdapter {
+        /** 鼠标在面板里移动 */
+        public void mouseMoved(MouseEvent event) {
+            updateHover(event);
+        }
+
+        /** 按住鼠标拖动 */
+        public void mouseDragged(MouseEvent event) {
+            handleDrag(event);
         }
     }
 }

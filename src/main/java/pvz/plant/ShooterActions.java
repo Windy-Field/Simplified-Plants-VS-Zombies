@@ -8,20 +8,20 @@ import pvz.world.Layout;
 import pvz.zombie.Zombie;
 
 /**
- * ShooterActions 负责这一类植物每一帧的行为。
+ * ShooterActions 负责这一类植物每一帧的行为
  *
- * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态。
+ * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
 public class ShooterActions {
-    /** 图片和动画资源。 */
+    /** 图片和动画资源 */
     private final Assets assets;
-    /** 当前游戏的数据。 */
+    /** 当前游戏的数据 */
     private final GameState state;
 
     /**
-     * 创建ShooterActions。
+     * 创建ShooterActions
      *
-     * 参数：assets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
     public ShooterActions(Assets assets, GameState gameState) {
         this.assets = assets;
@@ -29,11 +29,11 @@ public class ShooterActions {
     }
 
     /**
-     * 射手每帧检查一次：身前同一行有没有僵尸，有就开火。
+     * 射手每帧检查一次：身前同一行有没有僵尸，有就开火
      *
-     * 三线射手还会照顾上下各一行；胆小菇附近有僵尸时会吓得不出手。
+     * 三线射手还会照顾上下各一行；胆小菇附近有僵尸时会吓得不出手
      *
-     * 参数：plant 是那株射手。
+     * 参数：plant 是那株射手
      */
     public void update(Plant plant) {
         boolean hasTarget = false;
@@ -44,12 +44,12 @@ public class ShooterActions {
                 continue;
             }
             Rectangle target = zombie.bounds(assets, state.time);
-            // 僵尸已经走到植物身后就不用管了。
+            // 僵尸已经走到植物身后就不用管了
             if (target.getMaxX() < plant.x) {
                 continue;
             }
             if (zombie.row == plant.row) {
-                // 小喷菇射程短，只有三百二十像素内的僵尸才打。
+                // 小喷菇射程短，只有三百二十像素内的僵尸才打
                 boolean inRange = true;
                 if (plant.name.equals("PuffShroom") && target.x > plant.x + 320) {
                     inRange = false;
@@ -87,10 +87,10 @@ public class ShooterActions {
     }
 
     /**
-     * 更新胆小菇的表情。
+     * 更新胆小菇的表情
      *
-     * 参数：plant 是那株胆小菇；inDanger 表示附近有没有僵尸。
-     * 返回：现在可以开火就返回真；被吓住返回假。
+     * 参数：plant 是那株胆小菇；inDanger 表示附近有没有僵尸
+     * 返回：现在可以开火就返回真；被吓住返回假
      */
     private boolean updateScaredyShroom(Plant plant, boolean inDanger) {
         boolean crying = plant.animation.equals("ScaredyShroomCry");
@@ -103,24 +103,24 @@ public class ShooterActions {
     }
 
     /**
-     * 真正生成子弹：三线射手一次射三行，双发射手一次射两颗。
+     * 真正生成子弹：三线射手一次射三行，双发射手一次射两颗
      *
-     * 参数：plant 是开火的射手。
+     * 参数：plant 是开火的射手
      */
     private void fireBullets(Plant plant) {
         Rectangle source = plant.bounds(assets, state.time);
         String bulletName = bulletNameFor(plant);
-        // 子弹从植物身体的右边缘射出。
+        // 子弹从植物身体的右边缘射出
         int muzzleX = source.x + source.width;
 
-        // 子弹要长在嘴上，所以先算出嘴的中心高度，再把子弹的可见部分上下居中到这一点。
+        // 子弹要长在嘴上，所以先算出嘴的中心高度，再把子弹的可见部分上下居中到这一点
         int muzzleY = source.y + muzzleOffset(plant);
         int[] bulletVisible = assets.animationBounds(bulletName);
         int bulletHeight = bulletVisible[3] - bulletVisible[1];
         int top = muzzleY - bulletHeight / 2;
 
         if (plant.name.equals("Threepeater")) {
-            for (int offset = -1; offset <= 1; offset++) {
+            for (int offset = -1; offset <= 1; offset = offset + 1) {
                 int row = plant.row + offset;
                 if (row < 0 || row >= Layout.ROW_COUNT) {
                     continue;
@@ -132,7 +132,7 @@ public class ShooterActions {
         }
 
         state.bullets.add(new Bullet(bulletName, muzzleX, top, plant.row, top, assets));
-        // 双发射手的两颗子弹前后错开 40 像素，看起来就是连发两颗。
+        // 双发射手的两颗子弹前后错开 40 像素，看起来就是连发两颗
         if (plant.name.equals("RepeaterPea")) {
             int secondLeft = muzzleX + 40;
             state.bullets.add(new Bullet(bulletName, secondLeft, top, plant.row, top, assets));
@@ -140,16 +140,17 @@ public class ShooterActions {
     }
 
     /**
-     * 查一种射手的嘴比身体可见范围的上沿低多少像素。
+     * 查一种射手的嘴比身体可见范围的上沿低多少像素
      *
      * 嘴长在头的中下部，不是头顶。直接拿身体上沿当子弹高度的话，
-     * 看起来就像子弹从头顶冒出来，所以要按品种各挪一个量。
+     * 看起来就像子弹从头顶冒出来，所以要按品种各挪一个量
      *
-     * 参数：plant 是开火的射手。
-     * 返回：嘴中心相对身体上沿的纵向偏移。
+     * 参数：plant 是开火的射手
+     * 返回：嘴中心相对身体上沿的纵向偏移
      */
-    // TODO【选做-植物-6】：如果新射手的嘴位置不同，补充出射高度资料。
     private int muzzleOffset(Plant plant) {
+        // TODO【08-出射高度选择】：新射手嘴的位置不同时，在 Layout 定义高度偏移并在这里返回
+        // 高度按身体可见范围的上沿测量，避免子弹从头顶或脚下射出
         if (plant.name.equals("SnowPea")) {
             return Layout.SNOW_PEA_MUZZLE_OFFSET;
         }
@@ -169,13 +170,14 @@ public class ShooterActions {
     }
 
     /**
-     * 按植物品种决定子弹素材名。
+     * 按植物品种决定子弹素材名
      *
-     * 参数：plant 是开火的射手。
-     * 返回：子弹的素材名。
+     * 参数：plant 是开火的射手
+     * 返回：子弹的素材名
      */
-    // TODO【选做-植物-5】：如果新射手需要新的子弹素材，补充子弹资料和登记。
     private String bulletNameFor(Plant plant) {
+        // TODO【09-子弹选择】：新射手使用不同子弹时在这里补充分支，并先在 Assets 登记对应素材
+        // 改变射击数量、射程或间隔还需检查本类的 update 和 fireBullets，仅换子弹名不会改变这些规则
         if (plant.name.equals("SnowPea")) {
             return "PeaIce";
         }

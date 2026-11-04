@@ -3,15 +3,15 @@ package pvz.plant;
 import pvz.world.Layout;
 
 /**
- * 全部植物的固定资料表。
+ * 全部植物的固定资料表
  *
- * 每种植物的资料放在同一个 PlantDefinition 对象里，新增植物时只需要新增一条完整记录。
+ * 每种植物的资料放在同一个 PlantDefinition 对象里，新增植物时只需要新增一条完整记录
  */
 public final class PlantCatalog {
-    // TODO【必做-植物-4】：新增植物时在这里增加一条完整资料。
-    // 新植物优先复用已有行为处理器，不要在 Game 里直接比较植物名字。
-
-    /** 全部植物，最后两种是保龄球植物。 */
+    // TODO【04-植物资料】：新增植物时在资料表中填写花费、冷却、血量、行为类别和需要的能力参数
+    // 普通植物放在末尾两种保龄球植物之前，CHOOSER_COUNT 才能继续排除这两种专用植物
+    // 新品种优先复用已有行为处理器，并在 AlmanacDescriptions 的 PLANTS 表中补齐中文介绍
+    /** 全部植物，最后两种是保龄球植物 */
     public static final PlantDefinition[] DEFINITIONS = {
         new PlantDefinition("SunFlower", "card_sunflower", 50, 7500,
             Layout.DEFAULT_PLANT_HEALTH, false, true, PlantActionType.SUN_PRODUCER, false,
@@ -85,28 +85,28 @@ public final class PlantCatalog {
             0, 0, 0, 0, null, new BulletTransformation[0])
     };
 
-    /** 选卡界面中不包含保龄球植物。 */
+    /** 选卡界面中不包含保龄球植物 */
     public static final int CHOOSER_COUNT = DEFINITIONS.length - 2;
 
-    /** 这个类只提供固定资料和查询方法，不允许创建对象。 */
+    /** 这个类只提供固定资料和查询方法，不允许创建对象 */
     private PlantCatalog() {
     }
 
     /**
-     * 按编号取得植物资料。
+     * 按编号取得植物资料
      *
-     * 参数：plantIndex 是植物编号。
-     * 返回：对应的植物资料。
+     * 参数：plantIndex 是植物编号
+     * 返回：对应的植物资料
      */
     public static PlantDefinition definitionAt(int plantIndex) {
         return DEFINITIONS[plantIndex];
     }
 
     /**
-     * 按植物名取得固定资料。
+     * 按植物名取得固定资料
      *
-     * 参数：plantName 是植物内部名字。
-     * 返回：对应的资料；找不到时抛出异常。
+     * 参数：plantName 是植物内部名字
+     * 返回：对应的资料；找不到时抛出异常
      */
     public static PlantDefinition definitionOf(String plantName) {
         int index = indexOf(plantName);
@@ -117,13 +117,13 @@ public final class PlantCatalog {
     }
 
     /**
-     * 查植物编号。
+     * 查植物编号
      *
-     * 参数：plantName 是植物内部名字。
-     * 返回：找到就返回编号；找不到返回 -1。
+     * 参数：plantName 是植物内部名字
+     * 返回：找到就返回编号；找不到返回 -1
      */
     public static int indexOf(String plantName) {
-        for (int index = 0; index < DEFINITIONS.length; index++) {
+        for (int index = 0; index < DEFINITIONS.length; index = index + 1) {
             if (DEFINITIONS[index].name.equals(plantName)) {
                 return index;
             }
@@ -132,21 +132,21 @@ public final class PlantCatalog {
     }
 
     /**
-     * 按编号取得植物名。
+     * 按编号取得植物名
      *
-     * 参数：plantIndex 是植物编号。
-     * 返回：植物内部名字。
+     * 参数：plantIndex 是植物编号
+     * 返回：植物内部名字
      */
     public static String nameAt(int plantIndex) {
         return DEFINITIONS[plantIndex].name;
     }
 
-    /** 判断一种植物是不是保龄球。 */
+    /** 判断一种植物是不是保龄球 */
     public static boolean isBowling(String plantName) {
         return definitionOf(plantName).bowling;
     }
 
-    /** 判断僵尸能不能吃掉一种植物。 */
+    /** 判断僵尸能不能吃掉一种植物 */
     public static boolean canBeEaten(String plantName) {
         return definitionOf(plantName).canBeEaten;
     }

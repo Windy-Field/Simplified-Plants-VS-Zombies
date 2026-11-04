@@ -6,21 +6,21 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
 /**
- * 提供通用的图片处理方法。
+ * 提供通用的图片处理方法
  *
- * 这里不负责登记游戏素材，也不负责读取 GIF 动画。
- * 它只处理可以独立复用的图片复制、格式转换、裁剪和缩放。
+ * 这里不负责登记游戏素材，也不负责读取 GIF 动画
+ * 它只处理可以独立复用的图片复制、格式转换、裁剪和缩放
  */
 public final class AssetToolkit {
-    /** 这个类只提供静态方法，不允许创建对象。 */
+    /** 这个类只提供静态方法，不允许创建对象 */
     private AssetToolkit() {
     }
 
     /**
-     * 把图片缩放到指定大小。
+     * 把图片缩放到指定大小
      *
-     * 参数：source 是原图；width 和 height 是目标大小。
-     * 返回：缩放后的 ARGB 图片。
+     * 参数：source 是原图；width 和 height 是目标大小
+     * 返回：缩放后的 ARGB 图片
      */
     public static BufferedImage resize(BufferedImage source, int width, int height) {
         BufferedImage result = new BufferedImage(width, height,
@@ -34,11 +34,11 @@ public final class AssetToolkit {
     }
 
     /**
-     * 按比例缩放图片。
+     * 按比例缩放图片
      *
-     * 缩小时先分几次缩小，再做最后一次插值缩放，尽量保留细节。
-     * 参数：source 是原图；scale 是缩放比例。
-     * 返回：缩放后的图片。
+     * 缩小时先分几次缩小，再做最后一次插值缩放，尽量保留细节
+     * 参数：source 是原图；scale 是缩放比例
+     * 返回：缩放后的图片
      */
     public static BufferedImage resizeByScale(BufferedImage source, double scale) {
         if (scale <= 0) {
@@ -63,10 +63,10 @@ public final class AssetToolkit {
     }
 
     /**
-     * 裁剪图片的一块区域。
+     * 裁剪图片的一块区域
      *
-     * 参数：source 是原图；left 和 top 是裁剪起点；width 和 height 是裁剪大小。
-     * 返回：裁剪后的独立图片。
+     * 参数：source 是原图；left 和 top 是裁剪起点；width 和 height 是裁剪大小
+     * 返回：裁剪后的独立图片
      */
     public static BufferedImage crop(BufferedImage source, int left, int top,
             int width, int height) {
@@ -80,10 +80,10 @@ public final class AssetToolkit {
     }
 
     /**
-     * 复制一张图片。
+     * 复制一张图片
      *
-     * 参数：source 是要复制的图片。
-     * 返回：独立的新图片。
+     * 参数：source 是要复制的图片
+     * 返回：独立的新图片
      */
     public static BufferedImage copyImage(BufferedImage source) {
         BufferedImage result = new BufferedImage(source.getWidth(), source.getHeight(),
@@ -96,10 +96,10 @@ public final class AssetToolkit {
     }
 
     /**
-     * 把图片转换成带透明通道的格式。
+     * 把图片转换成带透明通道的格式
      *
-     * 参数：source 是原图片。
-     * 返回：ARGB 格式图片。
+     * 参数：source 是原图片
+     * 返回：ARGB 格式图片
      */
     public static BufferedImage toArgb(BufferedImage source) {
         if (source.getType() == BufferedImage.TYPE_INT_ARGB) {

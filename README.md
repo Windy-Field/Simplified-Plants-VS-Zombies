@@ -14,6 +14,10 @@
 | --- | --- |
 | ![主菜单](screenshots/menu.png) | ![选卡界面](screenshots/level-1.png) |
 
+| 关卡选择 | 第 4 关 |
+| --- | --- |
+| ![关卡选择](screenshots/level-selection.png) | ![第 4 关](screenshots/level-3-play.png) |
+
 | 经典关卡 | 传送带关卡 |
 | --- | --- |
 | ![经典关卡](screenshots/level-0-play.png) | ![传送带关卡](screenshots/level-4-play.png) |
@@ -22,7 +26,24 @@
 | --- | --- |
 | ![坚果保龄球关卡](screenshots/level-5-play.png) | ![关卡编辑器](screenshots/editor.png) |
 
+| 植物图鉴 | 僵尸图鉴 |
+| --- | --- |
+| ![植物图鉴](screenshots/almanac-plants.png) | ![僵尸图鉴](screenshots/almanac-zombies.png) |
+
 ## 当前版本
+
+### V1.19
+
+- **关卡与导航**：编辑器支持截图封面选关、双击进入，以及关卡内返回选关
+- **植物与僵尸图鉴**：主菜单可查看全部已实现品种的 GIF 动画、数值和能力介绍，支持暂停
+- **新增战斗内容**：加入巨人僵尸和小鬼僵尸
+- **增加豌豆伤害**：普通、冰豌豆及蘑菇子弹伤害由 20 提升为 25，火焰豌豆由 40 提升为 50
+- **重要修复**：修正吞咽与爆炸死亡效果、传送带入场时序和卡片重叠，并改善系统缩放下的文字对齐
+- **代码整理**：合并文字定位与构建工具，统一关卡查找，使用 Gson 写入关卡，并补充风格检查
+
+详细数值与实现说明请移步至 [战斗数值设计](docs/combat-values.md)和[游戏界面设计](docs/interface-design.md)。
+
+## 历史更新
 
 ### V1.8
 
@@ -75,7 +96,7 @@ run.bat editor 3   :: 打开关卡编辑器并载入第 4 关
 .\build.ps1 -Editor -Level 3
 ```
 
-脚本会自动暂存、提交、同步远程提交并推送。遇到冲突、未登录 GitHub 或远程地址不正确时会停止，不会强制覆盖远程内容。
+启动脚本只负责本地编译、运行和自检，不会自动提交、同步或推送 Git。进入游戏后点击“冒险模式”打开选关页，命令行关卡参数用于设置默认选中项；编辑器试玩仍直接载入指定关卡。
 
 使用 IntelliJ IDEA 时，请打开仓库根目录，并将运行配置的工作目录设置为仓库根目录。IDEA 会根据 `pom.xml` 使用 `lib/gson-2.11.0.jar`。
 
@@ -91,11 +112,14 @@ assets/
 ├── Screen/      菜单和界面图片
 ├── Zombies/     僵尸动画
 ├── bullets/     子弹图片
-├── new_assets/  新增的特殊素材
+├── new_assets/  新增素材、重复素材和待删除素材
 └── levels/      关卡文件 level_0.json ~ level_5.json
 ```
 
 素材缺失或损坏时，请运行 `run.bat test`。自检程序会检查素材、资料表、动画和关卡文件是否能够正常使用。
+
+新增素材的英文命名、重复比对和筛选结果见 [`docs/asset-import/README.md`](docs/asset-import/README.md)。
+以后可以新增的植物和僵尸技能见 [`docs/asset-import/creative-skills.md`](docs/asset-import/creative-skills.md)。
 
 ## 自检程序
 
@@ -104,6 +128,7 @@ assets/
 - 界面图片、背景、植物素材和僵尸素材；
 - 植物与僵尸资料表、卡片、动画和基础行为；
 - 橄榄球僵尸的速度、动画和死亡流程；
+- 巨人的砸击、半血投掷、冻结、小鬼飞行落地、专属死亡和编辑器读写；
 - 窝瓜的索敌、锁定目标和多目标压扁范围；
 - 铲子、传送带、保龄球、选卡、种植和出怪流程；
 - 关卡编辑器的保存、读取和游戏侧加载；
@@ -128,6 +153,8 @@ assets/
 
 编辑器可以设置初始阳光、阳光生成间隔、出怪间隔、卡槽数量、卡池、禁用植物和必选植物。卡槽数量的范围是 1~8；禁用植物和必选植物只对正常选卡关卡生效。
 
+右侧“关卡截图”区域可选择 PNG、JPG 或 GIF 图片作为选关封面，设置后需保存关卡。点击“恢复自动”并保存可改回自动封面，截图导入位置与回退规则见 [游戏界面设计](docs/interface-design.md)。
+
 点击“保存并试玩”可以在新窗口中运行当前关卡。勾选“开发者模式”后，试玩画面会显示碰撞箱、血量和场上对象数量；该设置不会写入关卡文件。
 
 ## 游戏操作
@@ -141,6 +168,10 @@ assets/
 | 点击右上角速度按钮 | 切换 1x、1.5x、2x 战斗速度 |
 
 ## 项目结构
+
+源码只保留在 `src/`，素材放在 `assets/`，说明放在 `docs/`，正式展示截图放在 `screenshots/`。运行和打包脚本共用 `scripts/java-tools.ps1`，JDK 要求、依赖校验和编译流程只维护一份。
+
+`build/` 保存当前编译结果和自检截图，每次编译先清理 `build/classes/`，避免已删除的类继续残留。`target/` 是 Maven 自动生成的目录；`dist/` 保存发行包，都不属于源码。`.probe/` 是旧实验副本，已被 Git 忽略，构建脚本不会读取它。
 
 ```text
 src/main/java/pvz/
@@ -162,11 +193,16 @@ src/main/java/pvz/
 │   └── WallNutActions.java       坚果裂纹行为
 ├── zombie/                       僵尸资料、出场和效果
 │   ├── Zombie.java               僵尸对象
+│   ├── GargantuarActions.java    巨人砸击、投掷和小鬼飞行
 │   ├── ZombieCatalog.java        僵尸资料表
 │   ├── ZombieDefinition.java     单种僵尸资料
 │   ├── ZombieEffects.java        僵尸死亡和特殊效果
 │   └── ZombieSpawn.java          僵尸出场记录
 ├── game/                         游戏流程和战斗系统
+│   ├── Almanac.java              图鉴浏览、动画和分页
+│   ├── AlmanacDescriptions.java  按内部名称查询的中文介绍
+│   ├── LevelSelection.java       选关布局、翻页与输入
+│   ├── LevelPreview.java         实际关卡资料生成的封面
 │   ├── CombatSystem.java         战斗对象更新
 │   ├── Game.java                 游戏主流程与输入处理
 │   ├── GameRenderer.java         游戏画面绘制
@@ -176,7 +212,8 @@ src/main/java/pvz/
 ├── level/                        关卡数据和 JSON 读写
 │   ├── Level.java                关卡数据
 │   ├── LevelJson.java            关卡 JSON 格式约定
-│   └── LevelLoader.java          读取关卡文件
+│   ├── LevelLoader.java          读取关卡文件和发现编号
+│   └── LevelScreenshot.java      截图导入和读取
 ├── world/                        素材、坐标和公共对象
 │   ├── Assets.java               图片与动画加载
 │   ├── Bullet.java               子弹对象
@@ -185,7 +222,8 @@ src/main/java/pvz/
 │   ├── Sprite.java               游戏对象基类
 │   └── Sun.java                  阳光对象
 ├── tools/
-│   └── AssetToolkit.java         图片处理工具
+│   ├── AssetToolkit.java         图片处理工具
+│   └── TextDrawing.java          选关和图鉴共用文字定位
 └── editor/                       关卡编辑器
     ├── CheckListPanel.java       植物选择列表
     ├── EditorDragController.java 拖放控制接口
@@ -196,7 +234,14 @@ src/main/java/pvz/
     └── LevelEditor.java          编辑器主窗口
 
 src/test/java/pvz/
+├── JavaStyleTest.java            Java 基础代码风格检查
+├── GameInterfaceTest.java        阳光原样显示与选关流程检查
 ├── DeveloperModeTest.java        开发者模式画面检查
+├── LevelScreenshotTest.java      截图与关卡 JSON 保存读取检查
+├── AlmanacTest.java              图鉴资料、草坪与动画检查
+├── CombatValuesTest.java         血量与伤害检查
+├── GargantuarTest.java           巨人和小鬼行为检查
+├── ConveyorRegressionTest.java   爆炸与传送带流程检查
 └── SelfCheckTest.java            项目自检程序
 ```
 
@@ -206,8 +251,21 @@ src/test/java/pvz/
 - `Layout` 保存坐标、时间、血量、伤害和界面布局常量；`LevelJson` 保存关卡 JSON 的字段约定。
 - `PlantActions`、`CombatSystem` 和 `LevelSystem` 分别处理植物行为、战斗过程和关卡流程。
 - 新增品种时应优先复用已有的资料类和行为处理器，只有通用规则无法表达时才新增类。
+- 编辑器通过 Gson 的 `JsonObject` 和 `JsonArray` 保存关卡，不自行拼接引号或逗号；保存时统一使用缩进格式，字段含义与旧关卡兼容。
 
 ## 新增植物示例
+
+源码中的扩展 TODO 使用连续编号 `01`～`20`，这些注释是学习和扩展指引，应保留；其中提到的可选步骤只在新功能需要时执行。
+
+| 编号 | 扩展步骤 | 主要位置 |
+| --- | --- | --- |
+| 01 | 设计共用数值 | `Layout` |
+| 02～05 | 植物属性、素材、资料与位置 | `PlantDefinition`、`Assets`、`PlantCatalog`、`Plant` |
+| 06～09 | 子弹素材、嘴部高度和子弹选择 | `Assets`、`Layout`、`ShooterActions` |
+| 10～11 | 植物行为与特殊绘制 | `PlantActions`、`GameRenderer` |
+| 12～14 | 僵尸属性、素材和资料 | `ZombieDefinition`、`Assets`、`ZombieCatalog` |
+| 15～17 | 僵尸状态、死亡与特殊能力 | `Zombie`、`CombatSystem` |
+| 18～20 | 动画和行为验证 | `SelfCheckTest` |
 
 下面以新增“寒冰双发射手”为例。新增植物时，应先复用已有的植物资料和行为，再补充确实缺少的代码。
 

@@ -1,39 +1,39 @@
 package pvz.world;
 
 /**
- * 一颗植物射出的子弹。
+ * 一颗植物射出的子弹
  *
  * 子弹只会往右飞，并且会慢慢靠近目标行的高度，
- * 这样三线射手打出去的三颗子弹才会在不同行上落到位。
+ * 这样三线射手打出去的三颗子弹才会在不同行上落到位
  */
 public class Bullet extends Sprite {
-    /** 是否是冰冻子弹，打中僵尸会让它减速。 */
+    /** 是否是冰冻子弹，打中僵尸会让它减速 */
     public boolean ice;
 
-    /** 子弹造成的直接伤害。 */
+    /** 子弹造成的直接伤害 */
     public int damage = Layout.BULLET_DAMAGE;
 
-    /** 上一次触发转换的对象，防止子弹在同一对象里重复转换。 */
+    /** 上一次触发转换的对象，防止子弹在同一对象里重复转换 */
     public Sprite lastTransformationSource;
 
-    /** 是否已经打中目标，进入爆炸动画阶段。 */
+    /** 是否已经打中目标，进入爆炸动画阶段 */
     public boolean exploded;
 
-    /** 打中的时刻，用来算爆炸动画该结束了。 */
+    /** 打中的时刻，用来算爆炸动画该结束了 */
     public long hitTime;
 
-    /** 期望落到的纵坐标。 */
+    /** 期望落到的纵坐标 */
     public int targetY;
 
     /**
-     * 在植物枪口位置产生一颗子弹。
+     * 在植物枪口位置产生一颗子弹
      *
      * 参数：kind 是子弹素材名；left 和 top 是子弹左上角坐标；
-     *       row 是所在行；targetY 是期望落到的纵坐标；assets 提供图片。
+     *       row 是所在行；targetY 是期望落到的纵坐标；assets 提供图片
      */
     public Bullet(String kind, int left, int top, int row, int targetY, Assets assets) {
         super(kind, left, top, row, 1, assets);
-        // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次。
+        // 父类是按底边中央对齐的，子弹要按左上角对齐，所以这里再覆盖一次
         x = left;
         y = top;
         this.targetY = targetY;
@@ -41,10 +41,10 @@ public class Bullet extends Sprite {
     }
 
     /**
-     * 把子弹变成另一种子弹。
+     * 把子弹变成另一种子弹
      *
      * 参数：next 是转换后的子弹名；nextDamage 是转换后的直接伤害；
-     * assets 提供子弹图片；time 是当前游戏时刻。
+     * assets 提供子弹图片；time 是当前游戏时刻
      */
     public void transform(String next, int nextDamage, Assets assets, long time) {
         name = next;
@@ -54,19 +54,23 @@ public class Bullet extends Sprite {
     }
 
     /**
-     * 根据子弹名字更新减速属性。
+     * 根据子弹名字设置基础伤害和减速属性，直接创建火焰豌豆时也能得到正确伤害
      *
-     * 参数：kind 是当前子弹名字。
+     * 参数：kind 是当前子弹名字
      */
     private void updateTypeData(String kind) {
+        damage = Layout.BULLET_DAMAGE;
+        if (kind.equals("PeaFire")) {
+            damage = Layout.FIRE_PEA_DAMAGE;
+        }
         ice = kind.equals("PeaIce") || kind.equals("BulletMushRoom");
     }
 
     /**
-     * 推进子弹一帧。
+     * 推进子弹一帧
      *
-     * 参数：time 是当前时刻。
-     * 说明：已经打中的子弹只等动画放完，不再移动。
+     * 参数：time 是当前时刻
+     * 说明：已经打中的子弹只等动画放完，不再移动
      */
     public void update(long time) {
         if (exploded) {
@@ -76,25 +80,25 @@ public class Bullet extends Sprite {
             return;
         }
 
-        // 战斗会按固定时间小步推进，子弹在每一步只走基础距离。
+        // 战斗会按固定时间小步推进，子弹在每一步只走基础距离
         int step = Layout.BULLET_SPEED;
         x = x + step;
-        // 逐渐把高度调到目标行，避免子弹在行之间瞬移。
+        // 逐渐把高度调到目标行，避免子弹在行之间瞬移
         if (y < targetY) {
             y = Math.min(targetY, y + step);
         } else if (y > targetY) {
             y = Math.max(targetY, y - step);
         }
-        // 飞出屏幕右边就不用再算了。
+        // 飞出屏幕右边就不用再算了
         if (x > Layout.WINDOW_WIDTH) {
             alive = false;
         }
     }
 
     /**
-     * 打中僵尸，换成原版的爆炸图。
+     * 打中僵尸，换成原版的爆炸图
      *
-     * 参数：assets 提供图片；time 是打中的时刻。
+     * 参数：assets 提供图片；time 是打中的时刻
      */
     public void explode(Assets assets, long time) {
         exploded = true;

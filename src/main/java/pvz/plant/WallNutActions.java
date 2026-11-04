@@ -5,20 +5,20 @@ import pvz.world.Assets;
 import pvz.world.Layout;
 
 /**
- * WallNutActions 负责这一类植物每一帧的行为。
+ * WallNutActions 负责这一类植物每一帧的行为
  *
- * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态。
+ * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
 public class WallNutActions {
-    /** 图片和动画资源。 */
+    /** 图片和动画资源 */
     private final Assets assets;
-    /** 当前游戏的数据。 */
+    /** 当前游戏的数据 */
     private final GameState state;
 
     /**
-     * 创建WallNutActions。
+     * 创建WallNutActions
      *
-     * 参数：assets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
     public WallNutActions(Assets assets, GameState gameState) {
         this.assets = assets;
@@ -26,9 +26,9 @@ public class WallNutActions {
     }
 
     /**
-     * 坚果被咬坏之后会换成有裂纹的图，分两个阶段。
+     * 坚果被咬坏之后会换成有裂纹的图，分两个阶段
      *
-     * 参数：plant 是那株坚果。
+     * 参数：plant 是那株坚果
      */
     public void update(Plant plant) {
         boolean cracked2 = plant.animation.equals("WallNut_cracked2");

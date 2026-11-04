@@ -18,16 +18,16 @@ import pvz.world.Sun;
 import pvz.zombie.Zombie;
 
 /**
- * 开发者模式绘制的专项测试。
+ * 开发者模式绘制的专项测试
  *
- * 它不启动窗口，也不修改关卡，只检查同一场景在两种模式下的画面差别。
+ * 它不启动窗口，也不修改关卡，只检查同一场景在两种模式下的画面差别
  */
 public class DeveloperModeTest {
     /**
-     * 运行开发者模式的渲染检查。
+     * 运行开发者模式的渲染检查
      *
      * 参数：arguments[0] 是素材目录；省略时使用当前目录下的 assets；
-     * arguments[1] 可选，用来指定调试画面的截图路径。
+     * arguments[1] 可选，用来指定调试画面的截图路径
      */
     public static void main(String[] arguments) throws Exception {
         Path root = Path.of("assets");
@@ -71,9 +71,9 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 检查普通游戏入口默认关闭开发者模式，显式开启的试玩才显示调试层。
+     * 检查普通游戏入口默认关闭开发者模式，显式开启的试玩才显示调试层
      *
-     * 参数：assets 提供游戏图片和关卡配置。
+     * 参数：assets 提供游戏图片和关卡配置
      */
     private static void checkGameConstructors(Assets assets) {
         Game normalGame = new Game(assets, 4, false, false);
@@ -88,10 +88,10 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 把一个游戏窗口画到内存图片，用于比较入口设置。
+     * 把一个游戏窗口画到内存图片，用于比较入口设置
      *
-     * 参数：game 是要绘制的游戏。
-     * 返回：绘制好的图片。
+     * 参数：game 是要绘制的游戏
+     * 返回：绘制好的图片
      */
     private static BufferedImage renderGame(Game game) {
         BufferedImage image = new BufferedImage(Layout.WINDOW_WIDTH,
@@ -104,10 +104,10 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 建立含植物、僵尸、子弹和阳光的固定测试场景。
+     * 建立含植物、僵尸、子弹和阳光的固定测试场景
      *
-     * 参数：assets 提供图片。
-     * 返回：可直接交给绘制器的游戏状态。
+     * 参数：assets 提供图片
+     * 返回：可直接交给绘制器的游戏状态
      */
     private static GameState createScene(Assets assets) {
         GameState state = new GameState();
@@ -135,10 +135,10 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 在内存图片里绘制一帧。
+     * 在内存图片里绘制一帧
      *
-     * 参数：renderer 是绘制器；state 是场景；developerMode 表示是否绘制调试信息。
-     * 返回：绘制好的图片。
+     * 参数：renderer 是绘制器；state 是场景；developerMode 表示是否绘制调试信息
+     * 返回：绘制好的图片
      */
     private static BufferedImage render(GameRenderer renderer, GameState state,
             boolean developerMode) {
@@ -151,14 +151,14 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 逐像素比较两张画面。
+     * 逐像素比较两张画面
      *
-     * 参数：first 和 second 是待比较图片。
-     * 返回：所有像素一致时返回真。
+     * 参数：first 和 second 是待比较图片
+     * 返回：所有像素一致时返回真
      */
     private static boolean samePixels(BufferedImage first, BufferedImage second) {
-        for (int row = 0; row < first.getHeight(); row++) {
-            for (int column = 0; column < first.getWidth(); column++) {
+        for (int row = 0; row < first.getHeight(); row = row + 1) {
+            for (int column = 0; column < first.getWidth(); column = column + 1) {
                 if (first.getRGB(column, row) != second.getRGB(column, row)) {
                     return false;
                 }
@@ -168,9 +168,9 @@ public class DeveloperModeTest {
     }
 
     /**
-     * 检查一个测试条件。
+     * 检查一个测试条件
      *
-     * 参数：condition 是检查结果；message 是不成立时的说明。
+     * 参数：condition 是检查结果；message 是不成立时的说明
      */
     private static void check(boolean condition, String message) {
         if (!condition) {

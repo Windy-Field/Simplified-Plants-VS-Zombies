@@ -4,42 +4,42 @@ import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 
 /**
- * 一颗可以点击收集的阳光。
+ * 一颗可以点击收集的阳光
  *
- * 阳光有两种来源：天上掉下来的，和向日葵／阳光菇产出的。
- * 它先朝目标点移动，走到之后原地停七秒，然后消失。
+ * 阳光有两种来源：天上掉下来的，和向日葵／阳光菇产出的
+ * 它先朝目标点移动，走到之后原地停七秒，然后消失
  */
 public class Sun extends Sprite {
-    /** 收集后能给多少阳光；大阳光 25，小阳光 12。 */
+    /** 收集后能给多少阳光；大阳光 25，小阳光 12 */
     public int value;
 
-    /** 要移动到的目标中心横坐标。 */
+    /** 要移动到的目标中心横坐标 */
     public int targetX;
 
-    /** 要移动到的目标底部纵坐标。 */
+    /** 要移动到的目标底部纵坐标 */
     public int targetY;
 
-    /** 到达目标的时刻；还没到就是 0。 */
+    /** 到达目标的时刻；还没到就是 0 */
     public long arrivalTime;
 
-    /** 是否正在飞向左上角的阳光数字处。 */
+    /** 是否正在飞向左上角的阳光数字处 */
     public boolean flyingToCounter;
 
-    /** 飞向左上角的起点横坐标，用来算减速。 */
+    /** 飞向左上角的起点横坐标，用来算减速 */
     private double collectStartX;
 
-    /** 飞向左上角的起点纵坐标，用来算减速。 */
+    /** 飞向左上角的起点纵坐标，用来算减速 */
     private double collectStartY;
 
-    /** 飞向左上角的起始时刻。 */
+    /** 飞向左上角的起始时刻 */
     private long collectStartTime;
 
     /**
-     * 创建一颗阳光。
+     * 创建一颗阳光
      *
      * 参数：center 和 bottom 是出生位置；destinationX 和 destinationY 是目标位置；
-     *       big 表示是不是大阳光；assets 提供图片。
-     * 说明：大阳光来自天空和向日葵，小阳光只有阳光菇才产。
+     *       big 表示是不是大阳光；assets 提供图片
+     * 说明：大阳光来自天空和向日葵，小阳光只有阳光菇才产
      */
     public Sun(int center, int bottom, int destinationX, int destinationY, boolean big, Assets assets) {
         super("Sun", center, bottom, 0, 1, assets);
@@ -50,7 +50,7 @@ public class Sun extends Sprite {
         } else {
             scale = 0.9;
         }
-        // 父类按未缩放的图片定位，缩放之后要重新对一次底边中央。
+        // 父类按未缩放的图片定位，缩放之后要重新对一次底边中央
         BufferedImage image = picture(assets, 0);
         x = center - image.getWidth() / 2.0;
         y = bottom - image.getHeight();
@@ -59,10 +59,10 @@ public class Sun extends Sprite {
     }
 
     /**
-     * 朝目标移动一帧，到了就开始计时。
+     * 朝目标移动一帧，到了就开始计时
      *
-     * 参数：assets 提供图片；time 是当前时刻。
-     * 说明：战斗会按固定时间小步推进，阳光每一步只走基础距离。
+     * 参数：assets 提供图片；time 是当前时刻
+     * 说明：战斗会按固定时间小步推进，阳光每一步只走基础距离
      */
     public void update(Assets assets, long time) {
         if (flyingToCounter) {
@@ -74,12 +74,12 @@ public class Sun extends Sprite {
         int center = (int) rect.getCenterX();
         int bottom = (int) rect.getMaxY();
 
-        // 横向和纵向使用相同的基础步长，倍速由战斗主循环统一处理。
+        // 横向和纵向使用相同的基础步长，倍速由战斗主循环统一处理
         int step = Layout.SUN_SPEED;
 
-        // 横向和纵向各自靠近目标，所以阳光走的是斜线。
+        // 横向和纵向各自靠近目标，所以阳光走的是斜线
         // 每边走之前先看看离目标还剩多少，最多只走剩下的距离，
-        // 免得一步跨过目标，害得后面永远差一点、到不了目的地。
+        // 免得一步跨过目标，害得后面永远差一点、到不了目的地
         if (center < targetX) {
             x = x + Math.min(step, targetX - center);
         } else if (center > targetX) {
@@ -101,9 +101,9 @@ public class Sun extends Sprite {
     }
 
     /**
-     * 开始收集动画：飞向左上角的阳光数字。
+     * 开始收集动画：飞向左上角的阳光数字
      *
-     * 参数：assets 提供图片；time 是当前时刻。
+     * 参数：assets 提供图片；time 是当前时刻
      */
     public void startCollect(Assets assets, long time) {
         Rectangle rect = bounds(assets, time);
@@ -114,27 +114,27 @@ public class Sun extends Sprite {
     }
 
     /**
-     * 推进收集动画：先匀速、接近目标后减速到零。
+     * 推进收集动画：先匀速、接近目标后减速到零
      *
-     * 参数：assets 提供图片；time 是当前时刻。
+     * 参数：assets 提供图片；time 是当前时刻
      */
     private void updateFlyingToCounter(Assets assets, long time) {
         // 目标是卡槽上阳光数字框的中心。这两个值由数字框的位置和尺寸算出来，
-        // 不再像以前那样在这里写死，免得改了卡槽布局而这里没跟着改、阳光飞到框外面去。
+        // 不再像以前那样在这里写死，免得改了卡槽布局而这里没跟着改、阳光飞到框外面去
         double goalX = Layout.CARD_BAR_SUN_CENTER_X;
         double goalY = Layout.CARD_BAR_SUN_CENTER_Y;
 
-        // 起点到终点的直线距离，以及按速度换算出的飞行时长。
+        // 起点到终点的直线距离，以及按速度换算出的飞行时长
         double totalDistX = goalX - collectStartX;
         double totalDistY = goalY - collectStartY;
         double totalDist = Math.sqrt(totalDistX * totalDistX + totalDistY * totalDistY);
-        // SUN_COLLECT_SPEED 是"每一步走多少像素"，乘固定步长才换算成"每毫秒走多少"。
+        // SUN_COLLECT_SPEED 是"每一步走多少像素"，乘固定步长才换算成"每毫秒走多少"
         double durationMs = totalDist / Layout.SUN_COLLECT_SPEED * Layout.FIXED_STEP_MS;
 
-        // 和卡片飞入卡槽用同一条曲线：前 80% 匀速，后 20% 缓出停住。
+        // 和卡片飞入卡槽用同一条曲线：前 80% 匀速，后 20% 缓出停住
         double traveled = Layout.flyProgress(time - collectStartTime, durationMs) * totalDist;
 
-        // 按行进距离沿直线推进，再换算成左上角坐标。
+        // 按行进距离沿直线推进，再换算成左上角坐标
         double angle = Math.atan2(totalDistY, totalDistX);
         double newCenterX = collectStartX + Math.cos(angle) * traveled;
         double newCenterY = collectStartY + Math.sin(angle) * traveled;
@@ -143,7 +143,7 @@ public class Sun extends Sprite {
         x = newCenterX - image.getWidth() / 2.0;
         y = newCenterY - image.getHeight() / 2.0;
 
-        // 到达终点就标记为死。
+        // 到达终点就标记为死
         if (time - collectStartTime >= durationMs) {
             alive = false;
         }

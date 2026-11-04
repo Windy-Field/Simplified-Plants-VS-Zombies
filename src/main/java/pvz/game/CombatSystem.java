@@ -12,31 +12,36 @@ import pvz.world.Sprite;
 import pvz.world.Sun;
 import pvz.zombie.Zombie;
 import pvz.zombie.ZombieEffects;
+import pvz.zombie.GargantuarActions;
 
 /**
- * 负责一局战斗中实体的更新。
+ * 负责一局战斗中实体的更新
  *
- * 这里处理僵尸、子弹、阳光、小推车和短时特效。
- * 关卡出怪时间表由 LevelSystem 负责，画面绘制由 GameRenderer 负责。
+ * 这里处理僵尸、子弹、阳光、小推车和短时特效
+ * 关卡出怪时间表由 LevelSystem 负责，画面绘制由 GameRenderer 负责
  */
 public class CombatSystem {
-    /** 当前游戏的所有运行数据。 */
+    /** 当前游戏的所有运行数据 */
     private final GameState state;
 
-    /** 图片和动画资源。 */
+    /** 图片和动画资源 */
     private final Assets assets;
 
+    /** 巨人和它投出的小鬼共用的特殊动作处理器 */
+    private final GargantuarActions gargantuarActions;
+
     /**
-     * 创建战斗系统。
+     * 创建战斗系统
      *
-     * 参数：gameState 是当前游戏状态；assetManager 是素材管理器。
+     * 参数：gameState 是当前游戏状态；assetManager 是素材管理器
      */
     public CombatSystem(GameState gameState, Assets assetManager) {
         state = gameState;
         assets = assetManager;
+        gargantuarActions = new GargantuarActions(assets, state);
     }
 
-    /** 推进一帧战斗中的僵尸、子弹、阳光、小推车和特效。 */
+    /** 推进一帧战斗中的僵尸、子弹、阳光、小推车和特效 */
     public void updateAll() {
         updateZombies();
         updateBullets();
@@ -45,9 +50,14 @@ public class CombatSystem {
         updateHeads();
     }
 
-    /** 遍历所有僵尸，处理走路、啃植物、掉帽子、掉头和死亡。 */
+    /** 遍历所有僵尸，处理走路、啃植物、掉帽子、掉头和死亡 */
     private void updateZombies() {
-        for (Zombie zombie : state.zombies) {
+        // TODO【17-僵尸特殊能力】：在普通走路和攻击之前处理新技能，参考巨人的动作入口安排触发与结束
+        // 每帧只推进动作状态，伤害按命中时刻结算一次，并检查冻结和死亡能否正确中断动作
+        // 小鬼可能在遍历中生成，本帧只更新开始时已有的僵尸，避免边遍历边添加出错
+        int zombieCount = state.zombies.size();
+        for (int index = 0; index < zombieCount; index = index + 1) {
+            Zombie zombie = state.zombies.get(index);
             if (!zombie.alive) {
                 continue;
             }
@@ -61,7 +71,11 @@ public class CombatSystem {
             updateZombieDamageState(zombie);
             updateZombieBleeding(zombie);
 
-            // 被冻住的僵尸这一帧什么也不做。
+            if (gargantuarActions.update(zombie)) {
+                continue;
+            }
+
+            // 被冻住的僵尸这一帧什么也不做
             if (state.time < zombie.frozenUntil) {
                 continue;
             }
@@ -69,9 +83,9 @@ public class CombatSystem {
         }
     }
 
-    /** 处理僵尸掉帽子、掉臂和掉头这几个血量节点。 */
+    /** 处理僵尸掉帽子、掉臂和掉头这几个血量节点 */
     private void updateZombieDamageState(Zombie zombie) {
-        if (zombie.hasOwnAnimation()) {
+        if (!zombie.usesStandardDamageStates()) {
             return;
         }
         if (zombie.helmet
@@ -102,7 +116,7 @@ public class CombatSystem {
         zombie.change(zombie.stateAnimation(zombie.attacking), assets, state.time);
     }
 
-    /** 掉了头的僵尸会持续流血，直到血流干自己倒下。 */
+    /** 掉了头的僵尸会持续流血，直到血流干自己倒下 */
     private void updateZombieBleeding(Zombie zombie) {
         if (!zombie.headLost) {
             return;
@@ -114,7 +128,7 @@ public class CombatSystem {
         zombie.lastBleed = state.time;
     }
 
-    /** 僵尸这一帧的主动行为：找到目标，然后决定是攻击还是走路。 */
+    /** 僵尸这一帧的主动行为：找到目标，然后决定是攻击还是走路 */
     private void updateZombieActions(Zombie zombie) {
         if (zombie.hasOwnAnimation()) {
             Plant target = findExplodingZombiePlant(zombie);
@@ -148,7 +162,7 @@ public class CombatSystem {
         checkZombieOutOfScreen(zombie);
     }
 
-    /** 找到爆炸僵尸接触到的第一株会触发爆炸的植物。 */
+    /** 找到爆炸僵尸接触到的第一株会触发爆炸的植物 */
     private Plant findExplodingZombiePlant(Zombie zombie) {
         Rectangle zombieBody = zombie.collisionBox(assets, state.time);
         Plant firstPlant = null;
@@ -174,7 +188,7 @@ public class CombatSystem {
         return firstPlant;
     }
 
-    /** 判断爆炸僵尸是否正接触攻击中的保护植物。 */
+    /** 判断爆炸僵尸是否正接触攻击中的保护植物 */
     private boolean hasTouchingProtectedPlant(Zombie zombie) {
         for (Plant plant : state.plants) {
             if (!plant.alive || plant.health <= 0 || plant.row != zombie.row) {
@@ -190,20 +204,20 @@ public class CombatSystem {
         return false;
     }
 
-    /** 被魅惑的僵尸找同一行里的普通僵尸。 */
+    /** 被魅惑的僵尸找同一行里的普通僵尸 */
     private Zombie findZombieOpponent(Zombie zombie) {
         return findOpponent(zombie, false);
     }
 
-    /** 普通僵尸找同一行里被魅惑的僵尸。 */
+    /** 普通僵尸找同一行里被魅惑的僵尸 */
     private Zombie findHypnotizedOpponent(Zombie zombie) {
         return findOpponent(zombie, true);
     }
 
-    /** 按目标阵营寻找同一行里接触到的僵尸。 */
+    /** 按目标阵营寻找同一行里接触到的僵尸 */
     private Zombie findOpponent(Zombie zombie, boolean hypnotized) {
         for (Zombie other : state.zombies) {
-            if (other == zombie || !other.alive || other.dying) {
+            if (other == zombie || !other.alive || other.dying || other.airborne) {
                 continue;
             }
             if (other.hypno != hypnotized || other.row != zombie.row) {
@@ -216,7 +230,7 @@ public class CombatSystem {
         return null;
     }
 
-    /** 普通僵尸找同一行里可以吃掉的植物。 */
+    /** 普通僵尸找同一行里可以吃掉的植物 */
     private Plant findPrey(Zombie zombie) {
         for (Plant plant : state.plants) {
             if (!plant.alive || plant.health <= 0 || plant.row != zombie.row) {
@@ -232,7 +246,7 @@ public class CombatSystem {
         return null;
     }
 
-    /** 根据是否战斗切换僵尸动画。 */
+    /** 根据是否战斗切换僵尸动画 */
     private void updateZombieFightingState(Zombie zombie, boolean fighting) {
         if (fighting == zombie.attacking) {
             return;
@@ -242,10 +256,17 @@ public class CombatSystem {
         zombie.frameInterval = Zombie.animationIntervalFor(next);
         zombie.change(next, assets, state.time);
         zombie.lastAttack = state.time;
+        zombie.actionElapsed = 0;
+        zombie.lastActionUpdate = state.time;
+        zombie.smashResolved = false;
     }
 
-    /** 僵尸攻击植物或另一只僵尸。 */
+    /** 僵尸攻击植物或另一只僵尸 */
     private void bite(Zombie zombie, Plant prey, Zombie opponent) {
+        if (zombie.isGargantuar()) {
+            gargantuarActions.smash(zombie, prey, opponent);
+            return;
+        }
         long interval = Layout.ZOMBIE_ATTACK_INTERVAL;
         if (state.time < zombie.slowedUntil) {
             interval = interval * 2;
@@ -266,7 +287,7 @@ public class CombatSystem {
         zombie.lastAttack = state.time;
     }
 
-    /** 僵尸向当前阵营的方向走一步。 */
+    /** 僵尸向当前阵营的方向走一步 */
     private void walk(Zombie zombie) {
         long interval = Layout.ZOMBIE_STEP_INTERVAL;
         if (state.time < zombie.slowedUntil) {
@@ -283,7 +304,7 @@ public class CombatSystem {
         zombie.lastStep = state.time;
     }
 
-    /** 处理僵尸离开屏幕的结果。 */
+    /** 处理僵尸离开屏幕的结果 */
     private void checkZombieOutOfScreen(Zombie zombie) {
         Rectangle bounds = zombie.bounds(assets, state.time);
         if (!zombie.hypno && bounds.getMaxX() < 0) {
@@ -295,7 +316,7 @@ public class CombatSystem {
         }
     }
 
-    /** 更新子弹，并处理子弹命中僵尸。 */
+    /** 更新子弹，并处理子弹命中僵尸 */
     private void updateBullets() {
         for (Bullet bullet : state.bullets) {
             if (!bullet.alive) {
@@ -312,7 +333,7 @@ public class CombatSystem {
         }
     }
 
-    /** 按植物资料转换经过植物的子弹。 */
+    /** 按植物资料转换经过植物的子弹 */
     private void transformBullet(Bullet bullet) {
         for (Plant plant : state.plants) {
             if (!plant.alive || plant.row != bullet.row) {
@@ -324,10 +345,11 @@ public class CombatSystem {
         }
     }
 
-    /** 检查子弹是否命中僵尸。 */
+    /** 检查子弹是否命中僵尸 */
     private void hitZombieWithBullet(Bullet bullet) {
         for (Zombie zombie : state.zombies) {
-            if (zombie.row != bullet.row || !zombie.alive || zombie.dying || zombie.hypno) {
+            if (zombie.row != bullet.row || !zombie.alive || zombie.dying
+                    || zombie.hypno || zombie.airborne) {
                 continue;
             }
             if (!Sprite.touches(bullet, zombie, assets, state.time)) {
@@ -342,7 +364,7 @@ public class CombatSystem {
         }
     }
 
-    /** 更新阳光、小推车、特效和掉落的僵尸头。 */
+    /** 更新阳光、小推车、特效和掉落的僵尸头 */
     private void updateSunsAndCars() {
         for (Sun sun : state.suns) {
             if (!sun.alive) {
@@ -357,7 +379,7 @@ public class CombatSystem {
         updateCars();
     }
 
-    /** 更新小推车，并处理小推车撞到的僵尸。 */
+    /** 更新小推车，并处理小推车撞到的僵尸 */
     private void updateCars() {
         BufferedImage carImage = assets.image("car");
         for (Car car : state.cars) {
@@ -369,7 +391,8 @@ public class CombatSystem {
             Rectangle carRect = new Rectangle(car.x, carTop,
                 carImage.getWidth(), carImage.getHeight());
             for (Zombie zombie : state.zombies) {
-                if (zombie.row != car.row || !zombie.alive || zombie.dying || zombie.hypno) {
+                if (zombie.row != car.row || !zombie.alive || zombie.dying
+                        || zombie.hypno || zombie.airborne) {
                     continue;
                 }
                 if (!carRect.intersects(zombie.collisionBox(assets, state.time))) {
@@ -381,7 +404,7 @@ public class CombatSystem {
         }
     }
 
-    /** 删除已经播完的爆炸和其他短时特效。 */
+    /** 删除已经播完的爆炸和其他短时特效 */
     private void updateEffects() {
         for (Sprite effect : state.effects) {
             long duration = assets.count(effect.animation) * effect.frameInterval;
@@ -391,7 +414,7 @@ public class CombatSystem {
         }
     }
 
-    /** 删除已经播完的掉落僵尸头动画。 */
+    /** 删除已经播完的掉落僵尸头动画 */
     private void updateHeads() {
         for (Sprite head : state.heads) {
             long duration = assets.count(head.animation) * head.frameInterval;

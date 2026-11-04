@@ -5,14 +5,13 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.metadata.IIOMetadata;
@@ -24,40 +23,42 @@ import com.google.gson.JsonParser;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import pvz.tools.AssetToolkit;
-import pvz.zombie.Zombie;
 
 /**
- * 负责读取项目 assets 目录里的图片和关卡。
+ * 负责读取项目 assets 目录里的图片和关卡
  *
  * 素材大多是自带透明通道的 GIF 动图，一个文件就是一整段动画；
  * 少数是单张 PNG 或按编号排列的 PNG 序列。游戏代码只认"动画名"
  * （如 Peashooter、ZombieAttack），这里用一张对照表把动画名对应到具体文件，
- * 这样换素材时只需要改这一处。
+ * 这样换素材时只需要改这一处
  */
 public class Assets {
-    /** 动画名 → 帧列表。 */
+    /** 动画名 → 帧列表 */
     private final Map<String, List<BufferedImage>> frames = new HashMap<String, List<BufferedImage>>();
 
-    /** 界面图片名 → 单张图片。 */
+    /** 界面图片名 → 单张图片 */
     private final Map<String, BufferedImage> images = new HashMap<String, BufferedImage>();
 
-    /** 缓存缩放后的帧，避免每次绘制都重新缩放。 */
+    /** 缓存缩放后的帧，避免每次绘制都重新缩放 */
     private final Map<String, BufferedImage> scaledImages = new HashMap<String, BufferedImage>();
 
-    /** 缓存每帧图上真正看得见的范围，避免每帧都重新扫描像素。 */
+    /** 缓存每帧图上真正看得见的范围，避免每帧都重新扫描像素 */
     private final Map<String, int[]> visibleBoundsCache = new HashMap<String, int[]>();
 
-    /** 缓存每段动画所有帧可见范围的并集。 */
+    /** 缓存每段动画所有帧可见范围的并集 */
     private final Map<String, int[]> animationBoundsCache = new HashMap<String, int[]>();
 
-    /** assets 目录。 */
+    /** assets 目录 */
     private final Path root;
 
+    /** 从投掷素材读取的小鬼脱手时间，不另外手写一份动画时长 */
+    private long gargantuarReleaseDelay;
+
     /**
-     * 读取全部素材。
+     * 读取全部素材
      *
-     * 参数：assetRoot 是项目里的 assets 目录。
-     * 异常：目录不存在或图片读取失败时抛出 IOException。
+     * 参数：assetRoot 是项目里的 assets 目录
+     * 异常：目录不存在或图片读取失败时抛出 IOException
      */
     public Assets(Path assetRoot) throws IOException {
         root = assetRoot;
@@ -72,48 +73,53 @@ public class Assets {
         loadBullets();
     }
 
-    /** 读取 JSON 文件，返回其根对象。 */
+    /** 读取 JSON 文件，返回其根对象 */
     public static JsonObject readObject(Path path) throws IOException {
         String text = Files.readString(path);
         JsonElement element = JsonParser.parseString(text);
         return element.getAsJsonObject();
     }
 
-    /** 界面上用到的整张图片：菜单、选卡面板、按钮、胜负画面、小推车等。 */
+    /** 界面上用到的整张图片：菜单、选卡面板、按钮、胜负画面、小推车等 */
     private void loadScreens() throws IOException {
         String[] names = {
             "MainMenu", "Adventure_0", "Adventure_1", "ChooserBackground", "MoveBackground",
             "PanelBackground", "StartButton", "GameVictory", "GameLoose", "car", "Boom",
             "shovelSlot", "shovel",
-            // 开局倒计时用的"准备-安放-开始"三张图，镜头移回草坪后按顺序显示。
+            // 开局倒计时用的"准备-安放-开始"三张图，镜头移回草坪后按顺序显示
             "ReadySetPlant1", "ReadySetPlant2", "ReadySetPlant3"
         };
-        for (int index = 0; index < names.length; index++) {
+        for (int index = 0; index < names.length; index = index + 1) {
             single(names[index], "Screen/" + names[index] + ".png");
         }
+        single("LevelSelector", "new_assets/UniqueAssets/Props/LevelSelector.jpg");
+        single("LevelPanel", "new_assets/UniqueAssets/Props/LevelPanel.png");
+        single("LevelButton", "new_assets/UniqueAssets/Props/Button.png");
+        single("AlmanacPlantBack", "new_assets/UniqueAssets/Extras/Almanac_PlantBack.jpg");
+        single("AlmanacZombieBack", "new_assets/UniqueAssets/Extras/Almanac_ZombieBack.jpg");
+        single("AlmanacPlantCard", "new_assets/UniqueAssets/Extras/Almanac_PlantCard.png");
+        single("AlmanacZombieCard", "new_assets/UniqueAssets/Extras/Almanac_ZombieCard.png");
+        single("AlmanacMenu", "new_assets/UniqueAssets/Extras/SelectorScreen_Almanac.png");
     }
 
     /**
-     * 卡片图片：Cards 目录里的文件按文件名登记。
+     * 卡片图片：Cards 目录里的文件按文件名登记
      *
      * 豌豆射手、向日葵、大嘴花、樱桃炸弹四张卡的文件名只是编号，
-     * 这里按卡面上的植物补上对应的名字。
+     * 这里按卡面上的植物补上对应的名字
      */
     private void loadCards() throws IOException {
-        List<Path> files = new ArrayList<Path>();
-        try (Stream<Path> stream = Files.list(root.resolve("Cards"))) {
-            Iterator<Path> iterator = stream.iterator();
-            while (iterator.hasNext()) {
-                files.add(iterator.next());
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(root.resolve("Cards"))) {
+            for (Path file : files) {
+                Path fileName = file.getFileName();
+                String filename = fileName.toString();
+                if (!Files.isRegularFile(file) || !filename.toLowerCase().endsWith(".png")) {
+                    continue;
+                }
+                String name = filename.substring(0, filename.length() - 4);
+                List<BufferedImage> cardFrames = readFrames(file);
+                images.put(name, cardFrames.get(0));
             }
-        }
-        for (Path file : files) {
-            String filename = file.getFileName().toString();
-            if (!filename.toLowerCase().endsWith(".png")) {
-                continue;
-            }
-            String name = filename.substring(0, filename.length() - 4);
-            images.put(name, readFrames(file).get(0));
         }
         alias("card_peashooter", "card_1");
         alias("card_sunflower", "card_2");
@@ -123,19 +129,21 @@ public class Assets {
         alias("card_torchwood_move", "card_torchwood");
     }
 
-    /** 关卡背景，下标就是关卡文件里的 background_type。 */
+    /** 关卡背景，下标就是关卡文件里的 background_type */
     private void loadBackgrounds() throws IOException {
-        sequence("Background",
+        String[] files = {
             "Map/map0.jpg",           // 0：白天草坪
             "Map/Background_1.jpg",   // 1：夜晚草坪
             "Map/Background_2.jpg",   // 2：白天泳池
             "Map/Background_3.jpg",   // 3：夜晚泳池
-            "Map/Background_4.jpg");  // 4：保龄球草坪（带红线）
+            "Map/Background_4.jpg"    // 4：保龄球草坪（带红线）
+        };
+        sequence("Background", files);
     }
 
-    /** 植物、阳光以及植物相关的特效。 */
-    // TODO【必做-植物-3】：新增植物时登记所有实际会用到的植物动画。
-    // 动画名必须和 PlantCatalog 中的资料一致；普通卡片图片由 loadCards() 自动读取。
+    /** 植物、阳光以及植物相关的特效 */
+    // TODO【03-植物素材】：新增植物时在这里登记基础动画和实际使用的状态动画，名称与植物资料一致
+    // 卡片放入 Cards 目录后由 loadCards 读取，普通植物还需在图鉴介绍表中补齐名称和说明
     private void loadPlants() throws IOException {
         animation("Sun", "Screen/Sun.gif");
 
@@ -149,10 +157,10 @@ public class Assets {
         animation("WallNut", "Plants/WallNut/1.gif");
         animation("WallNut_cracked1", "Plants/WallNut/Wallnut_cracked1.gif");
         animation("WallNut_cracked2", "Plants/WallNut/Wallnut_cracked2.gif");
-        // 保龄球用单张的坚果图，滚动时由绘制代码按距离旋转。
+        // 保龄球用单张的坚果图，滚动时由绘制代码按距离旋转
         animation("WallNutBowling", "Plants/WallNut/0.gif");
         animation("RedWallNutBowling", "Plants/WallNut/boom.gif");
-        sequence("RedWallNutBowlingExplode", "Screen/Boom.png");
+        animation("RedWallNutBowlingExplode", "Screen/Boom.png");
 
         animation("CherryBomb", "Plants/CherryBomb/1.gif");
         animation("CherryBombExplode", "Plants/CherryBomb/Boom.gif");
@@ -164,13 +172,13 @@ public class Assets {
         animation("PuffShroom", "Plants/PuffShroom/PuffShroom.gif");
         animation("PuffShroomSleep", "Plants/PuffShroom/PuffShroomSleep.gif");
 
-        // 土豆雷：1.gif 是刚种下还埋在土里的样子，PotatoMine.gif 是出土后闪灯。
+        // 土豆雷：1.gif 是刚种下还埋在土里的样子，PotatoMine.gif 是出土后闪灯
         animation("PotatoMineInit", "Plants/PotatoMine/1.gif");
         animation("PotatoMine", "Plants/PotatoMine/PotatoMine.gif");
         animation("PotatoMineExplode", "Plants/PotatoMine/PotatoMine_mashed.gif");
 
         animation("Squash", "Plants/Squash/1.gif");
-        // 窝瓜跳起砸下这 4 帧停留时间差别很大，按原始时长展开，砸下去的节奏才对。
+        // 窝瓜跳起砸下这 4 帧停留时间差别很大，按原始时长展开，砸下去的节奏才对
         stretchedAnimation("SquashAttack", "Plants/Squash/SquashAttack.gif");
 
         animation("Spikeweed", "Plants/Spikeweed/Spikeweed.gif");
@@ -182,7 +190,7 @@ public class Assets {
         animation("ScaredyShroomCry", "Plants/ScaredyShroom/ScaredyShroomCry.gif");
         animation("ScaredyShroomSleep", "Plants/ScaredyShroom/ScaredyShroomSleep.gif");
 
-        // 阳光菇：SunShroom2.gif 是刚种下的小个子，SunShroom.gif 是长大后的样子。
+        // 阳光菇：SunShroom2.gif 是刚种下的小个子，SunShroom.gif 是长大后的样子
         animation("SunShroom", "Plants/SunShroom/SunShroom2.gif");
         animation("SunShroomBig", "Plants/SunShroom/SunShroom.gif");
         animation("SunShroomSleep", "Plants/SunShroom/SunShroomSleep.gif");
@@ -197,9 +205,9 @@ public class Assets {
         animation("Torchwood", "Plants/Torchwood/Torchwood.gif");
     }
 
-    /** 僵尸的走路、啃食、掉头、死亡等动画。 */
-    // TODO：【必做-8】新增僵尸时需要调用 animation() 登记僵尸所有动画状态
-    //                （基础、啃食、死亡、被炸死、掉头、掉头啃食、飞出去的头等）
+    /** 僵尸的走路、啃食、掉头、死亡等动画 */
+    // TODO【13-僵尸素材】：新增僵尸时登记行走、攻击、死亡、爆炸和实际使用的特殊状态动画
+    // 普通状态按内部名加 Attack、LostHead 等后缀查找，特殊命名先在 ZombieDefinition 配置
     private void loadZombies() throws IOException {
         animation("Zombie", "Zombies/Zombie/Zombie.gif");
         animation("ZombieAttack", "Zombies/Zombie/ZombieAttack.gif");
@@ -209,8 +217,8 @@ public class Assets {
         animation("ZombieHead", "Zombies/Zombie/ZombieHead.gif");
         animation("BoomDie", "Zombies/Zombie/BoomDie.gif");
 
-        // 独臂僵尸：普通僵尸、路障和铁桶的本体掉到一半血时换成这套图。
-        // 素材画布比原版大得多，所以在登记时就缩放好，后面和普通僵尸走同一套代码。
+        // 独臂僵尸：普通僵尸、路障和铁桶的本体掉到一半血时换成这套图
+        // 素材画布比原版大得多，所以在登记时就缩放好，后面和普通僵尸走同一套代码
         scaledAnimation("ZombieNoArm", "Zombies/Zombie/ZombieNoArm.gif",
             Layout.ZOMBIE_NO_ARM_SCALE);
         scaledAnimation("ZombieNoArmAttack", "Zombies/Zombie/ZombieNoArmAttack.gif",
@@ -219,7 +227,7 @@ public class Assets {
             Layout.ZOMBIE_NO_ARM_SCALE);
         scaledAnimation("ZombieNoArmLostHead", "Zombies/Zombie/ZombieNoArmLostHead.gif",
             Layout.ZOMBIE_NO_ARM_SCALE);
-        // 这张的导出分辨率只有别的四分之一，得用单独的倍数。
+        // 这张的导出分辨率只有别的四分之一，得用单独的倍数
         scaledAnimation("ZombieNoArmLostHeadAttack",
             "Zombies/Zombie/ZombieNoArmLostHeadAttack.gif", Layout.ZOMBIE_NO_ARM_SMALL_SCALE);
 
@@ -233,7 +241,7 @@ public class Assets {
         animation("FlagZombieLostHead", "Zombies/FlagZombie/FlagZombieLostHead.gif");
         animation("FlagZombieLostHeadAttack", "Zombies/FlagZombie/FlagZombieLostHeadAttack.gif");
 
-        // 报纸僵尸的文件名里，1 表示还拿着报纸，0 表示报纸已经被打掉。
+        // 报纸僵尸的文件名里，1 表示还拿着报纸，0 表示报纸已经被打掉
         animation("NewspaperZombie", "Zombies/NewspaperZombie/HeadWalk1.gif");
         animation("NewspaperZombieAttack", "Zombies/NewspaperZombie/HeadAttack1.gif");
         animation("NewspaperZombieNoPaper", "Zombies/NewspaperZombie/HeadWalk0.gif");
@@ -259,35 +267,87 @@ public class Assets {
         animation("JokerZombie", "new_assets/joker/joker_walking.gif");
         animation("JokerZombieExplode", "new_assets/joker/joker_exploding.gif");
         animation("JokerBoom", "new_assets/joker/Boom.gif");
+
+        loadGargantuarAnimations();
+        animation("Imp", "Zombies/LittleZombie/1.gif");
+        animation("ImpAttack", "Zombies/LittleZombie/Attack.gif");
+        animation("ImpDie", "Zombies/LittleZombie/Die.gif");
+        animation("ImpBoomDie", "Zombies/LittleZombie/BoomDie.gif");
     }
 
-    /** 豌豆、冰豆、蘑菇孢子以及它们打中后的效果。 */
-    // TODO：【选做-2.5】新增植物时需要调用 animation()/sequence() 登记子弹材质，
-    //                 并在 ShooterActions.bulletNameFor() 中返回对应名字。
+    /** 登记巨人的带小鬼、无小鬼动作；帧时长不同的动作仍按原来的节奏播放 */
+    private void loadGargantuarAnimations() throws IOException {
+        String rootPath = "new_assets/gargantuar/";
+        String[] animationNames = {
+            "Gargantuar", "GargantuarAttack", "GargantuarThrow", "GargantuarDie",
+            "GargantuarNoImp", "GargantuarNoImpAttack", "GargantuarNoImpDie"
+        };
+        String[] fileNames = {
+            "Walk.gif", "Attack.gif", "Throw.gif", "Death.gif",
+            "WalkNoImp.gif", "AttackNoImp.gif", "DeathNoImp.gif"
+        };
+        for (int index = 0; index < animationNames.length; index = index + 1) {
+            loadTimedGargantuar(animationNames[index], rootPath + fileNames[index]);
+        }
+    }
+
+    /** 参数 name 是动画名，file 是 GIF；缩放一次并按十毫秒展开，保持原始帧时长 */
+    private void loadTimedGargantuar(String name, String file) throws IOException {
+        List<BufferedImage> animation = new ArrayList<BufferedImage>();
+        List<GifFrame> sourceFrames = readGif(root.resolve(file));
+        long releaseDelay = 0;
+        for (int index = 0; index < sourceFrames.size(); index = index + 1) {
+            GifFrame frame = sourceFrames.get(index);
+            BufferedImage image = AssetToolkit.resizeByScale(frame.image,
+                Layout.GARGANTUAR_SCALE);
+            long repeats = Math.max(1, frame.delay / Layout.GARGANTUAR_FRAME_INTERVAL);
+            for (long repeat = 0; repeat < repeats; repeat = repeat + 1) {
+                animation.add(image);
+            }
+            if (index < Layout.GARGANTUAR_RELEASE_FRAME) {
+                releaseDelay = releaseDelay + frame.delay;
+            }
+        }
+        frames.put(name, animation);
+        if (name.equals("GargantuarThrow")) {
+            gargantuarReleaseDelay = releaseDelay;
+        }
+    }
+
+    /** 返回小鬼在投掷动画开始后多少毫秒脱手 */
+    public long gargantuarReleaseDelay() {
+        return gargantuarReleaseDelay;
+    }
+
+    /** 豌豆、冰豆、蘑菇孢子以及它们打中后的效果 */
+    // TODO【06-子弹素材】：新增子弹时在这里登记素材，再由 ShooterActions.bulletNameFor 返回动画名
+    // 单个图片文件使用 animation，多张顺序图片使用 sequence 并传入路径数组
     private void loadBullets() throws IOException {
-        sequence("PeaNormal", "bullets/PeaNormal/PeaNormal_0.png");
-        sequence("PeaIce", "bullets/PeaIce/PeaIce_0.png");
-        sequence("PeaFire", "new_assets/torch_wood/fire_pea.png");
-        sequence("PeaNormalExplode", "bullets/PeaNormalExplode/PeaNormalExplode_0.png");
-        sequence("BulletMushRoom",
+        animation("PeaNormal", "bullets/PeaNormal/PeaNormal_0.png");
+        animation("PeaIce", "bullets/PeaIce/PeaIce_0.png");
+        animation("PeaFire", "new_assets/torch_wood/fire_pea.png");
+        animation("PeaNormalExplode", "bullets/PeaNormalExplode/PeaNormalExplode_0.png");
+        String[] files = {
             "bullets/BulletMushRoom/BulletMushRoom_0.png",
             "bullets/BulletMushRoom/BulletMushRoom_1.png",
             "bullets/BulletMushRoom/BulletMushRoom_2.png",
             "bullets/BulletMushRoom/BulletMushRoom_3.png",
-            "bullets/BulletMushRoom/BulletMushRoom_4.png");
-        // 这组孢子图是从大图上切下来的，边上残留着一圈紫色底，要先擦掉。
+            "bullets/BulletMushRoom/BulletMushRoom_4.png"
+        };
+        sequence("BulletMushRoom", files);
+        // 这组孢子图是从大图上切下来的，边上残留着一圈紫色底，要先擦掉
         for (BufferedImage image : frames.get("BulletMushRoom")) {
             clearEdgeColor(image, 0xAA71BA);
         }
         animation("BulletMushRoomExplode", "bullets/BulletMushRoomExplode/BulletMushRoomExplode_0.gif");
     }
 
-    /** 登记一张界面图片（取文件第一帧）。 */
+    /** 登记一张界面图片（取文件第一帧） */
     private void single(String name, String file) throws IOException {
         images.put(name, readFrames(root.resolve(file)).get(0));
     }
 
-    /** 给已登记的界面图片再起一个名字。 */
+    /** 给已登记的界面图片再起一个名字 */
     private void alias(String name, String existing) throws IOException {
         BufferedImage image = images.get(existing);
         if (image == null) {
@@ -296,19 +356,16 @@ public class Assets {
         images.put(name, image);
     }
 
-    /** 登记一段动画：一个 GIF 文件里的所有帧。 */
+    /** 参数 name 是动画名，file 是图片路径；GIF 读取全部帧，静态图片作为单帧动画复用 */
     private void animation(String name, String file) throws IOException {
-        List<BufferedImage> list = new ArrayList<BufferedImage>();
-        for (GifFrame frame : readGif(root.resolve(file))) {
-            list.add(frame.image);
-        }
+        List<BufferedImage> list = readFrames(root.resolve(file));
         frames.put(name, list);
     }
 
     /**
-     * 登记可选动画，缺少专属素材时使用普通僵尸的动画。
+     * 登记可选动画，缺少专属素材时使用普通僵尸的动画
      *
-     * 参数：name 是游戏里的动画名；file 是专属素材路径；fallbackName 是已加载的动画名。
+     * 参数：name 是游戏里的动画名；file 是专属素材路径；fallbackName 是已加载的动画名
      */
     private void animationWithFallback(String name, String file, String fallbackName)
             throws IOException {
@@ -320,27 +377,27 @@ public class Assets {
         frames.put(name, animationFrames(fallbackName));
     }
 
-    /** 登记一段由若干单独图片按顺序组成的动画。 */
-    private void sequence(String name, String... files) throws IOException {
+    /** 参数 name 是动画名，files 是按顺序排列的图片路径；登记各文件的第一帧 */
+    private void sequence(String name, String[] files) throws IOException {
         List<BufferedImage> list = new ArrayList<BufferedImage>();
-        for (int index = 0; index < files.length; index++) {
+        for (int index = 0; index < files.length; index = index + 1) {
             list.add(readFrames(root.resolve(files[index])).get(0));
         }
         frames.put(name, list);
     }
 
     /**
-     * 登记一段动画，并按 GIF 里每帧的停留时间把帧复制展开。
+     * 登记一段动画，并按 GIF 里每帧的停留时间把帧复制展开
      *
-     * 游戏里所有帧都按同一个间隔播放，而有些 GIF 各帧停留时间差别很大。
-     * 展开之后，停得久的帧会重复出现几次，按统一间隔播放也能还原原来的节奏。
+     * 游戏里所有帧都按同一个间隔播放，而有些 GIF 各帧停留时间差别很大
+     * 展开之后，停得久的帧会重复出现几次，按统一间隔播放也能还原原来的节奏
      */
     private void stretchedAnimation(String name, String file) throws IOException {
         long unit = Layout.DEFAULT_ANIMATION_INTERVAL;
         List<BufferedImage> list = new ArrayList<BufferedImage>();
         for (GifFrame frame : readGif(root.resolve(file))) {
             long repeat = Math.max(1, Math.round((double) frame.delay / unit));
-            for (long count = 0; count < repeat; count++) {
+            for (long count = 0; count < repeat; count = count + 1) {
                 list.add(frame.image);
             }
         }
@@ -348,15 +405,15 @@ public class Assets {
     }
 
     /**
-     * 登记一段动画，并把每一帧都缩放到指定倍数。
+     * 登记一段动画，并把每一帧都缩放到指定倍数
      *
      * 有些素材的画布比原版大得多（比如独臂僵尸那几组，站立高度是原版的六倍多），
      * 直接放进来会是个巨人。在这里一次缩好，后面算可见范围、算碰撞盒、
-     * 换动画时对齐底边就都不用再管缩放，和别的僵尸走同一套代码。
+     * 换动画时对齐底边就都不用再管缩放，和别的僵尸走同一套代码
      *
-     * 缩小时分几步走：一次缩到六分之一会丢很多像素，分几次减半再缩更清楚。
+     * 缩小时分几步走：一次缩到六分之一会丢很多像素，分几次减半再缩更清楚
      *
-     * 参数：name 是动画名；file 是文件路径；scale 是目标倍数（小于 1 表示缩小）。
+     * 参数：name 是动画名；file 是文件路径；scale 是目标倍数（小于 1 表示缩小）
      */
     private void scaledAnimation(String name, String file, double scale) throws IOException {
         List<BufferedImage> list = new ArrayList<BufferedImage>();
@@ -366,25 +423,28 @@ public class Assets {
         frames.put(name, list);
     }
 
-    /** GIF 里的一帧：合成后的完整画面和它的停留时间（毫秒）。 */
+    /** GIF 里的一帧：合成后的完整画面和它的停留时间（毫秒） */
     private static class GifFrame {
-        /** 合成后的完整画面。 */
+        /** 合成后的完整画面 */
         final BufferedImage image;
 
-        /** 这一帧停留多少毫秒。 */
+        /** 这一帧停留多少毫秒 */
         final long delay;
 
-        /** 保存一帧的画面和停留时间。 */
+        /** 保存一帧的画面和停留时间 */
         GifFrame(BufferedImage frameImage, long frameDelay) {
             image = frameImage;
             delay = frameDelay;
         }
     }
 
-    /** 读取一个图片文件的所有帧；非 GIF 图片只有一帧。 */
+    /** 读取一个图片文件的所有帧；非 GIF 图片只有一帧 */
     private static List<BufferedImage> readFrames(Path path) throws IOException {
         List<BufferedImage> list = new ArrayList<BufferedImage>();
-        if (path.getFileName().toString().toLowerCase().endsWith(".gif")) {
+        Path fileName = path.getFileName();
+        String name = fileName.toString();
+        String lowerName = name.toLowerCase();
+        if (lowerName.endsWith(".gif")) {
             for (GifFrame frame : readGif(path)) {
                 list.add(frame.image);
             }
@@ -402,11 +462,11 @@ public class Assets {
     }
 
     /**
-     * 解码 GIF 动图的全部帧。
+     * 解码 GIF 动图的全部帧
      *
      * GIF 的每一帧往往只记录"和上一帧不同的那一小块"，
      * 所以要按帧的位置和处置方式，一层层叠到同一块画布上，
-     * 每叠完一帧就拷贝一份画布，才能得到完整的画面。
+     * 每叠完一帧就拷贝一份画布，才能得到完整的画面
      */
     private static List<GifFrame> readGif(Path path) throws IOException {
         if (!Files.isRegularFile(path)) {
@@ -418,7 +478,7 @@ public class Assets {
             reader.setInput(input, false);
             int count = reader.getNumImages(true);
 
-            // 先读出所有帧和它们的位置，才能确定画布需要多大。
+            // 先读出所有帧和它们的位置，才能确定画布需要多大
             List<BufferedImage> pieces = new ArrayList<BufferedImage>();
             List<IIOMetadataNode> metas = new ArrayList<IIOMetadataNode>();
             int width = 0;
@@ -432,7 +492,7 @@ public class Assets {
                     height = intAttribute(screen, "logicalScreenHeight", 0);
                 }
             }
-            for (int index = 0; index < count; index++) {
+            for (int index = 0; index < count; index = index + 1) {
                 BufferedImage piece = reader.read(index);
                 IIOMetadataNode tree = (IIOMetadataNode) reader.getImageMetadata(index)
                     .getAsTree("javax_imageio_gif_image_1.0");
@@ -446,7 +506,7 @@ public class Assets {
             }
 
             BufferedImage canvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            for (int index = 0; index < count; index++) {
+            for (int index = 0; index < count; index = index + 1) {
                 BufferedImage piece = pieces.get(index);
                 IIOMetadataNode tree = metas.get(index);
                 IIOMetadataNode descriptor = child(tree, "ImageDescriptor");
@@ -460,7 +520,7 @@ public class Assets {
                     delay = intAttribute(control, "delayTime", 10) * 10L;
                 }
 
-                // "恢复到上一帧"要先把叠加前的画布存起来。
+                // "恢复到上一帧"要先把叠加前的画布存起来
                 BufferedImage before = null;
                 if (disposal.equals("restoreToPrevious")) {
                     before = AssetToolkit.copyImage(canvas);
@@ -471,7 +531,7 @@ public class Assets {
                 painter.dispose();
                 result.add(new GifFrame(AssetToolkit.copyImage(canvas), delay));
 
-                // 按处置方式为下一帧准备画布。
+                // 按处置方式为下一帧准备画布
                 if (disposal.equals("restoreToBackgroundColor")) {
                     Graphics2D eraser = canvas.createGraphics();
                     eraser.setComposite(AlphaComposite.Clear);
@@ -490,10 +550,10 @@ public class Assets {
         return result;
     }
 
-    /** 在元数据树里找指定名字的直接子节点，找不到返回 null。 */
+    /** 在元数据树里找指定名字的直接子节点，找不到返回 null */
     private static IIOMetadataNode child(IIOMetadataNode parent, String name) {
         NodeList children = parent.getChildNodes();
-        for (int index = 0; index < children.getLength(); index++) {
+        for (int index = 0; index < children.getLength(); index = index + 1) {
             Node node = children.item(index);
             if (node.getNodeName().equals(name)) {
                 return (IIOMetadataNode) node;
@@ -502,7 +562,7 @@ public class Assets {
         return null;
     }
 
-    /** 读取元数据节点里的整数属性，缺失时返回默认值。 */
+    /** 读取元数据节点里的整数属性，缺失时返回默认值 */
     private static int intAttribute(IIOMetadataNode node, String name, int fallback) {
         if (node == null) {
             return fallback;
@@ -515,21 +575,21 @@ public class Assets {
     }
 
     /**
-     * 把贴着图片边缘、颜色恰好为 rgb 的那一片像素改成透明。
+     * 把贴着图片边缘、颜色恰好为 rgb 的那一片像素改成透明
      *
      * 从四条边上的同色像素出发向内扩散，只擦掉和边缘连成一片的底色，
-     * 图案内部偶尔用到的同一种颜色不会被误擦。
+     * 图案内部偶尔用到的同一种颜色不会被误擦
      */
     private static void clearEdgeColor(BufferedImage image, int rgb) {
         int width = image.getWidth();
         int height = image.getHeight();
         boolean[] visited = new boolean[width * height];
         ArrayDeque<int[]> queue = new ArrayDeque<int[]>();
-        for (int column = 0; column < width; column++) {
+        for (int column = 0; column < width; column = column + 1) {
             queue.add(new int[] {column, 0});
             queue.add(new int[] {column, height - 1});
         }
-        for (int row = 0; row < height; row++) {
+        for (int row = 0; row < height; row = row + 1) {
             queue.add(new int[] {0, row});
             queue.add(new int[] {width - 1, row});
         }
@@ -557,7 +617,7 @@ public class Assets {
         }
     }
 
-    /** 取得单张界面素材；不存在时明确报错。 */
+    /** 取得单张界面素材；不存在时明确报错 */
     public BufferedImage image(String name) {
         BufferedImage image = images.get(name);
         if (image == null) {
@@ -566,26 +626,26 @@ public class Assets {
         return image;
     }
 
-    /** 取得动画的指定帧，索引循环回到第一帧。 */
+    /** 取得动画的指定帧，索引循环回到第一帧 */
     public BufferedImage frame(String name, int index) {
         List<BufferedImage> list = animationFrames(name);
         return list.get(wrap(index, list.size()));
     }
 
-    /** 返回动画长度，供实体控制播放速度。 */
+    /** 返回动画长度，供实体控制播放速度 */
     public int count(String name) {
         return animationFrames(name).size();
     }
 
-    /** 判断某个动画是否存在。 */
+    /** 判断某个动画是否存在 */
     public boolean hasAnimation(String name) {
         return frames.containsKey(name);
     }
 
     /**
-     * 取得动画某一帧，并按需要缩放。
+     * 取得动画某一帧，并按需要缩放
      *
-     * 参数：name 是动画名；index 是第几帧（超出会循环）；scale 是缩放倍数。
+     * 参数：name 是动画名；index 是第几帧（超出会循环）；scale 是缩放倍数
      */
     public BufferedImage sprite(String name, int index, double scale) {
         List<BufferedImage> animation = animationFrames(name);
@@ -610,14 +670,14 @@ public class Assets {
     }
 
     /**
-     * 算出某帧图上"真正看得见"的那块区域。
+     * 算出某帧图上"真正看得见"的那块区域
      *
      * 动图每帧周围都留了大片透明边距，如果直接用整张图做碰撞，
      * 僵尸会隔着一段空气就"咬到"植物。这里逐像素找出不透明的范围，
-     * 让碰撞盒刚好等于视觉上的身体。
+     * 让碰撞盒刚好等于视觉上的身体
      *
-     * 参数：name 是动画名；index 是第几帧。
-     * 返回：四个整数组成的数组，依次是左、上、右、下边界（右下是开区间），未缩放。
+     * 参数：name 是动画名；index 是第几帧
+     * 返回：四个整数组成的数组，依次是左、上、右、下边界（右下是开区间），未缩放
      */
     public int[] visibleBounds(String name, int index) {
         List<BufferedImage> animation = animationFrames(name);
@@ -636,8 +696,8 @@ public class Assets {
         int right = 0;
         int bottom = 0;
 
-        for (int row = 0; row < height; row++) {
-            for (int column = 0; column < width; column++) {
+        for (int row = 0; row < height; row = row + 1) {
+            for (int column = 0; column < width; column = column + 1) {
                 int alpha = (image.getRGB(column, row) >>> 24) & 0xFF;
                 if (alpha == 0) {
                     continue;
@@ -657,7 +717,7 @@ public class Assets {
             }
         }
 
-        // 整张图都是透明的（比如动画里的空白帧），就退回整块区域，免得算出负数宽高。
+        // 整张图都是透明的（比如动画里的空白帧），就退回整块区域，免得算出负数宽高
         if (right <= left || bottom <= top) {
             left = 0;
             top = 0;
@@ -671,30 +731,30 @@ public class Assets {
     }
 
     /**
-     * 算出整段动画"看得见的部分"的总范围，即所有帧可见区域的并集。
+     * 算出整段动画"看得见的部分"的总范围，即所有帧可见区域的并集
      *
      * 动图每一帧的轮廓都在变（僵尸走路时手臂前后摆），如果碰撞盒逐帧跟着变，
-     * 僵尸会在"碰到植物"和"没碰到"之间来回切换，啃食动画不停从头播放，看起来就在颤抖。
-     * 用整段动画的总范围做碰撞盒，大小固定不变，就不会出现这种抖动。
+     * 僵尸会在"碰到植物"和"没碰到"之间来回切换，啃食动画不停从头播放，看起来就在颤抖
+     * 用整段动画的总范围做碰撞盒，大小固定不变，就不会出现这种抖动
      *
-     * 参数：name 是动画名。
-     * 返回：四个整数组成的数组，依次是左、上、右、下边界（右下是开区间），未缩放。
+     * 参数：name 是动画名
+     * 返回：四个整数组成的数组，依次是左、上、右、下边界（右下是开区间），未缩放
      */
     public int[] animationBounds(String name) {
         int[] cached = animationBoundsCache.get(name);
         if (cached != null) {
             return cached;
         }
-        // 先以第 0 帧的范围作为起点。取出来放进单独的变量里，不直接改缓存里的数组。
+        // 先以第 0 帧的范围作为起点。取出来放进单独的变量里，不直接改缓存里的数组
         int[] firstFrame = visibleBounds(name, 0);
         int left = firstFrame[0];
         int top = firstFrame[1];
         int right = firstFrame[2];
         int bottom = firstFrame[3];
 
-        // 再逐帧把范围往外扩：左、上取最小，右、下取最大，就能包住所有帧。
+        // 再逐帧把范围往外扩：左、上取最小，右、下取最大，就能包住所有帧
         int frameCount = count(name);
-        for (int index = 1; index < frameCount; index++) {
+        for (int index = 1; index < frameCount; index = index + 1) {
             int[] visible = visibleBounds(name, index);
             left = Math.min(left, visible[0]);
             top = Math.min(top, visible[1]);
@@ -707,12 +767,12 @@ public class Assets {
         return result;
     }
 
-    /** 返回某个关卡的 JSON 文件位置。 */
+    /** 返回某个关卡的 JSON 文件位置 */
     public Path levelPath(int number) {
         return root.resolve("levels/level_" + number + ".json");
     }
 
-    /** 取出动画的帧列表，不存在时明确报错。 */
+    /** 取出动画的帧列表，不存在时明确报错 */
     private List<BufferedImage> animationFrames(String name) {
         List<BufferedImage> list = frames.get(name);
         if (list == null || list.isEmpty()) {
@@ -721,11 +781,11 @@ public class Assets {
         return list;
     }
 
-    /** 把任意帧号折回到 0 到 size-1 之间。 */
+    /** 把任意帧号折回到 0 到 size-1 之间 */
     private static int wrap(int index, int size) {
         int result = index % size;
         if (result < 0) {
-            result += size;
+            result = result + size;
         }
         return result;
     }

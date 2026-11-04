@@ -5,34 +5,34 @@ import pvz.world.Assets;
 import pvz.world.Layout;
 
 /**
- * 植物行为的总入口。
+ * 植物行为的总入口
  *
- * 这个类只负责遍历植物、检查植物是否还活着，并把植物交给对应的行为家族。
- * 具体的产阳光、射击、爆炸和近战规则分别放在独立的处理类中。
+ * 这个类只负责遍历植物、检查植物是否还活着，并把植物交给对应的行为家族
+ * 具体的产阳光、射击、爆炸和近战规则分别放在独立的处理类中
  */
 public class PlantActions {
-    /** 当前游戏的数据。 */
+    /** 当前游戏的数据 */
     private final GameState state;
 
-    /** 阳光植物的行为处理器。 */
+    /** 阳光植物的行为处理器 */
     private final SunProducerActions sunProducerActions;
 
-    /** 射手植物的行为处理器。 */
+    /** 射手植物的行为处理器 */
     private final ShooterActions shooterActions;
 
-    /** 坚果植物的行为处理器。 */
+    /** 坚果植物的行为处理器 */
     private final WallNutActions wallNutActions;
 
-    /** 一次性植物的行为处理器。 */
+    /** 一次性植物的行为处理器 */
     private final InstantPlantActions instantPlantActions;
 
-    /** 近战和保龄球植物的行为处理器。 */
+    /** 近战和保龄球植物的行为处理器 */
     private final CloseAttackActions closeAttackActions;
 
     /**
-     * 创建植物行为总入口。
+     * 创建植物行为总入口
      *
-     * 参数：assets 提供素材；gameState 是当前游戏的数据。
+     * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
     public PlantActions(Assets assets, GameState gameState) {
         state = gameState;
@@ -44,7 +44,7 @@ public class PlantActions {
     }
 
     /**
-     * 遍历所有植物，并把每株植物交给正确的行为处理器。
+     * 遍历所有植物，并把每株植物交给正确的行为处理器
      */
     public void updateAll() {
         for (Plant plant : state.plants) {
@@ -63,11 +63,13 @@ public class PlantActions {
     }
 
     /**
-     * 按植物固定资料里的行为类别分发植物。
+     * 按植物固定资料里的行为类别分发植物
      *
-     * 参数：plant 是要更新的植物。
+     * 参数：plant 是要更新的植物
      */
     private void dispatchPlant(Plant plant) {
+        // TODO【10-植物行为】：新品种先选择已有类别，在对应处理器中实现索敌、间隔和效果
+        // 只有现有类别都不适合时才扩展 PlantActionType 并在这里接入，避免每种植物都重复写更新循环
         PlantDefinition definition = PlantCatalog.definitionOf(plant.name);
         if (definition.actionType == PlantActionType.SUN_PRODUCER) {
             sunProducerActions.update(plant);
@@ -91,10 +93,10 @@ public class PlantActions {
     }
 
     /**
-     * 从场上移除一株植物，并释放它占用的格子。
+     * 从场上移除一株植物，并释放它占用的格子
      *
-     * 参数：plant 是要移除的植物。
-     * 铲子和植物死亡都使用这条入口，避免两边各写一份清理逻辑。
+     * 参数：plant 是要移除的植物
+     * 铲子和植物死亡都使用这条入口，避免两边各写一份清理逻辑
      */
     public void removePlant(Plant plant) {
         plant.alive = false;

@@ -37,6 +37,7 @@ import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -49,151 +50,165 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import pvz.game.Game;
+import pvz.level.LevelLoader;
+import pvz.level.LevelScreenshot;
 import pvz.plant.PlantCatalog;
 import pvz.plant.PlantDefinition;
 import pvz.world.Assets;
 import pvz.world.Layout;
 
 /**
- * 关卡编辑器的主窗口。
+ * 关卡编辑器的主窗口
  *
- * 窗口分成三块：左边是可以挑的僵尸，中间是出怪网格，右边是关卡参数。
+ * 窗口分成三块：左边是可以挑的僵尸，中间是出怪网格，右边是关卡参数
  * 这个类负责把三块拼起来，处理读盘存盘，并且居中协调一次拖动——
- * 因为拖动常常从一块面板开始、在另一块结束，只有窗口同时认识两边。
+ * 因为拖动常常从一块面板开始、在另一块结束，只有窗口同时认识两边
  */
 public class LevelEditor extends JFrame implements EditorDragController {
-    /** 拖动时跟着鼠标走的那个僵尸画多大。 */
+    /** 编号选择框与保存范围共用上限，避免一处扩展后另一处仍按旧范围检查 */
+    private static final int MAX_LEVEL_NUMBER = 99;
+
+    /** 拖动时跟着鼠标走的那个僵尸画多大 */
     private static final int DRAG_ICON_HEIGHT = 56;
 
-    /** 拖动时跟着鼠标走的僵尸画得稍微透一点，免得挡住底下的格子。 */
+    /** 拖动时跟着鼠标走的僵尸画得稍微透一点，免得挡住底下的格子 */
     private static final float DRAG_ICON_ALPHA = 0.8f;
 
-    /** 界面文字的字号，和 Windows 自带程序差不多大。 */
+    /** 界面文字的字号，和 Windows 自带程序差不多大 */
     private static final int INTERFACE_FONT_SIZE = 12;
 
     /**
-     * 时钟显示的时区，固定用北京时间。
+     * 时钟显示的时区，固定用北京时间
      *
      * 这里不跟系统时区走：编辑器上的时间是用来对表、记开工时间的，
-     * 换到别的机器上也得是同一个时间，否则对不上。
+     * 换到别的机器上也得是同一个时间，否则对不上
      */
     private static final ZoneId CLOCK_ZONE = ZoneId.of("Asia/Shanghai");
 
-    /** 时钟的格式：年月日加星期，再跟时分秒。 */
+    /** 时钟的格式：年月日加星期，再跟时分秒 */
     private static final DateTimeFormatter CLOCK_FORMAT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd EEE HH:mm:ss", Locale.CHINA);
 
-    /** 时钟多久刷新一次，单位是毫秒。一秒一次，秒数就不会跳格。 */
+    /** 时钟多久刷新一次，单位是毫秒。一秒一次，秒数就不会跳格 */
     private static final int CLOCK_REFRESH_INTERVAL = 1000;
 
-    /** 参数面板右边那一列控件的宽度，要装得下"0 - 白天草坪"这种最长的选项。 */
+    /** 参数面板右边那一列控件的宽度，要装得下"0 - 白天草坪"这种最长的选项 */
     private static final int FIELD_WIDTH = 132;
 
-    /** 参数面板里控件的高度。 */
+    /** 参数面板里控件的高度 */
     private static final int FIELD_HEIGHT = 26;
 
-    /** 提供图片素材，试玩时也要交给游戏。 */
+    /** 截图预览保持四比三，与选关封面相同，避免挤占参数面板 */
+    private static final int SCREENSHOT_WIDTH = 160;
+    private static final int SCREENSHOT_HEIGHT = 120;
+
+    /** 提供图片素材，试玩时也要交给游戏 */
     private final Assets assets;
 
-    /** assets 目录，关卡文件就在它下面的 levels 里。 */
+    /** assets 目录，关卡文件就在它下面的 levels 里 */
     private final Path assetRoot;
 
-    /** 提供僵尸图标。 */
+    /** 提供僵尸图标 */
     private final EditorIcons icons;
 
-    /** 正在编辑的关卡。打开别的关卡时会被整个换掉。 */
+    /** 正在编辑的关卡。打开别的关卡时会被整个换掉 */
     private LevelDesign design = new LevelDesign();
 
-    /** 中间的出怪网格。 */
+    /** 中间的出怪网格 */
     private final EditorGrid grid;
 
-    /** 左边的僵尸列表。 */
+    /** 左边的僵尸列表 */
     private final EditorPalette palette;
 
-    /** 底部状态栏，显示统计和各种提示。 */
+    /** 底部状态栏，显示统计和各种提示 */
     private final JLabel statusLabel = new JLabel(" ");
 
-    /** 底部状态栏右侧的时钟，动态显示当前北京时间。 */
+    /** 底部状态栏右侧的时钟，动态显示当前北京时间 */
     private final JLabel clockLabel = new JLabel(" ");
 
-    /** 要读写第几关。 */
+    /** 截图和说明分别显示，切换关卡时可以一起刷新且不保留旧图 */
+    private final JLabel screenshotPreview = new JLabel("自动生成", JLabel.CENTER);
+    private final JLabel screenshotStatus = new JLabel("未设置截图");
+    private final JButton clearScreenshotButton = new JButton("恢复自动");
+
+    /** 要读写第几关 */
     private final JSpinner levelSpinner;
 
-    /** 一共几波，也就是网格有几列。 */
+    /** 一共几波，也就是网格有几列 */
     private final JSpinner waveCountSpinner;
 
-    /** 开局赠送多少阳光。 */
+    /** 开局赠送多少阳光 */
     private final JSpinner initialSunSpinner;
 
-    /** 天空多久掉一颗阳光，单位是秒。 */
+    /** 天空多久掉一颗阳光，单位是秒 */
     private final JSpinner skySunSpinner;
 
-    /** 第一波等多久才出，单位是秒。 */
+    /** 第一波等多久才出，单位是秒 */
     private final JSpinner firstWaveSpinner;
 
-    /** 两波之间隔多久，单位是秒。 */
+    /** 两波之间隔多久，单位是秒 */
     private final JSpinner waveIntervalSpinner;
 
-    /** 同一格里的僵尸错开多久，单位是毫秒。 */
+    /** 同一格里的僵尸错开多久，单位是毫秒 */
     private final JSpinner spacingSpinner;
 
-    /** 本关要求玩家恰好携带的卡片数量。 */
+    /** 本关要求玩家恰好携带的卡片数量 */
     private final JSpinner cardSlotSpinner;
 
-    /** 用第几张背景图。 */
+    /** 用第几张背景图 */
     private final JComboBox<String> backgroundBox;
 
-    /** 用哪种卡槽模式。 */
+    /** 用哪种卡槽模式 */
     private final JComboBox<String> barBox;
 
-    /** 传送带和保龄球模式的可出卡池。 */
+    /** 传送带和保龄球模式的可出卡池 */
     private final CheckListPanel poolList;
 
-    /** 本关禁用的植物。 */
+    /** 本关禁用的植物 */
     private final CheckListPanel bannedList;
 
-    /** 本关强制携带的植物。 */
+    /** 本关强制携带的植物 */
     private final CheckListPanel requiredList;
 
-    /** 勾上表示当前选中的格子改成随机行出怪。 */
+    /** 勾上表示当前选中的格子改成随机行出怪 */
     private final JCheckBox randomRowBox = new JCheckBox("选中格子随机行出怪");
 
-    /** 勾上后，下次试玩会显示碰撞箱和战斗状态。 */
+    /** 勾上后，下次试玩会显示碰撞箱和战斗状态 */
     private final JCheckBox developerModeBox = new JCheckBox("开发者模式");
 
-    /** 僵尸列表里当前选中的品种；在空格子上 Ctrl + 左键，或往上滚滚轮，就把它放下去。 */
+    /** 僵尸列表里当前选中的品种；在空格子上 Ctrl + 左键，或往上滚滚轮，就把它放下去 */
     private String selectedKind = LevelDesign.ZOMBIE_KINDS[0];
 
     /**
-     * 是否正在把关卡数据写进各个控件。
+     * 是否正在把关卡数据写进各个控件
      *
      * 给控件赋值会触发它们的监听器，若不加这个开关，
-     * 赋值过程会被当成用户在改参数，再反过来去改关卡数据，绕成一个圈。
+     * 赋值过程会被当成用户在改参数，再反过来去改关卡数据，绕成一个圈
      */
     private boolean updatingFields;
 
-    /** 此刻是不是正拖着一只僵尸。 */
+    /** 此刻是不是正拖着一只僵尸 */
     private boolean dragging;
 
-    /** 正在拖的僵尸品种。 */
+    /** 正在拖的僵尸品种 */
     private String dragKind;
 
-    /** 正在拖的僵尸只数。 */
+    /** 正在拖的僵尸只数 */
     private int dragCount;
 
-    /** 拖动的内容来自哪个格子；从僵尸列表拖出来的就是 -1。 */
+    /** 拖动的内容来自哪个格子；从僵尸列表拖出来的就是 -1 */
     private int dragFromRow = -1;
 
     private int dragFromWave = -1;
 
-    /** 鼠标当前位置，换算成了玻璃面板的坐标，用来画跟手的那只僵尸。 */
+    /** 鼠标当前位置，换算成了玻璃面板的坐标，用来画跟手的那只僵尸 */
     private Point dragPoint;
 
     /**
-     * 创建并布置好编辑器窗口。
+     * 创建并布置好编辑器窗口
      *
      * 参数：assets 提供图片素材；root 是 assets 目录；
-     *       levelNumber 是一开始要编辑第几关。
+     *       levelNumber 是一开始要编辑第几关
      */
     public LevelEditor(Assets assets, Path root, int levelNumber) {
         super("植物大战僵尸 - 关卡编辑器 - Windy-Field / Octorange");
@@ -204,11 +219,11 @@ public class LevelEditor extends JFrame implements EditorDragController {
         grid = new EditorGrid(design, icons, this);
         palette = new EditorPalette(icons, this);
 
-        levelSpinner = new JSpinner(new SpinnerNumberModel(levelNumber, 0, 99, 1));
+        levelSpinner = new JSpinner(new SpinnerNumberModel(levelNumber, 0, MAX_LEVEL_NUMBER, 1));
         waveCountSpinner = new JSpinner(new SpinnerNumberModel(design.waveCount(),
             LevelDesign.MIN_WAVE_COUNT, LevelDesign.MAX_WAVE_COUNT, 1));
         initialSunSpinner = new JSpinner(new SpinnerNumberModel(design.initialSun, 0, 9990, 25));
-        // 时间类的参数按秒显示，用户不用心算毫秒。
+        // 时间类的参数按秒显示，用户不用心算毫秒
         skySunSpinner = new JSpinner(new SpinnerNumberModel(
             design.skySunInterval / 1000.0, 0.5, 120.0, 0.5));
         firstWaveSpinner = new JSpinner(new SpinnerNumberModel(
@@ -239,7 +254,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         updateStatus();
         startClock();
 
-        // 编辑器多半是拿来改现成关卡的，开窗时就把这一关读进来，省一次点击。
+        // 编辑器多半是拿来改现成关卡的，开窗时就把这一关读进来，省一次点击
         Path initial = assetRoot.resolve("levels/level_" + levelNumber + ".json");
         if (Files.isRegularFile(initial)) {
             openPath(initial);
@@ -250,35 +265,35 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 列出卡池里可选的植物，顺带标上各自要花多少阳光。
+     * 列出卡池里可选的植物，顺带标上各自要花多少阳光
      *
-     * 返回：每种植物一行的文字。
+     * 返回：每种植物一行的文字
      */
     private static String[] plantChoices() {
         return plantChoices(PlantCatalog.DEFINITIONS.length);
     }
 
     /**
-     * 列出能进选卡界面的植物，给禁用/必选清单用。
+     * 列出能进选卡界面的植物，给禁用/必选清单用
      *
      * 保龄球那两种只在保龄球关里出现，本来就不进选卡界面，
-     * 把它们列进禁用/必选清单没有意义，所以不列。
+     * 把它们列进禁用/必选清单没有意义，所以不列
      *
-     * 返回：每种植物一行的文字。
+     * 返回：每种植物一行的文字
      */
     private static String[] chooserPlantChoices() {
         return plantChoices(PlantCatalog.CHOOSER_COUNT);
     }
 
     /**
-     * 列出前若干种植物，每行带上中文名和阳光数。
+     * 列出前若干种植物，每行带上中文名和阳光数
      *
-     * 参数：count 是要列几种。
-     * 返回：每种植物一行的文字。
+     * 参数：count 是要列几种
+     * 返回：每种植物一行的文字
      */
     private static String[] plantChoices(int count) {
         String[] result = new String[count];
-        for (int index = 0; index < count; index++) {
+        for (int index = 0; index < count; index = index + 1) {
             PlantDefinition definition = PlantCatalog.definitionAt(index);
             result[index] = definition.name + "（" + definition.cost + "）";
         }
@@ -286,9 +301,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拼出顶部那一排按钮。
+     * 拼出顶部那一排按钮
      *
-     * 返回：摆好按钮的面板。
+     * 返回：摆好按钮的面板
      */
     private JPanel buildToolbar() {
         JPanel toolbar = new JPanel();
@@ -301,107 +316,82 @@ public class LevelEditor extends JFrame implements EditorDragController {
         toolbar.add(Box.createHorizontalStrut(10));
         addEditButtons(toolbar);
         toolbar.add(Box.createHorizontalStrut(10));
-        toolbar.add(button("保存并试玩", new ActionListener() {
-            /** 先存盘，再开一个游戏窗口跑这一关。 */
-            public void actionPerformed(ActionEvent event) {
-                playCurrentLevel();
-            }
-        }));
+        toolbar.add(button("保存并试玩", new PlayLevelListener()));
         developerModeBox.setToolTipText("下次试玩显示碰撞箱、血量和战斗状态");
         toolbar.add(developerModeBox);
         return toolbar;
     }
 
     /**
-     * 往工具栏上摆"关卡编号 + 读取 + 保存"这一组。
+     * 往工具栏上摆"关卡编号 + 读取 + 保存"这一组
      *
-     * 参数：toolbar 是要摆按钮的工具栏。
+     * 参数：toolbar 是要摆按钮的工具栏
      */
     private void addLevelNumberButtons(JPanel toolbar) {
         toolbar.add(new JLabel("关卡编号"));
         levelSpinner.setPreferredSize(new Dimension(58, 26));
         toolbar.add(levelSpinner);
 
-        JButton loadButton = button("读取关卡", new ActionListener() {
-            /** 把关卡编号对应的文件读进来。 */
-            public void actionPerformed(ActionEvent event) {
-                openLevelByNumber();
-            }
-        });
+        JButton loadButton = button("读取关卡", new LoadLevelListener());
         toolbar.add(loadButton);
 
-        JButton saveButton = button("保存关卡", new ActionListener() {
-            /** 写回关卡编号对应的文件。 */
-            public void actionPerformed(ActionEvent event) {
-                saveLevelByNumber();
-            }
-        });
+        JButton saveButton = button("保存关卡", new SaveLevelListener());
         toolbar.add(saveButton);
 
         // 监听关卡编号变化，超出现有关卡范围就禁用保存按钮
-        levelSpinner.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent event) {
-                int number = levelNumber();
-                boolean canSave = canEditLevel(number);
-                saveButton.setEnabled(canSave);
-                if (!canSave) {
-                    statusLabel.setText("关卡 " + number + " 超出现有范围，只能读取和另存为，不能直接保存");
-                } else {
-                    updateStatus();
-                }
-            }
-        });
+        levelSpinner.addChangeListener(new LevelNumberListener(saveButton));
 
         // 初始状态也要检查一次
         saveButton.setEnabled(canEditLevel(levelNumber()));
     }
 
+    /** 关卡编号变化时更新保存权限，持有按钮引用避免重复查找控件 */
+    private class LevelNumberListener implements ChangeListener {
+        private final JButton saveButton;
+
+        /** 参数 saveButton 是需要更新的按钮，监听器只管理它的启用状态 */
+        LevelNumberListener(JButton saveButton) {
+            this.saveButton = saveButton;
+        }
+
+        /** 参数 event 是编号变化通知，按当前文件范围检查是否能直接保存 */
+        public void stateChanged(ChangeEvent event) {
+            int number = levelNumber();
+            boolean canSave = canEditLevel(number);
+            saveButton.setEnabled(canSave);
+            if (!canSave) {
+                statusLabel.setText("关卡 " + number + " 超出现有范围，只能读取和另存为，不能直接保存");
+            } else {
+                updateStatus();
+            }
+        }
+    }
+
     /**
-     * 往工具栏上摆"自己挑文件打开 / 另存为"这一组。
+     * 往工具栏上摆"自己挑文件打开 / 另存为"这一组
      *
-     * 参数：toolbar 是要摆按钮的工具栏。
+     * 参数：toolbar 是要摆按钮的工具栏
      */
     private void addFileButtons(JPanel toolbar) {
-        toolbar.add(button("打开文件…", new ActionListener() {
-            /** 自己挑一个关卡文件打开。 */
-            public void actionPerformed(ActionEvent event) {
-                openFromChooser();
-            }
-        }));
-        toolbar.add(button("另存为…", new ActionListener() {
-            /** 自己挑一个位置存盘。 */
-            public void actionPerformed(ActionEvent event) {
-                saveWithChooser();
-            }
-        }));
+        toolbar.add(button("打开文件…", new OpenFileListener()));
+        toolbar.add(button("另存为…", new SaveFileListener()));
     }
 
     /**
-     * 往工具栏上摆"新建 / 清空"这一组。
+     * 往工具栏上摆"新建 / 清空"这一组
      *
-     * 参数：toolbar 是要摆按钮的工具栏。
+     * 参数：toolbar 是要摆按钮的工具栏
      */
     private void addEditButtons(JPanel toolbar) {
-        toolbar.add(button("新建空关卡", new ActionListener() {
-            /** 把参数和网格都恢复成默认值，从头开始编。 */
-            public void actionPerformed(ActionEvent event) {
-                resetDesign();
-            }
-        }));
-        toolbar.add(button("清空网格", new ActionListener() {
-            /** 只清掉网格里的僵尸，参数保留。 */
-            public void actionPerformed(ActionEvent event) {
-                design.clearAllCells();
-                designChanged();
-            }
-        }));
+        toolbar.add(button("新建空关卡", new NewLevelListener()));
+        toolbar.add(button("清空网格", new ClearGridListener()));
     }
 
     /**
-     * 造一个按钮并挂上点击响应。
+     * 造一个按钮并挂上点击响应
      *
-     * 参数：text 是按钮上的字；listener 是点击后要做的事。
-     * 返回：做好的按钮。
+     * 参数：text 是按钮上的字；listener 是点击后要做的事
+     * 返回：做好的按钮
      */
     private static JButton button(String text, ActionListener listener) {
         JButton result = new JButton(text);
@@ -410,9 +400,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拼出左边那一栏：上面是僵尸列表，下面是操作提示。
+     * 拼出左边那一栏：上面是僵尸列表，下面是操作提示
      *
-     * 返回：摆好的面板。
+     * 返回：摆好的面板
      */
     private JPanel buildPaletteSide() {
         JPanel side = new JPanel(new BorderLayout());
@@ -426,7 +416,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
             + "R：切换随机行</body></html>");
         hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 11f));
 
-        // 复选框和提示文字一起放在下面，上面留给僵尸列表。
+        // 复选框和提示文字一起放在下面，上面留给僵尸列表
         JPanel bottom = new JPanel(new BorderLayout());
         randomRowBox.setFont(randomRowBox.getFont().deriveFont(Font.PLAIN, 11f));
         randomRowBox.setBorder(BorderFactory.createEmptyBorder(4, 6, 0, 6));
@@ -437,9 +427,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 把出怪网格装进可滚动的区域，波数多了也能横着看。
+     * 把出怪网格装进可滚动的区域，波数多了也能横着看
      *
-     * 返回：装好网格的滚动面板。
+     * 返回：装好网格的滚动面板
      */
     private JScrollPane buildGridArea() {
         JScrollPane scroll = new JScrollPane(grid);
@@ -450,11 +440,11 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拼出右边的参数面板。
+     * 拼出右边的参数面板
      *
-     * 返回：摆好各项参数的面板。
+     * 返回：摆好各项参数的面板
      */
-    private JPanel buildSettingsSide() {
+    private JScrollPane buildSettingsSide() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder("关卡参数"));
         GridBagConstraints constraints = new GridBagConstraints();
@@ -472,21 +462,89 @@ public class LevelEditor extends JFrame implements EditorDragController {
         gridRow = addField(panel, constraints, gridRow, "卡槽数量（1~8）", cardSlotSpinner);
         gridRow = addField(panel, constraints, gridRow, "背景", backgroundBox);
         gridRow = addField(panel, constraints, gridRow, "卡槽模式", barBox);
+        constraints.gridx = 0;
+        constraints.gridy = gridRow;
+        constraints.gridwidth = 2;
+        JPanel screenshotPanel = new JPanel(new BorderLayout(0, 4));
+        screenshotPanel.setBorder(BorderFactory.createTitledBorder("关卡截图"));
+        screenshotPreview.setPreferredSize(new Dimension(SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT));
+        screenshotPanel.add(buildScreenshotButtons(), BorderLayout.NORTH);
+        screenshotPanel.add(screenshotPreview, BorderLayout.CENTER);
+        screenshotPanel.add(screenshotStatus, BorderLayout.SOUTH);
+        panel.add(screenshotPanel, constraints);
+        gridRow = gridRow + 1;
 
         gridRow = addTallField(panel, constraints, gridRow, "传送带 / 保龄球卡池", poolList);
         gridRow = addTallField(panel, constraints, gridRow, "禁用植物（正常选卡）", bannedList);
         gridRow = addTallField(panel, constraints, gridRow, "必选植物（正常选卡）", requiredList);
-        return panel;
+        // 新增截图后参数区域较长，独立滚动避免把整个窗口撑出屏幕
+        JScrollPane scroll = new JScrollPane(panel);
+        scroll.setPreferredSize(new Dimension(360, 700));
+        scroll.getVerticalScrollBar().setUnitIncrement(24);
+        return scroll;
+    }
+
+    /** 返回截图选择和恢复按钮，使用普通按钮让键盘与鼠标都能操作 */
+    private JPanel buildScreenshotButtons() {
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+        buttons.add(button("选择截图", new ChooseScreenshotListener()));
+        clearScreenshotButton.addActionListener(new ClearScreenshotListener());
+        buttons.add(clearScreenshotButton);
+        return buttons;
+    }
+
+    /** 从文件选择器导入截图，先验证图片再改关卡配置，失败时保留之前的封面 */
+    private void chooseScreenshot() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("选择关卡截图");
+        chooser.setFileFilter(new FileNameExtensionFilter("图片 (*.png, *.jpg, *.gif)",
+            "png", "jpg", "jpeg", "gif"));
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        try {
+            java.io.File selectedFile = chooser.getSelectedFile();
+            Path source = selectedFile.toPath();
+            design.screenshot = LevelScreenshot.importImage(assetRoot, source);
+            updateScreenshotPreview();
+            statusLabel.setText("已设置关卡截图，保存关卡后生效");
+        } catch (IOException | IllegalArgumentException exception) {
+            JOptionPane.showMessageDialog(this, "截图设置失败：\n" + exception.getMessage(),
+                "截图设置失败", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** 读取当前关卡截图并更新预览，文件缺失时明确提示，避免显示上一关的截图 */
+    private void updateScreenshotPreview() {
+        screenshotPreview.setIcon(null);
+        screenshotPreview.setText("自动生成");
+        screenshotStatus.setText("未设置截图");
+        screenshotStatus.setToolTipText(null);
+        clearScreenshotButton.setEnabled(!design.screenshot.isEmpty());
+        if (design.screenshot.isEmpty()) {
+            return;
+        }
+        screenshotStatus.setToolTipText(design.screenshot);
+        try {
+            BufferedImage original = LevelScreenshot.read(assetRoot, design.screenshot);
+            BufferedImage fitted = LevelScreenshot.fit(original, SCREENSHOT_WIDTH, SCREENSHOT_HEIGHT);
+            screenshotPreview.setText("");
+            screenshotPreview.setIcon(new ImageIcon(fitted));
+            screenshotStatus.setText("已设置自定义截图");
+        } catch (IOException | IllegalArgumentException exception) {
+            screenshotStatus.setText("截图缺失，将使用自动封面");
+            screenshotPreview.setText("截图无法读取");
+        }
     }
 
     /**
-     * 在参数面板上加一行"标签 + 清单"。
+     * 在参数面板上加一行"标签 + 清单"
      *
-     * 清单比普通控件高，所以单独一个方法，不和 addField 混在一起。
+     * 清单比普通控件高，所以单独一个方法，不和 addField 混在一起
      *
      * 参数：panel 是参数面板；constraints 是摆放规则，会被改动后复用；
-     *       gridRow 是摆在第几行；label 是左边的说明文字；list 是要摆的清单。
-     * 返回：下一行的行号。
+     *       gridRow 是摆在第几行；label 是左边的说明文字；list 是要摆的清单
+     * 返回：下一行的行号
      */
     private static int addTallField(JPanel panel, GridBagConstraints constraints, int gridRow,
             String label, CheckListPanel list) {
@@ -505,11 +563,11 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 在参数面板上加一行"标签 + 控件"。
+     * 在参数面板上加一行"标签 + 控件"
      *
      * 参数：panel 是参数面板；constraints 是摆放规则，会被改动后复用；
-     *       gridRow 是摆在第几行；label 是左边的说明文字；field 是右边的控件。
-     * 返回：下一行的行号。
+     *       gridRow 是摆在第几行；label 是左边的说明文字；field 是右边的控件
+     * 返回：下一行的行号
      */
     private static int addField(JPanel panel, GridBagConstraints constraints, int gridRow,
             String label, JComponent field) {
@@ -527,11 +585,11 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拼出底部状态栏。
+     * 拼出底部状态栏
      *
-     * 左边是状态文字，右边是当前北京时间，各占一头，中间留空。
+     * 左边是状态文字，右边是当前北京时间，各占一头，中间留空
      *
-     * 返回：摆好状态文字和时钟的面板。
+     * 返回：摆好状态文字和时钟的面板
      */
     private JPanel buildStatusBar() {
         JPanel statusBar = new JPanel(new BorderLayout());
@@ -545,76 +603,44 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 启动状态栏右下角的时钟。
+     * 启动状态栏右下角的时钟
      *
      * 先立刻显示一次时间，再挂上定时器每秒刷新，这样窗口一打开就有时间，
-     * 不用等满一秒。
+     * 不用等满一秒
      */
     private void startClock() {
         updateClock();
-        Timer clockTimer = new Timer(CLOCK_REFRESH_INTERVAL, new ActionListener() {
-            /** 每秒把状态栏上的时间换成最新的。 */
-            public void actionPerformed(ActionEvent event) {
-                updateClock();
-            }
-        });
+        Timer clockTimer = new Timer(CLOCK_REFRESH_INTERVAL, new ClockListener());
         clockTimer.start();
     }
 
-    /** 把状态栏上的时间换成此刻的北京时间。 */
+    /** 把状态栏上的时间换成此刻的北京时间 */
     private void updateClock() {
         ZonedDateTime now = ZonedDateTime.now(CLOCK_ZONE);
         clockLabel.setText(CLOCK_FORMAT.format(now));
     }
 
     /**
-     * 铺一层透明的玻璃面板，专门用来画拖动时跟着鼠标走的那只僵尸。
+     * 铺一层透明的玻璃面板，专门用来画拖动时跟着鼠标走的那只僵尸
      *
-     * 这只僵尸要能盖在所有面板上面，只有铺在最顶层才画得出来。
+     * 这只僵尸要能盖在所有面板上面，只有铺在最顶层才画得出来
      * 但玻璃面板默认会把鼠标事件全挡下，所以让它的 contains 一律回答"点不在我身上"，
-     * 事件就会照常落到底下的网格和列表上。
+     * 事件就会照常落到底下的网格和列表上
      */
     private void installGlassPane() {
-        JComponent glass = new JComponent() {
-            /** 一律回答"点不在我身上"，好让鼠标事件穿过去。 */
-            public boolean contains(int x, int y) {
-                return false;
-            }
-
-            /** 画出跟着鼠标走的那只僵尸。 */
-            protected void paintComponent(Graphics graphics) {
-                if (!dragging || dragPoint == null || dragKind == null) {
-                    return;
-                }
-                Graphics2D painter = (Graphics2D) graphics.create();
-                painter.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON);
-                painter.setComposite(
-                    AlphaComposite.getInstance(AlphaComposite.SRC_OVER, DRAG_ICON_ALPHA));
-
-                BufferedImage image = icons.icon(dragKind, DRAG_ICON_HEIGHT);
-                int left = dragPoint.x - image.getWidth() / 2;
-                int top = dragPoint.y - image.getHeight() / 2;
-                painter.drawImage(image, left, top, null);
-
-                if (dragCount > 1) {
-                    drawDragCount(painter, image, left, top);
-                }
-                painter.dispose();
-            }
-        };
+        JComponent glass = new DragGlassPane();
         glass.setOpaque(false);
         setGlassPane(glass);
         glass.setVisible(true);
     }
 
     /**
-     * 在跟手的僵尸旁边标出正在搬几只。
+     * 在跟手的僵尸旁边标出正在搬几只
      *
-     * 参数：painter 是画笔；image 是僵尸图标；left、top 是图标的左上角。
+     * 参数：painter 是画笔；image 是僵尸图标；left、top 是图标的左上角
      */
     private void drawDragCount(Graphics2D painter, BufferedImage image, int left, int top) {
-        // 数字要看得清楚，所以把前面调低的透明度改回不透明。
+        // 数字要看得清楚，所以把前面调低的透明度改回不透明
         painter.setComposite(AlphaComposite.SrcOver);
         int badgeLeft = left + image.getWidth() - 8;
         int badgeTop = top + image.getHeight() - 16;
@@ -625,14 +651,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
         painter.drawString("× " + dragCount, badgeLeft + 5, badgeTop + 13);
     }
 
-    /** 给所有参数控件挂上监听：用户一改，就把新值收进关卡数据。 */
+    /** 给所有参数控件挂上监听：用户一改，就把新值收进关卡数据 */
     private void hookListeners() {
-        ChangeListener onChange = new ChangeListener() {
-            /** 数字框的值变了。 */
-            public void stateChanged(ChangeEvent event) {
-                readFields();
-            }
-        };
+        ChangeListener onChange = new ParameterChangeListener();
         initialSunSpinner.addChangeListener(onChange);
         skySunSpinner.addChangeListener(onChange);
         firstWaveSpinner.addChangeListener(onChange);
@@ -641,39 +662,19 @@ public class LevelEditor extends JFrame implements EditorDragController {
         waveCountSpinner.addChangeListener(onChange);
         cardSlotSpinner.addChangeListener(onChange);
 
-        ActionListener onSelect = new ActionListener() {
-            /** 下拉框选了别的项。 */
-            public void actionPerformed(ActionEvent event) {
-                readFields();
-            }
-        };
+        ActionListener onSelect = new ParameterSelectListener();
         backgroundBox.addActionListener(onSelect);
         barBox.addActionListener(onSelect);
 
-        poolList.setOnChange(this::readFields);
-        bannedList.setOnChange(this::readFields);
-        requiredList.setOnChange(this::readFields);
+        ReadFieldsTask readFieldsTask = new ReadFieldsTask();
+        poolList.setOnChange(readFieldsTask);
+        bannedList.setOnChange(readFieldsTask);
+        requiredList.setOnChange(readFieldsTask);
 
-        randomRowBox.addActionListener(new ActionListener() {
-            /** 勾选框状态变了：改当前选中格子的随机行标记。 */
-            public void actionPerformed(ActionEvent event) {
-                if (updatingFields) {
-                    return;
-                }
-                int row = grid.selectedRow();
-                int wave = grid.selectedWave();
-                if (row < 0) {
-                    return;
-                }
-                design.setRandomRow(row, wave, randomRowBox.isSelected());
-                designChanged();
-                // 复选框会抢走焦点，交还给网格，否则 R 键等快捷键就失效了。
-                grid.requestFocusInWindow();
-            }
-        });
+        randomRowBox.addActionListener(new RandomRowListener());
     }
 
-    /** 把各个控件里的值收进关卡数据，然后刷新画面。 */
+    /** 把各个控件里的值收进关卡数据，然后刷新画面 */
     private void readFields() {
         if (updatingFields) {
             return;
@@ -689,7 +690,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         design.backgroundIndex = backgroundBox.getSelectedIndex();
         design.barType = barBox.getSelectedIndex();
         design.setWaveCount(((Number) waveCountSpinner.getValue()).intValue());
-        // 数字框本身把取值限制在 Layout.MIN_CARD_SLOTS ~ MAX_CARD_SLOTS 之间，这里不用再夹。
+        // 数字框本身把取值限制在 Layout.MIN_CARD_SLOTS ~ MAX_CARD_SLOTS 之间，这里不用再夹
         design.maxCards = ((Number) cardSlotSpinner.getValue()).intValue();
 
         design.cardPool.clear();
@@ -705,11 +706,19 @@ public class LevelEditor extends JFrame implements EditorDragController {
         updateStatus();
     }
 
+    /** 三份植物清单复用同一具名回调，勾选后统一读取参数以免漏同步 */
+    private class ReadFieldsTask implements Runnable {
+        /** 将勾选结果写回关卡数据，复用原参数读取入口 */
+        public void run() {
+            readFields();
+        }
+    }
+
     /**
-     * 按卡槽模式决定三份清单哪个能改。
+     * 按卡槽模式决定三份清单哪个能改
      *
-     * 卡池只有传送带和保龄球模式才看，禁用/必选清单反过来，只有正常选卡模式才看。
-     * 不该看的就变灰，免得用户以为选了有用。
+     * 卡池只有传送带和保龄球模式才看，禁用/必选清单反过来，只有正常选卡模式才看
+     * 不该看的就变灰，免得用户以为选了有用
      */
     private void updateListAvailability() {
         boolean normal = design.barType == Layout.BAR_NORMAL;
@@ -719,9 +728,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 让随机行复选框跟上当前选中的格子。
+     * 让随机行复选框跟上当前选中的格子
      *
-     * 没选中格子、或者格子是空的，复选框就置灰——空格子谈不上随机行。
+     * 没选中格子、或者格子是空的，复选框就置灰——空格子谈不上随机行
      */
     private void updateRandomRowBox() {
         int row = grid.selectedRow();
@@ -739,19 +748,19 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 读一个按秒显示的数字框，换算成毫秒。
+     * 读一个按秒显示的数字框，换算成毫秒
      *
-     * 参数：spinner 是那个数字框。
-     * 返回：对应的毫秒数。
+     * 参数：spinner 是那个数字框
+     * 返回：对应的毫秒数
      */
     private static long secondsToMilliseconds(JSpinner spinner) {
         double seconds = ((Number) spinner.getValue()).doubleValue();
         return Math.round(seconds * 1000);
     }
 
-    /** 把关卡数据写进各个控件，打开别的关卡之后靠它把界面刷新成新关卡的样子。 */
+    /** 把关卡数据写进各个控件，打开别的关卡之后靠它把界面刷新成新关卡的样子 */
     private void writeFields() {
-        // 赋值会触发控件的监听器，先立起这个牌子，免得又被当成用户在改参数。
+        // 赋值会触发控件的监听器，先立起这个牌子，免得又被当成用户在改参数
         updatingFields = true;
 
         initialSunSpinner.setValue(Integer.valueOf(design.initialSun));
@@ -769,16 +778,17 @@ public class LevelEditor extends JFrame implements EditorDragController {
         bannedList.setChecked(design.bannedPlants);
         requiredList.setChecked(design.requiredPlants);
         updateListAvailability();
+        updateScreenshotPreview();
 
         updatingFields = false;
         updateRandomRowBox();
     }
 
     /**
-     * 把下标夹回合法范围，免得关卡文件里写了越界的数字导致下拉框报错。
+     * 把下标夹回合法范围，免得关卡文件里写了越界的数字导致下拉框报错
      *
-     * 参数：value 是文件里读到的下标；size 是下拉框一共几项。
-     * 返回：夹好的下标。
+     * 参数：value 是文件里读到的下标；size 是下拉框一共几项
+     * 返回：夹好的下标
      */
     private static int clampIndex(int value, int size) {
         if (value < 0) {
@@ -790,7 +800,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         return value;
     }
 
-    /** 刷新底部状态栏：统计数字加上需要提醒的话。 */
+    /** 刷新底部状态栏：统计数字加上需要提醒的话 */
     private void updateStatus() {
         String text = "共 " + design.totalZombies() + " 只僵尸";
         text = text + " · " + design.waveCount() + " 波";
@@ -807,50 +817,50 @@ public class LevelEditor extends JFrame implements EditorDragController {
         statusLabel.setText(text);
     }
 
-    /** 网格内容被改动了，重画一遍并更新统计。 */
+    /** 网格内容被改动了，重画一遍并更新统计 */
     public void designChanged() {
         grid.refresh();
         updateRandomRowBox();
         updateStatus();
     }
 
-    /** 用户换了选中的格子，把随机行复选框同步成那个格子的状态。 */
+    /** 用户换了选中的格子，把随机行复选框同步成那个格子的状态 */
     public void selectionChanged() {
         updateRandomRowBox();
     }
 
     /**
-     * 查询僵尸列表里选中的品种。
+     * 查询僵尸列表里选中的品种
      *
-     * 返回：僵尸品种名。
+     * 返回：僵尸品种名
      */
     public String selectedKind() {
         return selectedKind;
     }
 
     /**
-     * 记下用户在僵尸列表里选了哪一种。
+     * 记下用户在僵尸列表里选了哪一种
      *
-     * 参数：kind 是僵尸品种名。
+     * 参数：kind 是僵尸品种名
      */
     public void selectKind(String kind) {
         selectedKind = kind;
     }
 
     /**
-     * 查询此刻是不是正在拖动。
+     * 查询此刻是不是正在拖动
      *
-     * 返回：正在拖动就返回真。
+     * 返回：正在拖动就返回真
      */
     public boolean isDragging() {
         return dragging;
     }
 
     /**
-     * 一次拖动开始了：记下拖的是什么、从哪来。
+     * 一次拖动开始了：记下拖的是什么、从哪来
      *
      * 参数：kind 是僵尸品种；count 是只数；fromRow、fromWave 是源格子（来自僵尸列表时是 -1）；
-     *       screenPoint 是鼠标在屏幕上的位置。
+     *       screenPoint 是鼠标在屏幕上的位置
      */
     public void beginDrag(String kind, int count, int fromRow, int fromWave, Point screenPoint) {
         dragging = true;
@@ -863,9 +873,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拖动中鼠标动了：挪动跟手的僵尸，并高亮此刻会落进的格子。
+     * 拖动中鼠标动了：挪动跟手的僵尸，并高亮此刻会落进的格子
      *
-     * 参数：screenPoint 是鼠标在屏幕上的位置。
+     * 参数：screenPoint 是鼠标在屏幕上的位置
      */
     public void updateDrag(Point screenPoint) {
         dragPoint = toGlassPoint(screenPoint);
@@ -880,9 +890,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 拖动结束：落在格子上就放进去，落在网格外面就当成把它扔掉。
+     * 拖动结束：落在格子上就放进去，落在网格外面就当成把它扔掉
      *
-     * 参数：screenPoint 是松手时鼠标在屏幕上的位置。
+     * 参数：screenPoint 是松手时鼠标在屏幕上的位置
      */
     public void finishDrag(Point screenPoint) {
         int[] cell = cellAtScreen(screenPoint);
@@ -896,12 +906,12 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 把拖着的东西放进某个格子。
+     * 把拖着的东西放进某个格子
      *
-     * 从网格里拖来的：目标空着就搬过去，目标有东西就两格对调，这样谁都不会丢。
-     * 从僵尸列表拖来的：同品种就加一只，不同品种就换成新的。
+     * 从网格里拖来的：目标空着就搬过去，目标有东西就两格对调，这样谁都不会丢
+     * 从僵尸列表拖来的：同品种就加一只，不同品种就换成新的
      *
-     * 参数：row 是行号；wave 是波号。
+     * 参数：row 是行号；wave 是波号
      */
     private void dropInto(int row, int wave) {
         if (dragFromRow >= 0) {
@@ -919,7 +929,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         }
     }
 
-    /** 收拾掉这一次拖动留下的所有痕迹。 */
+    /** 收拾掉这一次拖动留下的所有痕迹 */
     private void clearDragState() {
         dragging = false;
         dragKind = null;
@@ -933,26 +943,26 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 把屏幕坐标换算成玻璃面板里的坐标。
+     * 把屏幕坐标换算成玻璃面板里的坐标
      *
-     * 参数：screenPoint 是鼠标在屏幕上的位置。
-     * 返回：玻璃面板里的对应位置。
+     * 参数：screenPoint 是鼠标在屏幕上的位置
+     * 返回：玻璃面板里的对应位置
      */
     private Point toGlassPoint(Point screenPoint) {
-        // convertPointFromScreen 会直接改传进去的那个点，所以先复制一份再交给它。
+        // convertPointFromScreen 会直接改传进去的那个点，所以先复制一份再交给它
         Point local = new Point(screenPoint);
         SwingUtilities.convertPointFromScreen(local, getGlassPane());
         return local;
     }
 
     /**
-     * 看看屏幕上的某个点落在网格的哪个格子里。
+     * 看看屏幕上的某个点落在网格的哪个格子里
      *
-     * 参数：screenPoint 是鼠标在屏幕上的位置。
-     * 返回：两个元素的数组，依次是行号和波号；没落在格子上就返回 null。
+     * 参数：screenPoint 是鼠标在屏幕上的位置
+     * 返回：两个元素的数组，依次是行号和波号；没落在格子上就返回 null
      */
     private int[] cellAtScreen(Point screenPoint) {
-        // 网格还没显示出来时谈不上屏幕坐标，直接当成没落在格子上。
+        // 网格还没显示出来时谈不上屏幕坐标，直接当成没落在格子上
         if (!grid.isShowing()) {
             return null;
         }
@@ -961,16 +971,16 @@ public class LevelEditor extends JFrame implements EditorDragController {
         return grid.cellAt(local);
     }
 
-    /** 丢掉当前内容，换成一个各项都是默认值的空关卡。 */
+    /** 丢掉当前内容，换成一个各项都是默认值的空关卡 */
     private void resetDesign() {
         applyDesign(new LevelDesign());
         statusLabel.setText("已新建空关卡。");
     }
 
     /**
-     * 换一个关卡来编辑，网格和各个控件都跟着换。
+     * 换一个关卡来编辑，网格和各个控件都跟着换
      *
-     * 参数：newDesign 是新的关卡数据。
+     * 参数：newDesign 是新的关卡数据
      */
     private void applyDesign(LevelDesign newDesign) {
         design = newDesign;
@@ -980,59 +990,59 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 读出当前选的关卡编号。
+     * 读出当前选的关卡编号
      *
-     * 返回：关卡编号。
+     * 返回：关卡编号
      */
     private int levelNumber() {
         return ((Number) levelSpinner.getValue()).intValue();
     }
 
-    /** 按关卡编号找到文件并读进来。 */
+    /** 按关卡编号找到文件并读进来 */
     private void openLevelByNumber() {
         openPath(levelPath(levelNumber()));
     }
 
     /**
-     * 拼出某一关的文件位置。
+     * 拼出某一关的文件位置
      *
-     * 参数：number 是关卡编号。
-     * 返回：该关卡文件的路径。
+     * 参数：number 是关卡编号
+     * 返回：该关卡文件的路径
      */
     private Path levelPath(int number) {
-        return assetRoot.resolve("levels/level_" + number + ".json");
+        return assets.levelPath(number);
     }
 
     /**
-     * 判断某一关是否可以直接保存。
+     * 判断某一关是否可以直接保存
      *
-     * 只有当关卡编号在现有关卡范围内（即文件已存在，或者是紧接着最后一关的下一关）时才能直接保存。
-     * 判范围时是去翻 levels 目录，数出来最后一关是第几号，所以关卡数量变了这里也不用改。
+     * 只有当关卡编号在现有关卡范围内（即文件已存在，或者是紧接着最后一关的下一关）时才能直接保存
+     * 判范围时是去翻 levels 目录，数出来最后一关是第几号，所以关卡数量变了这里也不用改
      *
-     * 参数：number 是关卡编号。
-     * 返回：可以直接保存就返回真。
+     * 参数：number 是关卡编号
+     * 返回：可以直接保存就返回真
      */
     private boolean canEditLevel(int number) {
-        // 找出现有关卡的最大编号
+        // 与选关页共用文件扫描规则，关卡编号有空缺时也能找到最后一关
         int maxExisting = -1;
         try {
-            Path levelsDir = assetRoot.resolve("levels");
-            if (Files.isDirectory(levelsDir)) {
-                for (int i = 0; i <= 99; i++) {
-                    if (Files.exists(levelPath(i))) {
-                        maxExisting = i;
-                    }
+            LevelLoader loader = new LevelLoader(assets);
+            List<Integer> numbers = loader.levelNumbers();
+            for (int existing : numbers) {
+                if (existing > MAX_LEVEL_NUMBER) {
+                    break;
                 }
+                maxExisting = existing;
             }
-        } catch (Exception exception) {
-            // 出错就允许保存，不挡住用户
+        } catch (IllegalStateException exception) {
+            // 保留目录暂时不可读时仍能另存工作内容的行为，实际写入失败会由保存流程提示
             return true;
         }
         // 允许编辑现有关卡和紧接着的下一关
         return number <= maxExisting + 1;
     }
 
-    /** 弹出文件对话框，让用户自己挑一个关卡文件打开。 */
+    /** 弹出文件对话框，让用户自己挑一个关卡文件打开 */
     private void openFromChooser() {
         JFileChooser chooser = new JFileChooser(assetRoot.resolve("levels").toFile());
         chooser.setFileFilter(new FileNameExtensionFilter("关卡文件 (*.json)", "json"));
@@ -1043,9 +1053,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 读入指定位置的关卡文件。
+     * 读入指定位置的关卡文件
      *
-     * 参数：path 是关卡文件位置。
+     * 参数：path 是关卡文件位置
      */
     private void openPath(Path path) {
         if (!Files.isRegularFile(path)) {
@@ -1060,22 +1070,22 @@ public class LevelEditor extends JFrame implements EditorDragController {
             JOptionPane.showMessageDialog(this, "读取失败：\n" + exception.getMessage(),
                 "打开失败", JOptionPane.ERROR_MESSAGE);
         } catch (RuntimeException exception) {
-            // 文件能读但内容不对（缺字段、类型不符）时 Gson 抛的是运行时异常，一并接住。
+            // 文件能读但内容不对（缺字段、类型不符）时 Gson 抛的是运行时异常，一并接住
             JOptionPane.showMessageDialog(this, "关卡文件格式不对：\n" + exception.getMessage(),
                 "打开失败", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     /**
-     * 按关卡编号把当前内容写回文件。
+     * 按关卡编号把当前内容写回文件
      *
-     * 返回：真的存下去了就返回真；用户中途反悔或出错就返回假。
+     * 返回：真的存下去了就返回真；用户中途反悔或出错就返回假
      */
     private boolean saveLevelByNumber() {
         return saveTo(levelPath(levelNumber()));
     }
 
-    /** 弹出文件对话框，让用户自己挑一个位置存盘。 */
+    /** 弹出文件对话框，让用户自己挑一个位置存盘 */
     private void saveWithChooser() {
         JFileChooser chooser = new JFileChooser(assetRoot.resolve("levels").toFile());
         chooser.setFileFilter(new FileNameExtensionFilter("关卡文件 (*.json)", "json"));
@@ -1087,12 +1097,12 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 把当前内容写到指定文件，写之前先提醒两件事。
+     * 把当前内容写到指定文件，写之前先提醒两件事
      *
-     * 一是关卡本身有没有毛病，二是会不会覆盖掉已有的文件，两处都要用户点头才继续。
+     * 一是关卡本身有没有毛病，二是会不会覆盖掉已有的文件，两处都要用户点头才继续
      *
-     * 参数：path 是要写到哪里。
-     * 返回：真的存下去了就返回真。
+     * 参数：path 是要写到哪里
+     * 返回：真的存下去了就返回真
      */
     private boolean saveTo(Path path) {
         String warning = design.validate();
@@ -1123,7 +1133,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
         }
     }
 
-    /** 先存盘，再开一个窗口直接跑这一关，方便边改边试。 */
+    /** 先存盘，再开一个窗口直接跑这一关，方便边改边试 */
     private void playCurrentLevel() {
         if (!saveLevelByNumber()) {
             return;
@@ -1131,68 +1141,92 @@ public class LevelEditor extends JFrame implements EditorDragController {
         boolean developerMode = developerModeBox.isSelected();
         final Game game = new Game(assets, levelNumber(), true, developerMode);
         JFrame window = new JFrame("试玩：第 " + (levelNumber() + 1) + " 关");
-        // 试玩窗口关掉只是收起这一局，编辑器还要继续用，所以不能设成退出程序。
+        // 试玩窗口关掉只是收起这一局，编辑器还要继续用，所以不能设成退出程序
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         window.setContentPane(game);
         window.pack();
         window.setResizable(false);
         window.setLocationRelativeTo(this);
 
-        // 光把窗口关掉，这一局还会在背地里接着跑，所以要亲手把它停下来。
-        // 不然试玩几次之后，就有好几局同时占着处理器。
-        window.addWindowListener(new WindowAdapter() {
-            /** 窗口关闭时结束这一局。 */
-            public void windowClosed(WindowEvent event) {
-                game.stop();
-            }
-        });
+        // 光把窗口关掉，这一局还会在背地里接着跑，所以要亲手把它停下来
+        // 不然试玩几次之后，就有好几局同时占着处理器
+        window.addWindowListener(new StopPreviewListener(game));
 
         window.setVisible(true);
 
-        // 直接载入关卡，跳过主菜单那一步。
+        // 直接载入关卡，跳过主菜单那一步
         game.loadLevel();
         game.requestFocusInWindow();
     }
 
     /**
-     * 打开编辑器窗口。
+     * 打开编辑器窗口
      *
-     * 参数：assets 提供图片素材；root 是 assets 目录；levelNumber 是一开始编辑第几关。
+     * 参数：assets 提供图片素材；root 是 assets 目录；levelNumber 是一开始编辑第几关
      */
     public static void open(final Assets assets, final Path root, final int levelNumber) {
-        // Swing 规定：创建窗口必须在事件线程里做，所以包一层 Runnable 交过去。
-        SwingUtilities.invokeLater(new Runnable() {
-            /** 在 Swing 事件线程里创建并显示编辑器窗口。 */
-            public void run() {
-                useSystemLookAndFeel();
-                LevelEditor editor = new LevelEditor(assets, root, levelNumber);
-                editor.setVisible(true);
-            }
-        });
+        // Swing 规定：创建窗口必须在事件线程里做，所以包一层 Runnable 交过去
+        SwingUtilities.invokeLater(new OpenEditorTask(assets, root, levelNumber));
+    }
+
+    /** 试玩窗口关闭时停止它的计时器，避免不可见的游戏继续运行 */
+    private static class StopPreviewListener extends WindowAdapter {
+        private final Game game;
+
+        /** 参数 game 是窗口所属的试玩，仅停止这局而不影响编辑器 */
+        StopPreviewListener(Game game) {
+            this.game = game;
+        }
+
+        /** 参数 event 是关闭通知，在窗口销毁后释放持续更新的任务 */
+        public void windowClosed(WindowEvent event) {
+            game.stop();
+        }
+    }
+
+    /** 保存编辑器启动参数，使用具名任务保证窗口在事件线程创建 */
+    private static class OpenEditorTask implements Runnable {
+        private final Assets assets;
+        private final Path root;
+        private final int level;
+
+        /** 参数 assets、root 和 level 是编辑器初始化资料，复用已加载素材 */
+        OpenEditorTask(Assets assets, Path root, int level) {
+            this.assets = assets;
+            this.root = root;
+            this.level = level;
+        }
+
+        /** 先设置系统外观再创建控件，避免窗口打开后样式不一致 */
+        public void run() {
+            useSystemLookAndFeel();
+            LevelEditor editor = new LevelEditor(assets, root, level);
+            editor.setVisible(true);
+        }
     }
 
     /**
-     * 让按钮、输入框这些控件用上当前系统的外观。
+     * 让按钮、输入框这些控件用上当前系统的外观
      *
-     * Swing 默认用的是自带的那一套跨平台外观，摆在 Windows 上一眼就看得出不是本地程序。
-     * 换成系统外观之后，控件和文件对话框都会跟系统保持一致。
-     * 必须赶在创建任何控件之前换，换晚了已经造好的控件不会跟着变。
+     * Swing 默认用的是自带的那一套跨平台外观，摆在 Windows 上一眼就看得出不是本地程序
+     * 换成系统外观之后，控件和文件对话框都会跟系统保持一致
+     * 必须赶在创建任何控件之前换，换晚了已经造好的控件不会跟着变
      */
     private static void useSystemLookAndFeel() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             useInterfaceFont();
         } catch (Exception failure) {
-            // 换不成就照默认外观用，样子丑一点而已，不值得为此打不开编辑器。
+            // 换不成就照默认外观用，样子丑一点而已，不值得为此打不开编辑器
             System.out.println("套用系统外观失败，改用默认外观：" + failure.getMessage());
         }
     }
 
     /**
-     * 把界面文字换成系统界面字体。
+     * 把界面文字换成系统界面字体
      *
-     * 系统外观在中文 Windows 上默认用宋体，字形偏旧，和现在的窗口凑在一起不协调。
-     * 换成微软雅黑就跟系统自带的程序一致了。万一这台机器没装，就保持原样不动。
+     * 系统外观在中文 Windows 上默认用宋体，字形偏旧，和现在的窗口凑在一起不协调
+     * 换成微软雅黑就跟系统自带的程序一致了。万一这台机器没装，就保持原样不动
      */
     private static void useInterfaceFont() {
         String preferred = "Microsoft YaHei UI";
@@ -1200,10 +1234,10 @@ public class LevelEditor extends JFrame implements EditorDragController {
             return;
         }
 
-        // 外观的设置表里有几十项字体（按钮的、标签的、菜单的……），逐项换掉才不会漏。
+        // 外观的设置表里有几十项字体（按钮的、标签的、菜单的……），逐项换掉才不会漏
         Font font = new Font(preferred, Font.PLAIN, INTERFACE_FONT_SIZE);
         List<Object> keys = new ArrayList<Object>(UIManager.getLookAndFeelDefaults().keySet());
-        for (int index = 0; index < keys.size(); index++) {
+        for (int index = 0; index < keys.size(); index = index + 1) {
             Object key = keys.get(index);
             if (UIManager.get(key) instanceof Font) {
                 UIManager.put(key, font);
@@ -1212,19 +1246,167 @@ public class LevelEditor extends JFrame implements EditorDragController {
     }
 
     /**
-     * 查这台机器上装没装某个字体。
+     * 查这台机器上装没装某个字体
      *
-     * 参数：name 是字体名。
-     * 返回：装了就返回真。
+     * 参数：name 是字体名
+     * 返回：装了就返回真
      */
     private static boolean isFontInstalled(String name) {
         GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
         String[] installed = environment.getAvailableFontFamilyNames();
-        for (int index = 0; index < installed.length; index++) {
+        for (int index = 0; index < installed.length; index = index + 1) {
             if (installed[index].equals(name)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** 保存后启动试玩，复用原入口确保预览使用已保存的文件 */
+    private class PlayLevelListener implements ActionListener {
+        /** 先存盘，再开一个游戏窗口跑这一关 */
+        public void actionPerformed(ActionEvent event) {
+            playCurrentLevel();
+        }
+    }
+
+    /** 读取编号对应的关卡，复用文件读取入口以保留错误提示 */
+    private class LoadLevelListener implements ActionListener {
+        /** 把关卡编号对应的文件读进来 */
+        public void actionPerformed(ActionEvent event) {
+            openLevelByNumber();
+        }
+    }
+
+    /** 保存当前编号对应的关卡，集中保留路径和格式校验 */
+    private class SaveLevelListener implements ActionListener {
+        /** 写回关卡编号对应的文件 */
+        public void actionPerformed(ActionEvent event) {
+            saveLevelByNumber();
+        }
+    }
+
+    /** 打开文件选择器，允许编辑不在默认关卡目录中的文件 */
+    private class OpenFileListener implements ActionListener {
+        /** 自己挑一个关卡文件打开 */
+        public void actionPerformed(ActionEvent event) {
+            openFromChooser();
+        }
+    }
+
+    /** 另存关卡，复用原文件选择流程避免覆盖当前文件 */
+    private class SaveFileListener implements ActionListener {
+        /** 自己挑一个位置存盘 */
+        public void actionPerformed(ActionEvent event) {
+            saveWithChooser();
+        }
+    }
+
+    /** 新建关卡时一起重置参数和网格，避免旧数据残留 */
+    private class NewLevelListener implements ActionListener {
+        /** 把参数和网格都恢复成默认值，从头开始编 */
+        public void actionPerformed(ActionEvent event) {
+            resetDesign();
+        }
+    }
+
+    /** 仅清空出怪网格并通知刷新，保留用户已经设置的关卡参数 */
+    private class ClearGridListener implements ActionListener {
+        /** 只清掉网格里的僵尸，参数保留 */
+        public void actionPerformed(ActionEvent event) {
+            design.clearAllCells();
+            designChanged();
+        }
+    }
+
+    /** 时钟通知统一交给更新时间的方法，避免计时器里重复格式化逻辑 */
+    private class ClockListener implements ActionListener {
+        /** 每秒把状态栏上的时间换成最新的 */
+        public void actionPerformed(ActionEvent event) {
+            updateClock();
+        }
+    }
+
+    /** 在最上层绘制拖动物体，同时让鼠标穿透以便底层网格继续接收事件 */
+    private class DragGlassPane extends JComponent {
+        /** 一律回答"点不在我身上"，好让鼠标事件穿过去 */
+        public boolean contains(int x, int y) {
+            return false;
+        }
+
+        /** 画出跟着鼠标走的那只僵尸 */
+        protected void paintComponent(Graphics graphics) {
+            if (!dragging || dragPoint == null || dragKind == null) {
+                return;
+            }
+            Graphics2D painter = (Graphics2D) graphics.create();
+            painter.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+            painter.setComposite(
+                AlphaComposite.getInstance(AlphaComposite.SRC_OVER, DRAG_ICON_ALPHA));
+
+            BufferedImage image = icons.icon(dragKind, DRAG_ICON_HEIGHT);
+            int left = dragPoint.x - image.getWidth() / 2;
+            int top = dragPoint.y - image.getHeight() / 2;
+            painter.drawImage(image, left, top, null);
+
+            if (dragCount > 1) {
+                drawDragCount(painter, image, left, top);
+            }
+            painter.dispose();
+        }
+    }
+
+    /** 数字参数变化后统一写回数据，多个输入框共用入口以免漏同步 */
+    private class ParameterChangeListener implements ChangeListener {
+        /** 数字框的值变了 */
+        public void stateChanged(ChangeEvent event) {
+            readFields();
+        }
+    }
+
+    /** 下拉选项变化后统一写回数据，与数字参数使用相同的校验规则 */
+    private class ParameterSelectListener implements ActionListener {
+        /** 下拉框选了别的项 */
+        public void actionPerformed(ActionEvent event) {
+            readFields();
+        }
+    }
+
+    /** 随机行选项只修改选中格子，回填状态时跳过以免触发重复写入 */
+    private class RandomRowListener implements ActionListener {
+        /** 勾选框状态变了：改当前选中格子的随机行标记 */
+        public void actionPerformed(ActionEvent event) {
+            if (updatingFields) {
+                return;
+            }
+            int row = grid.selectedRow();
+            int wave = grid.selectedWave();
+            if (row < 0) {
+                return;
+            }
+            design.setRandomRow(row, wave, randomRowBox.isSelected());
+            designChanged();
+            // 复选框会抢走焦点，交还给网格，否则 R 键等快捷键就失效了
+            grid.requestFocusInWindow();
+        }
+    }
+
+    /** 截图选择只交给统一导入方法，避免按钮里混入图片和路径处理 */
+    private class ChooseScreenshotListener implements ActionListener {
+        /** 参数 event 是点击通知，使用已验证的导入流程更新当前关卡 */
+        public void actionPerformed(ActionEvent event) {
+            chooseScreenshot();
+        }
+    }
+
+    /** 清除关卡的截图引用而不删除文件，避免影响另一个引用相同截图的关卡 */
+    private class ClearScreenshotListener implements ActionListener {
+        /** 参数 event 是点击通知，清空设置并刷新预览，保存后使用自动封面 */
+        public void actionPerformed(ActionEvent event) {
+            design.screenshot = "";
+            updateScreenshotPreview();
+            statusLabel.setText("已恢复自动封面，保存关卡后生效");
+        }
     }
 }
