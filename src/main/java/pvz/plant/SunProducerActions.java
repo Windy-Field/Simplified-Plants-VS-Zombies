@@ -7,7 +7,7 @@ import pvz.world.Layout;
 import pvz.world.Sun;
 
 /**
- * SunProducerActions 负责这一类植物每一帧的行为
+ * 管理产阳光植物的生产间隔、产量和阳光菇成长
  *
  * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
@@ -18,7 +18,7 @@ public class SunProducerActions {
     private final GameState state;
 
     /**
-     * 创建SunProducerActions
+     * 创建产阳光行为入口，使用资料表中的产量处理单颗和多颗阳光
      *
      * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
@@ -30,7 +30,8 @@ public class SunProducerActions {
     /**
      * 向日葵和阳光菇产阳光
      *
-     * 刚种下的六秒内不产，之后每隔二十二秒产一颗
+     * 先等待首次生产时间，再按生产间隔生成阳光；数量从植物资料读取
+     * 等待时间由 Layout 维护，避免调整数值后这里仍沿用旧规则
      *
      * 参数：plant 是那株植物
      */

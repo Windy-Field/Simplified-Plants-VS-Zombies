@@ -176,7 +176,7 @@ public final class Layout {
     public static final int ZOMBIE_BACK_TRIM_PERCENT = 20;
 
     // TODO【01-共用数值】：新增共用血量、伤害和时间参数时在对应区域定义常量，由资料表和行为代码引用
-    // 修改平衡数值后同步核对 docs/combat-values.md 和 CombatValuesTest，避免说明与游戏不一致
+    // 修改平衡数值后同步核对 docs/combat-values.md 和 CombatTest，避免说明与游戏不一致
     /** 普通植物的初始血量，直接使用游戏内部数值 */
     public static final int DEFAULT_PLANT_HEALTH = 50;
 
@@ -454,7 +454,7 @@ public final class Layout {
     /** 卡槽模式：传送带，卡片从右边慢慢送过来 */
     public static final int BAR_CONVEYOR = 1;
 
-    /** 卡槽模式：坚果保龄球，棋盘上直接摆着球 */
+    /** 卡槽模式：坚果保龄球，通过传送带取得球卡后在允许的草坪区域投球 */
     public static final int BAR_BOWLING = 2;
 
     /** 传送带区域的左边界 */
@@ -630,7 +630,7 @@ public final class Layout {
     /** 普通射手两次射击之间的间隔 */
     public static final long SHOOT_INTERVAL = 2000;
 
-    /** 小喷菇和小喷菇类射手两次射击之间的间隔 */
+    /** 小喷菇两次射击之间的间隔，其他现有射手使用 SHOOT_INTERVAL */
     public static final long SHROOM_SHOOT_INTERVAL = 3000;
 
     /** 地刺每次扎伤僵尸之后的间隔 */
@@ -654,10 +654,10 @@ public final class Layout {
     /** 寒冰菇让全场僵尸冻结的毫秒数 */
     public static final long ZOMBIE_FREEZE_DURATION = 7500;
 
-    /** 定格动画帧的默认真实间隔，单位毫秒 */
+    /** 普通动画每帧的默认游戏时间，单位毫秒；战斗倍速同时影响动画推进 */
     public static final long DEFAULT_ANIMATION_INTERVAL = 100;
 
-    /** 僵尸动画帧的默认真实间隔，比植物慢一些 */
+    /** 僵尸行走动画每帧的默认游戏时间，比植物慢一些 */
     public static final long ZOMBIE_ANIMATION_INTERVAL = 150;
 
     /** 僵尸攻击动画帧的间隔 */
@@ -724,7 +724,7 @@ public final class Layout {
     /** 爆炸坚果保龄球撞到僵尸后多久炸开 */
     public static final long RED_BOWLING_EXPLODE_DELAY = 500;
 
-    /** 黄油爆米花之类特效图的播放时长 */
+    /** 单帧或较短的一次性植物特效至少保留的游戏时间 */
     public static final long SHORT_EFFECT_DURATION = 500;
 
     /** 这个类只提供坐标、时间、血量和伤害常量，不允许创建对象 */

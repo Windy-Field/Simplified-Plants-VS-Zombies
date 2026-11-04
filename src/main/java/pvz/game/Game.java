@@ -244,8 +244,7 @@ public class Game extends JPanel {
      * 通关时间到了：有下一关就接着打，没有了就回主菜单并退到第 1 关
      *
      * 注意 levelNumber 在判定胜利时就已经加过了，所以这里判断的是"下一关"
-     * 没有下一关时必须把它退回去：不然主菜单再点冒险模式会去读一个不存在的关卡文件，
-     * 游戏直接崩掉
+     * 没有下一关时重置默认编号，让下次打开选关页从第一关开始选择
      */
     private void goToNextLevelOrMenu() {
         if (Files.exists(assets.levelPath(state.levelNumber))) {
@@ -307,7 +306,7 @@ public class Game extends JPanel {
             state.maxCards = level.maxCards;
         }
 
-        // 每行开头的推车先摆好；保龄球模式最右边三列被占掉，球从那里滚出来
+        // 每行先摆好推车；保龄球模式会用占用标记限制可投球的位置
         for (int row = 0; row < Layout.ROW_COUNT; row = row + 1) {
             state.cars.add(new Car(row));
             for (int column = 0; column < Layout.COLUMN_COUNT; column = column + 1) {
@@ -593,7 +592,7 @@ public class Game extends JPanel {
         }
     }
 
-    /** 判断有没有点中"冒险模式"按钮 */
+    /** 参数 x、y 是菜单点击位置；进入图鉴或启动冒险模式的选关流程 */
     private void clickMenu(int x, int y) {
         Rectangle book = new Rectangle(Layout.ALMANAC_BUTTON_LEFT, Layout.ALMANAC_BUTTON_TOP,
             Layout.ALMANAC_BUTTON_WIDTH, Layout.ALMANAC_BUTTON_HEIGHT);
@@ -666,7 +665,7 @@ public class Game extends JPanel {
     /**
      * 把战斗推进到指定的游戏时间，不依赖真实时钟
      *
-     * 参数：elapsed 是距离本关开始的毫秒数
+     * 参数：elapsed 是本次需要增加的游戏毫秒数
      * 说明：只给自检用，游戏本身靠计时器推进，不会调用它
      */
     public void step(long elapsed) {

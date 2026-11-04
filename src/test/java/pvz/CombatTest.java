@@ -24,24 +24,139 @@ import pvz.zombie.Zombie;
 import pvz.zombie.ZombieEffects;
 import pvz.zombie.ZombieSpawn;
 
-/** 验证巨人的实际战斗、投掷、死亡和编辑器接入，沿用原自检入口运行 */
-public class GargantuarTest {
+/** 按战斗职责验证血量、子弹、爆炸和僵尸特殊动作，集中保存场景用例而不按单个品种建类 */
+public class CombatTest {
     private static final int TEST_ROW = 2;
     private static final int TEST_COLUMN = 5;
     private static final long START_TIME = 1000;
+    /** 子弹命中场景使用草坪中间位置，避免僵尸提前离开画面 */
+    private static final int TEST_CENTER = 450;
 
     /** 参数 assets 提供素材，project 是素材目录；失败抛异常，成功输出检查结果 */
     public static void run(Assets assets, Path project) throws Exception {
-        checkSmash(assets);
-        checkSmashOpponent(assets);
-        checkThrow(assets, false);
-        checkThrow(assets, true);
-        checkDeath(assets);
-        checkPlants(assets);
+        checkCombatValues(assets);
+        checkExplosion(assets);
+        checkGargantuarSmash(assets);
+        checkGargantuarSmashOpponent(assets);
+        checkGargantuarThrow(assets, false);
+        checkGargantuarThrow(assets, true);
+        checkGargantuarDeath(assets);
+        checkInstantAttacksOnGargantuar(assets);
         checkBulletsAndImpDeath(assets);
         checkTwoGiants(assets);
-        checkLevelAndEditor(assets, project);
-        System.out.println("PASS: Gargantuar smash, throw, flight, freeze, death and editor");
+        checkGargantuarLevelAndEditor(assets, project);
+        System.out.println("PASS: Combat values, explosion, zombie actions, freeze and editor");
+    }
+
+    /** 参数 assets 提供素材；用实际命中核对设计血量和子弹伤害，避免只验证常量自身 */
+    private static void checkCombatValues(Assets assets) {
+        String[] names = {
+            "Zombie", "FlagZombie", "ConeheadZombie", "BucketheadZombie",
+            "NewspaperZombie", "FootballZombie", "JokerZombie", "Gargantuar", "Imp"
+        };
+        // 预期值独立记录设计结果，不能直接读取游戏常量，否则常量误改时测试也会跟着通过
+        int[] healthValues = {270, 270, 640, 1370, 420, 1670, 270, 3000, 150};
+        for (int index = 0; index < names.length; index = index + 1) {
+            checkZombieHealth(assets, names[index], healthValues[index]);
+        }
+        checkBullet(assets, "PeaNormal", 25, false);
+        checkBullet(assets, "PeaIce", 25, true);
+        checkBullet(assets, "BulletMushRoom", 25, true);
+        checkBullet(assets, "PeaFire", 50, false);
+        System.out.println("PASS: Zombie health, equipment thresholds and projectile damage");
+    }
+
+    /** 参数 name 是僵尸名，expectedHealth 是设计血量；逐发命中检查实际扣血和状态节点 */
+    private static void checkZombieHealth(Assets assets, String name, int expectedHealth) {
+        GameState state = new GameState();
+        Zombie zombie = new Zombie(name, TEST_ROW, Layout.rowBottom(TEST_ROW), assets);
+        placeAt(zombie, TEST_CENTER, assets, state.time);
+        state.zombies.add(zombie);
+        CombatSystem combat = new CombatSystem(state, assets);
+        check(zombie.health == expectedHealth, "初始血量不符合设计：" + name);
+        boolean startedWithHelmet = zombie.helmet;
+        int shots = 0;
+        while (zombie.health > 0) {
+            int previousHealth = zombie.health;
+            fireAt(assets, state, combat, zombie, "PeaNormal");
+            shots = shots + 1;
+            check(previousHealth - zombie.health == 25, "普通豌豆没有造成 25 伤害：" + name);
+
+            // 命中后的下一次战斗更新负责切换掉装备和掉头动画
+            combat.updateAll();
+            if (startedWithHelmet && zombie.health > 0) {
+                boolean shouldHaveHelmet = zombie.health > 270;
+                check(zombie.helmet == shouldHaveHelmet, "掉装备血量节点错误：" + name);
+            }
+            if (zombie.usesStandardDamageStates() && zombie.health > 0) {
+                boolean shouldLoseHead = zombie.health <= 70;
+                check(zombie.headLost == shouldLoseHead, "掉头血量节点错误：" + name);
+                boolean shouldLoseArm = zombie.health <= 170;
+                check(zombie.armLost == shouldLoseArm, "掉臂血量节点错误：" + name);
+            }
+        }
+        int expectedShots = (expectedHealth + 24) / 25;
+        check(shots == expectedShots, "击倒所需豌豆数量错误：" + name);
+        check(zombie.dying, "血量耗尽后没有进入死亡流程：" + name);
+    }
+
+    /** 参数 kind、expectedDamage 和 expectedSlow 描述子弹设计，核对创建和实际命中结果 */
+    private static void checkBullet(Assets assets, String kind, int expectedDamage,
+            boolean expectedSlow) {
+        GameState state = new GameState();
+        Zombie zombie = new Zombie("BucketheadZombie", TEST_ROW,
+            Layout.rowBottom(TEST_ROW), assets);
+        placeAt(zombie, TEST_CENTER, assets, state.time);
+        state.zombies.add(zombie);
+        CombatSystem combat = new CombatSystem(state, assets);
+        int initialHealth = zombie.health;
+        Bullet bullet = fireAt(assets, state, combat, zombie, kind);
+        check(bullet.damage == expectedDamage, "子弹基础伤害错误：" + kind);
+        check(initialHealth - zombie.health == expectedDamage, "子弹实际伤害错误：" + kind);
+        check(bullet.ice == expectedSlow, "子弹减速属性错误：" + kind);
+    }
+
+    /** 参数 target 是命中目标，kind 是子弹名；返回实际发射并命中的子弹 */
+    private static Bullet fireAt(Assets assets, GameState state, CombatSystem combat,
+            Zombie target, String kind) {
+        state.bullets.clear();
+        Rectangle body = target.collisionBox(assets, state.time);
+        int top = (int) body.getMaxY() - 30;
+        Bullet bullet = new Bullet(kind, body.x, top, TEST_ROW, top, assets);
+        state.bullets.add(bullet);
+        state.time = state.time + Layout.FIXED_STEP_MS;
+        combat.updateAll();
+        check(bullet.exploded, "测试子弹没有命中：" + kind);
+        return bullet;
+    }
+
+    /** 樱桃实际引爆后直接进入灰烬动画，不应生成头部，也不能重复启动死亡动画 */
+    private static void checkExplosion(Assets assets) {
+        String[] names = {"Zombie", "ConeheadZombie", "BucketheadZombie", "FlagZombie",
+            "NewspaperZombie", "FootballZombie", "Imp"};
+        for (String name : names) {
+            GameState state = new GameState();
+            state.time = START_TIME;
+            int center = Layout.columnCenter(4);
+            int bottom = Layout.rowBottom(2);
+            Plant cherry = new Plant("CherryBomb", center, bottom, 2, 4, assets, state.time, false);
+            Zombie zombie = new Zombie(name, 2, bottom, assets);
+            placeAt(zombie, center, assets, state.time);
+            state.zombies.add(zombie);
+            state.time = state.time + assets.count(cherry.animation) * Layout.DEFAULT_ANIMATION_INTERVAL;
+            InstantPlantActions actions = new InstantPlantActions(assets, state);
+            actions.update(cherry);
+            check(zombie.dying && zombie.deathAnimationStarted, "爆炸没有立即开始死亡动画：" + name);
+            check(!zombie.waitingForDeath && !zombie.headLost && state.heads.isEmpty(),
+                "樱桃炸弹仍触发掉头：" + name);
+            check(zombie.animation.endsWith("BoomDie"), "爆炸没有使用灰烬图：" + name);
+            long deathTime = zombie.deathTime;
+            ZombieEffects.die(zombie, assets, state, state.time + 16, true);
+            check(zombie.deathTime == deathTime, "重复爆炸重启了死亡动画");
+            long duration = (long) assets.count(zombie.animation) * zombie.frameInterval;
+            ZombieEffects.updateDeath(zombie, assets, state, state.time + duration);
+            check(!zombie.alive, "爆炸动画结束后未清理僵尸：" + name);
+        }
     }
 
     /** 创建草坪中间的巨人；参数 state 是所在游戏，返回已加入场地的巨人 */
@@ -70,7 +185,7 @@ public class GargantuarTest {
     }
 
     /** 验证砸击不是普通啃咬：落棒前不扣血，落棒时清掉坚果并释放格子 */
-    private static void checkSmash(Assets assets) {
+    private static void checkGargantuarSmash(Assets assets) {
         GameState state = new GameState();
         Zombie giant = createGiant(assets, state);
         Plant nut = new Plant("WallNut", Layout.columnCenter(TEST_COLUMN),
@@ -93,7 +208,7 @@ public class GargantuarTest {
     }
 
     /** 参数 hypnotized 决定阵营；验证半血只投一次、飞行无碰撞、解冻落地与阵营一致 */
-    private static void checkThrow(Assets assets, boolean hypnotized) {
+    private static void checkGargantuarThrow(Assets assets, boolean hypnotized) {
         GameState state = new GameState();
         Zombie giant = createGiant(assets, state);
         giant.hypno = hypnotized;
@@ -142,7 +257,7 @@ public class GargantuarTest {
     }
 
     /** 验证巨人对敌方僵尸每次挥棒只造成一次伤害，减速时推迟落棒 */
-    private static void checkSmashOpponent(Assets assets) {
+    private static void checkGargantuarSmashOpponent(Assets assets) {
         GameState state = new GameState();
         Zombie giant = createGiant(assets, state);
         giant.hypno = true;
@@ -165,7 +280,7 @@ public class GargantuarTest {
     }
 
     /** 验证投掷前后使用对应死亡图，投掷中死亡不再生成小鬼，也不会触发小丑爆炸 */
-    private static void checkDeath(Assets assets) {
+    private static void checkGargantuarDeath(Assets assets) {
         for (int scenario = 0; scenario < 2; scenario = scenario + 1) {
             GameState state = new GameState();
             Zombie giant = createGiant(assets, state);
@@ -188,7 +303,7 @@ public class GargantuarTest {
     }
 
     /** 验证炸弹与辣椒需两次击倒巨人，大嘴花不能吞下巨人 */
-    private static void checkPlants(Assets assets) {
+    private static void checkInstantAttacksOnGargantuar(Assets assets) {
         GameState state = new GameState();
         Zombie giant = createGiant(assets, state);
         Plant cherry = new Plant("CherryBomb", Layout.columnCenter(TEST_COLUMN),
@@ -267,7 +382,7 @@ public class GargantuarTest {
     }
 
     /** 验证编辑器和关卡出怪读取同一个巨人名字，并输出游戏渲染图供检查 */
-    private static void checkLevelAndEditor(Assets assets, Path project) throws Exception {
+    private static void checkGargantuarLevelAndEditor(Assets assets, Path project) throws Exception {
         LevelDesign design = new LevelDesign();
         design.setCell(TEST_ROW, 0, "Gargantuar", 1);
         List<ZombieSpawn> spawns = design.buildSpawns();

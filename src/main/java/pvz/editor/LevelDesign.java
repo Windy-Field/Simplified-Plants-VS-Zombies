@@ -905,7 +905,7 @@ public class LevelDesign {
         if (totalZombies() == 0) {
             return "网格里一只僵尸都没有，进入关卡后会立刻通关。";
         }
-        // 游戏读传送带和保龄球关卡时一定会去取卡池，没有卡池会直接读不下去
+        // 空卡池虽然能够读取，但无法生成卡片，保存前提醒以免进入无法种植的关卡
         if (barType != Layout.BAR_NORMAL && cardPool.isEmpty()) {
             return "传送带和保龄球模式必须至少选一张卡池里的植物，否则关卡无法载入。";
         }

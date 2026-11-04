@@ -7,10 +7,13 @@ import pvz.world.Layout;
 /**
  * 植物行为的总入口
  *
- * 这个类只负责遍历植物、检查植物是否还活着，并把植物交给对应的行为家族
- * 具体的产阳光、射击、爆炸和近战规则分别放在独立的处理类中
+ * 这里检查植物存活和睡眠状态，并分派产阳光、射击、爆炸和近战行为
+ * 坚果的少量换图逻辑直接保留为本类方法，不为单个品种另建处理类
  */
 public class PlantActions {
+    /** 供坚果按血量切换动画，其他行为类也使用同一份素材 */
+    private final Assets assets;
+
     /** 当前游戏的数据 */
     private final GameState state;
 
@@ -19,9 +22,6 @@ public class PlantActions {
 
     /** 射手植物的行为处理器 */
     private final ShooterActions shooterActions;
-
-    /** 坚果植物的行为处理器 */
-    private final WallNutActions wallNutActions;
 
     /** 一次性植物的行为处理器 */
     private final InstantPlantActions instantPlantActions;
@@ -35,10 +35,10 @@ public class PlantActions {
      * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
     public PlantActions(Assets assets, GameState gameState) {
+        this.assets = assets;
         state = gameState;
         sunProducerActions = new SunProducerActions(assets, gameState);
         shooterActions = new ShooterActions(assets, gameState);
-        wallNutActions = new WallNutActions(assets, gameState);
         instantPlantActions = new InstantPlantActions(assets, gameState);
         closeAttackActions = new CloseAttackActions(assets, gameState);
     }
@@ -68,8 +68,8 @@ public class PlantActions {
      * 参数：plant 是要更新的植物
      */
     private void dispatchPlant(Plant plant) {
-        // TODO【10-植物行为】：新品种先选择已有类别，在对应处理器中实现索敌、间隔和效果
-        // 只有现有类别都不适合时才扩展 PlantActionType 并在这里接入，避免每种植物都重复写更新循环
+        // TODO【10-植物行为】：新品种先选择已有类别，复用对应处理器中的索敌、间隔和效果
+        // 少量特殊逻辑可写成本类的具名方法，只有形成一类共用行为时才考虑独立文件
         PlantDefinition definition = PlantCatalog.definitionOf(plant.name);
         if (definition.actionType == PlantActionType.SUN_PRODUCER) {
             sunProducerActions.update(plant);
@@ -80,7 +80,7 @@ public class PlantActions {
             return;
         }
         if (definition.actionType == PlantActionType.WALL_NUT) {
-            wallNutActions.update(plant);
+            updateWallNut(plant);
             return;
         }
         if (definition.actionType == PlantActionType.INSTANT) {
@@ -89,6 +89,19 @@ public class PlantActions {
         }
         if (definition.actionType == PlantActionType.CLOSE_ATTACK) {
             closeAttackActions.update(plant);
+        }
+    }
+
+    /** 参数 plant 是坚果；按当前血量切换两阶段裂纹，不重复重启动画 */
+    private void updateWallNut(Plant plant) {
+        boolean cracked2 = plant.animation.equals("WallNut_cracked2");
+        if (plant.health <= Layout.WALL_NUT_SECOND_CRACK_HEALTH && !cracked2) {
+            plant.change("WallNut_cracked2", assets, state.time);
+            return;
+        }
+        boolean fresh = plant.animation.equals("WallNut");
+        if (plant.health <= Layout.WALL_NUT_FIRST_CRACK_HEALTH && fresh) {
+            plant.change("WallNut_cracked1", assets, state.time);
         }
     }
 

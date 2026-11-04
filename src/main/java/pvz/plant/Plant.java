@@ -38,7 +38,7 @@ public class Plant extends Sprite {
     public Zombie target;
 
     /**
-     * 种下一株植物，并按品种设置血量、初始动画和透明色
+     * 种下一株植物，并按资料设置血量、位置和初始动画
      *
      * 参数：kind 是品种名（如 "Peashooter"）；center 和 bottom 是期望的底边中央位置；
      *       row 是所在行；column 是所在列；assets 提供图片；

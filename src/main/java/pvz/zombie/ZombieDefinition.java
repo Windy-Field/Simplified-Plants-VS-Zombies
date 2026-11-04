@@ -7,7 +7,7 @@ package pvz.zombie;
  */
 public class ZombieDefinition {
     // TODO【12-僵尸属性】：初始血量、速度和动画约定放在此类，当前血量、装备和动作状态放在 Zombie
-    // 新增属性必须由 CombatSystem 或专属行为类实际读取，仅增加字段不会自动产生新能力
+    // 新增属性必须由 ZombieActions 的行为方法实际读取，仅增加字段不会自动产生新能力
     /** 僵尸内部名字，也是动画名的起点 */
     public final String name;
 
@@ -34,8 +34,8 @@ public class ZombieDefinition {
     public final String idleAnimation;
 
     /**
-     * 触发特殊能力时替换掉的死亡动画名；null 表示没有，
-     * 按普通的掉头 → 倒地那套流程走
+     * 替换普通死亡过程的能力动画名，例如小丑开盒；null 表示没有替代动画
+     * 没有替代动画时使用本品种的死亡规则，巨人和小鬼也不会进入普通掉头流程
      */
     public final String abilityAnimation;
 

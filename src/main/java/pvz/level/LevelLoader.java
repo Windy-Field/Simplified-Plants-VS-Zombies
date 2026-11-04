@@ -93,8 +93,7 @@ public class LevelLoader {
             level.skySunInterval = LevelJson.readSkySunInterval(json);
             level.maxCards = LevelJson.readCardSlots(json);
 
-            // 出场表是这一关的骨架。一条都没有的话，这关会在开场演出结束后立刻判定通关，
-            // 玩家看到的是一个刚亮起来就结束的关卡。与其这样，不如在这里把话说明白
+            // 出场表字段是关卡格式的必需项，缺失时明确报错；空数组仍允许读取
             if (!json.has(LevelJson.ZOMBIE_LIST)) {
                 throw new IllegalStateException("第 " + (levelNumber + 1)
                     + " 关的关卡文件里没有 " + LevelJson.ZOMBIE_LIST + " 字段");

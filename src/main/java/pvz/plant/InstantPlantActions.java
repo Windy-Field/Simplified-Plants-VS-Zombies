@@ -9,7 +9,7 @@ import pvz.zombie.Zombie;
 import pvz.zombie.ZombieEffects;
 
 /**
- * InstantPlantActions 负责这一类植物每一帧的行为
+ * 管理樱桃炸弹、火爆辣椒和寒冰菇的一次性效果
  *
  * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
@@ -26,7 +26,7 @@ public class InstantPlantActions {
     private final GameState state;
 
     /**
-     * 创建InstantPlantActions
+     * 创建一次性效果入口，共用准备、触发和动画结束的处理顺序
      *
      * 参数：assets 提供素材；gameState 是当前游戏的数据
      */

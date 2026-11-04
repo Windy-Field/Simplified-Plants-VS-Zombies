@@ -14,59 +14,25 @@ import pvz.game.GameScreen;
 import pvz.game.GameState;
 import pvz.game.LevelSystem;
 import pvz.plant.Card;
-import pvz.plant.InstantPlantActions;
-import pvz.plant.Plant;
 import pvz.plant.PlantCatalog;
 import pvz.world.Assets;
 import pvz.world.Layout;
-import pvz.zombie.Zombie;
-import pvz.zombie.ZombieEffects;
 
-/** 验证爆炸死亡和传送带的完整时序、排队边界，防止只修正画面而遗漏实际行为 */
+/** 验证传送带和保龄球的入场时序、满队列与补位，逐步核对真实卡片边界 */
 public class ConveyorRegressionTest {
     private static final long START_TIME = 10000;
 
     /** 参数 assets 和 root 提供素材与输出位置，检查后保留截图供人工核对 */
     public static void run(Assets assets, Path root) throws Exception {
-        checkExplosion(assets);
         checkIntro(assets, root);
         checkQueue(assets, root, Layout.BAR_CONVEYOR);
         checkQueue(assets, root, Layout.BAR_BOWLING);
-        System.out.println("PASS: Explosion skips head loss; conveyor intro, capacity and spacing");
-    }
-
-    /** 樱桃实际引爆后直接进入灰烬动画，不应生成头部，也不能重复启动死亡动画 */
-    private static void checkExplosion(Assets assets) {
-        String[] names = {"Zombie", "ConeheadZombie", "BucketheadZombie", "FlagZombie",
-            "NewspaperZombie", "FootballZombie", "Imp"};
-        for (String name : names) {
-            GameState state = new GameState();
-            state.time = START_TIME;
-            int center = Layout.columnCenter(4);
-            int bottom = Layout.rowBottom(2);
-            Plant cherry = new Plant("CherryBomb", center, bottom, 2, 4, assets, state.time, false);
-            Zombie zombie = new Zombie(name, 2, bottom, assets);
-            Rectangle body = zombie.collisionBox(assets, state.time);
-            zombie.x = zombie.x + center - body.getCenterX();
-            state.zombies.add(zombie);
-            state.time = state.time + assets.count(cherry.animation) * Layout.DEFAULT_ANIMATION_INTERVAL;
-            InstantPlantActions actions = new InstantPlantActions(assets, state);
-            actions.update(cherry);
-            check(zombie.dying && zombie.deathAnimationStarted, "爆炸没有立即开始死亡动画：" + name);
-            check(!zombie.waitingForDeath && !zombie.headLost && state.heads.isEmpty(),
-                "樱桃炸弹仍触发掉头：" + name);
-            check(zombie.animation.endsWith("BoomDie"), "爆炸没有使用灰烬图：" + name);
-            long deathTime = zombie.deathTime;
-            ZombieEffects.die(zombie, assets, state, state.time + 16, true);
-            check(zombie.deathTime == deathTime, "重复爆炸重启了死亡动画");
-            long duration = (long) assets.count(zombie.animation) * zombie.frameInterval;
-            ZombieEffects.updateDeath(zombie, assets, state, state.time + duration);
-            check(!zombie.alive, "爆炸动画结束后未清理僵尸：" + name);
-        }
+        System.out.println("PASS: Conveyor intro, capacity and spacing");
     }
 
     /** 直接用演出状态核对画面，并调用原演出更新入口验证倒计时后才开始出怪 */
     private static void checkIntro(Assets assets, Path root) throws Exception {
+        // 读取游戏内部演出状态以检查时间边界，不为自检增加可写的公开游戏接口
         for (int mode = Layout.BAR_CONVEYOR; mode <= Layout.BAR_BOWLING; mode = mode + 1) {
             Game game = new Game(assets, 4, false, false);
             Field field = Game.class.getDeclaredField("state");
@@ -113,7 +79,7 @@ public class ConveyorRegressionTest {
         state.barType = mode;
         state.background = assets.frame("Background", 0);
         state.screen = GameScreen.PLAY;
-        // 少数植物不在传送带卡池中，使用项目已支持的不同宽度卡片测试
+        // 测试卡池包含不同宽度的卡片，检查不能只依赖某一种卡片的固定宽度
         String[] plants = {"Peashooter", "SnowPea", "WallNut", "CherryBomb", "Torchwood", "TwinSunflower"};
         if (mode == Layout.BAR_BOWLING) {
             plants = new String[] {"WallNutBowling", "RedWallNutBowling"};

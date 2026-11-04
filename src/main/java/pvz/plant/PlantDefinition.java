@@ -44,7 +44,7 @@ public class PlantDefinition {
     public final int rootShift;
 
     /**
-     * 种植时图片要往上挪多少像素（负数表示向上）
+     * 种植时图片的纵向偏移，正数向下，负数向上
      *
      * 大多数植物填 0。窝瓜的图比其他植物高，用默认的落脚点会让它底部超出格子
      */
@@ -70,8 +70,10 @@ public class PlantDefinition {
     /**
      * 创建一种植物的完整固定资料
      *
-     * 参数：前面几个参数是植物基本资料；sunCount 是每次产出的阳光数；
-     * forwardRange 是提前索敌的前方格子数；
+     * 参数：name 是内部名，cardPicture 是卡片图片名；cost 是阳光花费，cooldown 是冷却毫秒数
+     * maxHealth 是初始血量；sleepsAtDay、canBeEaten 分别表示白天睡眠和可被啃食
+     * actionType 是行为类别，bowling 表示保龄球；sunCount 是每次产出的阳光数
+     * forwardRange 是提前索敌的前方格子数
      * rootShift 和 verticalShift 是绘制偏移；attackAnimation 是攻击动画，
      * 没有时传 null；transformations 是子弹转换列表
      */

@@ -9,7 +9,7 @@ import pvz.zombie.Zombie;
 import pvz.zombie.ZombieEffects;
 
 /**
- * CloseAttackActions 负责这一类植物每一帧的行为
+ * 管理近距离植物与保龄球的索敌、准备动作和命中效果
  *
  * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
@@ -20,7 +20,7 @@ public class CloseAttackActions {
     private final GameState state;
 
     /**
-     * 创建CloseAttackActions
+     * 创建近距离行为入口，让各品种共用范围判定和本局数据
      *
      * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
@@ -32,8 +32,8 @@ public class CloseAttackActions {
     /**
      * 近距离植物：土豆雷、窝瓜、食人花、地刺和保龄球
      *
-     * 它们的共同点是必须等僵尸走到身上才生效，所以先处理各自的"预备动作"，
-     * 再统一遍历僵尸判断有没有挨上
+     * 先处理准备与滚动，再检查接触或前方范围
+     * 窝瓜会主动寻找邻格目标，大嘴花也可以提前锁定前方目标，不必等到身体相碰
      *
      * 参数：plant 是那株植物
      */
@@ -202,7 +202,7 @@ public class CloseAttackActions {
     }
 
     /**
-     * 土豆雷埋够十五秒才出土，出土后才有效
+     * 土豆雷等待 Layout 中的准备时间后出土，出土前不能引爆
      *
      * 参数：plant 是那颗土豆雷
      */
@@ -350,7 +350,7 @@ public class CloseAttackActions {
     }
 
     /**
-     * 食人花咬住僵尸后吞掉它，再消化十六秒才能咬下一只
+     * 大嘴花吞掉目标后等待 Layout 中的消化时间，期间不能再次攻击
      *
      * 参数：plant 是那株食人花
      */
@@ -377,7 +377,7 @@ public class CloseAttackActions {
     }
 
     /**
-     * 清除爆炸范围内所有僵尸
+     * 对范围内的敌方僵尸执行一次性攻击，巨人按约定扣血，其他目标进入死亡流程
      *
      * 参数：plant 是爆炸的植物；rowRange 是上下波及几行；xRange 是左右波及多少像素
      */

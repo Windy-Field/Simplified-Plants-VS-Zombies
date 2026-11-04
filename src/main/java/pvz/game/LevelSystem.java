@@ -15,7 +15,7 @@ import pvz.zombie.ZombieSpawn;
  * 负责关卡时间表相关的运行逻辑
  *
  * 这里处理出怪、传送带、天空阳光和通关判断
- * 植物、僵尸和子弹的具体战斗规则仍由 Game 当前的战斗流程负责
+ * 植物由 PlantActions 更新，僵尸由 ZombieActions 更新，其余碰撞与效果由 CombatSystem 处理
  */
 public class LevelSystem {
     /** 当前关卡的所有运行数据 */

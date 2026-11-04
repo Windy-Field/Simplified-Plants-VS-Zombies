@@ -16,14 +16,10 @@ import pvz.zombie.ZombieSpawn;
 /**
  * 装着一局游戏里所有会变的东西
  *
- * Game 只负责"怎么变"，GameRenderer 只负责"怎么画"，
- * 两边都从这个对象里取需要的数据，互相并不认识
+ * Game 和各行为类从这里读取和更新数据，GameRenderer 只读取后绘制
  *
- * 这个类只该放"一局游戏里会变的东西"。与某一关绑定的配置（比如卡槽模式
- * BAR_NORMAL / BAR_CONVEYOR / BAR_BOWLING，它们其实是关卡文件里
- * choosebar_type 的取值）放在 {@link pvz.world.Layout}，不属于这里：
- * 放这儿的时候，Level、LevelLoader、LevelDesign 为了读这几个数字
- * 都得 import 整个 GameState，让关卡和编辑器平白反过来指向游戏运行时
+ * 当前关卡的配置值也保存在这里，但卡槽模式编号等固定约定放在 Layout
+ * 关卡读取器和编辑器直接引用固定约定，不需要依赖游戏运行状态
  */
 public class GameState {
     /** 当前画面的编号，取值见 GameScreen */
@@ -137,7 +133,7 @@ public class GameState {
      */
     public final List<Zombie> introZombies = new ArrayList<Zombie>();
 
-    /** 游戏内部速度倍率，2 是新的 1 倍速，3 是新的 1.5 倍速 */
+    /** 速度倍率用整数保存，2、3、4 分别对应 1、1.5、2 倍速 */
     public int speedMultiplier = 2;
 
     /** 上一帧的真实时刻，用来算出这一帧过了多久 */

@@ -32,14 +32,13 @@
 
 ## 当前版本
 
-### V1.19
+### V1.9
 
 - **关卡与导航**：编辑器支持截图封面选关、双击进入，以及关卡内返回选关
 - **植物与僵尸图鉴**：主菜单可查看全部已实现品种的 GIF 动画、数值和能力介绍，支持暂停
 - **新增战斗内容**：加入巨人僵尸和小鬼僵尸
 - **增加豌豆伤害**：普通、冰豌豆及蘑菇子弹伤害由 20 提升为 25，火焰豌豆由 40 提升为 50
-- **重要修复**：修正吞咽与爆炸死亡效果、传送带入场时序和卡片重叠，并改善系统缩放下的文字对齐
-- **代码整理**：合并文字定位与构建工具，统一关卡查找，使用 Gson 写入关卡，并补充风格检查
+- **重要修复**：修正吞咽与爆炸死亡效果、传送带入场时序和卡片重叠
 
 详细数值与实现说明请移步至 [战斗数值设计](docs/combat-values.md)和[游戏界面设计](docs/interface-design.md)。
 
@@ -48,14 +47,12 @@
 ### V1.8
 
 - 增加铲子卡槽。点击植物可以移除植物，点击空草坪格会自动收回铲子，右键可以取消操作。
-- 增加橄榄球僵尸。它使用 `assets/Zombies/FootballZombie/` 下的动画，移动速度为每个固定步长 1.5 像素；缺少专属掉头动画时会使用普通僵尸动画。
-- 优化窝瓜攻击。窝瓜仍在所在行的左、中、右三格内索敌，并优先锁定距离最近的僵尸；砸下时会攻击锁定目标左右各半格范围内、躯干与范围相交的僵尸。
-- 清理植物和僵尸的公共逻辑，删除未使用的字段、常量和重复方法。
+- 增加橄榄球僵尸。
+- 优化窝瓜索敌，优先攻击近处目标，并压扁落点附近的僵尸。
 
 ### V1.7
 
 - 增加双发向日葵。每次生产阳光时会生成两颗阳光。
-- 将植物的产阳光数量写入 `PlantDefinition`，并继续整理植物资料和行为代码。
 
 ### V1.6
 
@@ -68,16 +65,9 @@
 - 增加小丑僵尸、传送带关卡、坚果保龄球关卡和图形化关卡编辑器。
 - 增加开场演出、阳光收集、卡片冷却和小推车防线等基础机制。
 
-## 运行环境
-
-- 建议使用 Windows 系统。启动脚本使用 PowerShell，其他系统不保证能够正常运行。
-- 需要 JDK 17 或更高版本。
-- 项目自带 Gson 2.11.0，文件位于 `lib/gson-2.11.0.jar`，无需单独下载。
-- 游戏需要仓库根目录下的 `assets/` 素材目录。
-
 ## 快速开始
 
-请在仓库根目录中运行以下命令：
+使用 Windows 和 JDK 17 或更高版本，保留完整素材，在项目根目录运行：
 
 ```bat
 run.bat            :: 从第 1 关开始
@@ -87,18 +77,7 @@ run.bat editor     :: 打开关卡编辑器并载入第 1 关
 run.bat editor 3   :: 打开关卡编辑器并载入第 4 关
 ```
 
-也可以直接使用 PowerShell：
-
-```powershell
-.\build.ps1
-.\build.ps1 -Level 5
-.\build.ps1 -Test
-.\build.ps1 -Editor -Level 3
-```
-
-启动脚本只负责本地编译、运行和自检，不会自动提交、同步或推送 Git。进入游戏后点击“冒险模式”打开选关页，命令行关卡参数用于设置默认选中项；编辑器试玩仍直接载入指定关卡。
-
-使用 IntelliJ IDEA 时，请打开仓库根目录，并将运行配置的工作目录设置为仓库根目录。IDEA 会根据 `pom.xml` 使用 `lib/gson-2.11.0.jar`。
+进入游戏后点击“冒险模式”打开选关页，命令行关卡参数用于设置默认选中项；编辑器试玩直接载入指定关卡。
 
 游戏入口是 `src/main/java/pvz/Main.java`，编辑器入口是 `src/main/java/pvz/EditorMain.java`。
 
@@ -169,9 +148,9 @@ assets/
 
 ## 项目结构
 
-源码只保留在 `src/`，素材放在 `assets/`，说明放在 `docs/`，正式展示截图放在 `screenshots/`。运行和打包脚本共用 `scripts/java-tools.ps1`，JDK 要求、依赖校验和编译流程只维护一份。
+源码放在 `src/`，素材放在 `assets/`，说明放在 `docs/`，展示截图放在 `screenshots/`。`scripts/` 保存运行和打包共用的构建工具。
 
-`build/` 保存当前编译结果和自检截图，每次编译先清理 `build/classes/`，避免已删除的类继续残留。`target/` 是 Maven 自动生成的目录；`dist/` 保存发行包，都不属于源码。`.probe/` 是旧实验副本，已被 Git 忽略，构建脚本不会读取它。
+`build/` 保存编译结果和自检截图，`target/` 是 Maven 生成的目录，`dist/` 保存发行包。
 
 ```text
 src/main/java/pvz/
@@ -185,15 +164,14 @@ src/main/java/pvz/
 │   ├── InstantPlantActions.java  一次性植物行为
 │   ├── Plant.java                植物对象
 │   ├── PlantActionType.java      植物行为类别
-│   ├── PlantActions.java         植物行为调度
+│   ├── PlantActions.java         植物行为调度与坚果换图
 │   ├── PlantCatalog.java         植物资料表
 │   ├── PlantDefinition.java      单种植物资料
 │   ├── ShooterActions.java       射手植物行为
-│   ├── SunProducerActions.java   产阳光植物行为
-│   └── WallNutActions.java       坚果裂纹行为
+│   └── SunProducerActions.java   产阳光植物行为
 ├── zombie/                       僵尸资料、出场和效果
 │   ├── Zombie.java               僵尸对象
-│   ├── GargantuarActions.java    巨人砸击、投掷和小鬼飞行
+│   ├── ZombieActions.java        普通动作、巨人砸击与投掷、小鬼飞行
 │   ├── ZombieCatalog.java        僵尸资料表
 │   ├── ZombieDefinition.java     单种僵尸资料
 │   ├── ZombieEffects.java        僵尸死亡和特殊效果
@@ -239,9 +217,8 @@ src/test/java/pvz/
 ├── DeveloperModeTest.java        开发者模式画面检查
 ├── LevelScreenshotTest.java      截图与关卡 JSON 保存读取检查
 ├── AlmanacTest.java              图鉴资料、草坪与动画检查
-├── CombatValuesTest.java         血量与伤害检查
-├── GargantuarTest.java           巨人和小鬼行为检查
-├── ConveyorRegressionTest.java   爆炸与传送带流程检查
+├── CombatTest.java               血量、子弹、爆炸和僵尸特殊动作检查
+├── ConveyorRegressionTest.java   传送带与保龄球入场及队列检查
 └── SelfCheckTest.java            项目自检程序
 ```
 
@@ -249,8 +226,9 @@ src/test/java/pvz/
 
 - `PlantCatalog` 和 `ZombieCatalog` 保存植物、僵尸的固定资料。品种差异应优先写入资料表，不要在多个类中重复判断名称。
 - `Layout` 保存坐标、时间、血量、伤害和界面布局常量；`LevelJson` 保存关卡 JSON 的字段约定。
-- `PlantActions`、`CombatSystem` 和 `LevelSystem` 分别处理植物行为、战斗过程和关卡流程。
-- 新增品种时应优先复用已有的资料类和行为处理器，只有通用规则无法表达时才新增类。
+- `PlantActions` 处理植物行为，`ZombieActions` 统一处理僵尸行为，`CombatSystem` 安排战斗更新顺序并处理子弹、阳光、小推车和特效，`LevelSystem` 处理关卡时间表。
+- 新增品种时优先复用已有资料和行为；少量特殊情况写成所属行为类中的具名方法，形成明确且可复用的一类职责后才考虑独立文件。
+- 自检按职责组织，战斗数值、爆炸死亡和巨人、小鬼场景集中在 `CombatTest`，不为单个品种新增自检文件；通用检查仍由 `SelfCheckTest` 调用。
 - 编辑器通过 Gson 的 `JsonObject` 和 `JsonArray` 保存关卡，不自行拼接引号或逗号；保存时统一使用缩进格式，字段含义与旧关卡兼容。
 
 ## 新增植物示例
@@ -264,18 +242,18 @@ src/test/java/pvz/
 | 06～09 | 子弹素材、嘴部高度和子弹选择 | `Assets`、`Layout`、`ShooterActions` |
 | 10～11 | 植物行为与特殊绘制 | `PlantActions`、`GameRenderer` |
 | 12～14 | 僵尸属性、素材和资料 | `ZombieDefinition`、`Assets`、`ZombieCatalog` |
-| 15～17 | 僵尸状态、死亡与特殊能力 | `Zombie`、`CombatSystem` |
+| 15～17 | 僵尸状态、死亡与特殊能力 | `Zombie`、`ZombieActions` |
 | 18～20 | 动画和行为验证 | `SelfCheckTest` |
 
 下面以新增“寒冰双发射手”为例。新增植物时，应先复用已有的植物资料和行为，再补充确实缺少的代码。
 
 ### 必做步骤
 
-1. 将基础动画和状态动画放入 `assets/Plants/寒冰双发射手/`。
+1. 将基础动画和状态动画放入 `assets/Plants/IceRepeater/`，新增目录和文件使用英文名。
 2. 将卡片图片放入 `assets/Cards/`，并让文件名与 `PlantDefinition.cardPicture` 一致。
 3. 在 `world/Assets.java` 的 `loadPlants()` 中登记动画。普通动画使用 `animation()`，序列动画使用 `sequence()`，需要拉伸的动画使用 `stretchedAnimation()`。
 4. 在 `plant/PlantCatalog.java` 中增加一条完整的 `PlantDefinition`，填写名称、卡片、花费、冷却、血量、睡眠状态、可被吃状态、行为类别、产阳光数量、绘制偏移、攻击动画和子弹转换资料。
-5. 为植物选择已有的 `PlantActionType`。只有现有行为处理器无法表达新规则时，才新增处理器。
+5. 为植物选择已有的 `PlantActionType`，在对应行为类中实现必要的具名方法；少量特殊逻辑不单独建文件。
 6. 在 `SelfCheckTest.java` 的动画名单中加入新动画。若植物会进入传送带或保龄球卡池，还要准备对应卡片并加入相关检查。
 7. 运行 `run.bat test`，确认素材、资料表、卡片、渲染和行为检查全部通过。
 
@@ -284,7 +262,7 @@ src/test/java/pvz/
 - 植物需要睡眠动画时，准备 `植物名Sleep`，并在 `PlantDefinition` 中设置 `sleepsAtDay`。
 - 植物需要特殊绘制位置时，在 `PlantDefinition` 中设置 `rootShift` 或 `verticalShift`。
 - 植物需要攻击保护时，在 `PlantDefinition` 中设置 `attackAnimation`。
-- 植物需要特殊子弹时，在 `assets/bullets/` 或 `assets/new_assets/` 中准备素材，并登记 `BulletTransformation`。
+- 植物发射特殊子弹时，在 `Assets.loadBullets()` 登记素材，并在 `ShooterActions.bulletNameFor()` 选择；新伤害或命中特效还需更新 `Bullet`。只有植物会改变经过它的子弹时才配置 `BulletTransformation`。
 - 植物需要新的射击高度时，再修改 `Layout.java` 和 `ShooterActions.java`。
 
 ### 植物行为类别
@@ -295,15 +273,16 @@ src/test/java/pvz/
 | `SHOOTER` | `ShooterActions` | 向同一行的僵尸发射子弹 |
 | `INSTANT` | `InstantPlantActions` | 播放一次动画后立即生效 |
 | `CLOSE_ATTACK` | `CloseAttackActions` | 僵尸进入近距离后发动攻击 |
-| `WALL_NUT` | `WallNutActions` | 根据血量切换裂纹动画 |
+| `WALL_NUT` | `PlantActions.updateWallNut` | 根据血量切换裂纹动画 |
 
 ## 新增僵尸
 
 1. 将僵尸动画放入 `assets/Zombies/` 或 `assets/new_assets/`。
 2. 在 `world/Assets.java` 的 `loadZombies()` 中登记行走、攻击、死亡和特殊动作动画。
 3. 在 `zombie/ZombieCatalog.java` 中增加一条 `ZombieDefinition`，填写血量、装备、速度和动画名称。
-4. 如果缺少专属动画，将对应字段设为 `null`，让通用规则复用已有动画。
-5. 在 `SelfCheckTest.java` 中加入新动画并运行 `run.bat test`。
+4. 需要不同状态动画时先填写资料字段，并确认该字段的默认规则；`null` 只表示使用该字段约定的默认值，不保证所有缺失动画都会自动替代。
+5. 特殊技能在 `ZombieActions` 中增加具名方法，复用普通移动、索敌、攻击和冻结流程，不按品种单独新增行为文件。
+6. 在 `AlmanacDescriptions` 补充介绍，在 `SelfCheckTest` 登记动画；新战斗规则加入 `CombatTest`，最后运行 `run.bat test`。
 
 编辑器会自动读取 `ZombieCatalog` 中的僵尸名单，不需要另外修改编辑器名单。
 
@@ -333,15 +312,6 @@ src/test/java/pvz/
 - 关卡使用 JSON 文件保存，并由 Gson 解析。
 - 植物、僵尸和子弹使用矩形碰撞检测；僵尸还会单独计算躯干碰撞范围。
 - 游戏使用固定时间步长推进战斗，因此不同速度下的规则仍保持一致。
-
-## 常见问题
-
-| 问题 | 处理方法 |
-| --- | --- |
-| 找不到 `assets` | 确认已经完整克隆仓库，并从仓库根目录运行程序 |
-| 找不到 Gson | 确认 `lib/gson-2.11.0.jar` 存在，并重新加载 Maven 项目 |
-| IDEA 找不到素材 | 将运行配置的工作目录设置为仓库根目录 |
-| 自检失败 | 根据错误信息检查对应的素材、资料表或关卡文件 |
 
 ## 版权与许可
 

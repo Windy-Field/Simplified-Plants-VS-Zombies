@@ -36,7 +36,6 @@ import pvz.plant.PlantDefinition;
 import pvz.plant.PlantActionType;
 import pvz.plant.ShooterActions;
 import pvz.plant.SunProducerActions;
-import pvz.plant.WallNutActions;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Layout;
@@ -126,8 +125,7 @@ public class SelfCheckTest {
         checkLevelData(assets);
         checkPlantBehavior(assets);
         checkZombieBehavior(assets);
-        CombatValuesTest.run(assets);
-        GargantuarTest.run(assets, project);
+        CombatTest.run(assets, project);
         GameInterfaceTest.run(assets, project);
         LevelScreenshotTest.run(assets, project);
         AlmanacTest.run(assets, project);
@@ -172,7 +170,7 @@ public class SelfCheckTest {
         }
     }
 
-    /** 检查五张背景图都是完整宽度 */
+    /** 检查所有已登记背景都有足够的宽度，防止镜头平移时超出图片范围 */
     private static void checkBackgrounds(Assets assets) {
         int backgroundCount = assets.count("Background");
         check(backgroundCount >= MIN_BACKGROUND_COUNT, "缺少关卡背景");
@@ -251,6 +249,7 @@ public class SelfCheckTest {
      * 加新植物时最容易出的错是资料、动画或卡片图没有对齐，这里都会拦下来
      */
     private static void checkPlantCatalog(Assets assets) {
+        checkPlantOrder();
         int plantCount = PlantCatalog.DEFINITIONS.length;
 
         for (int index = 0; index < plantCount; index = index + 1) {
@@ -291,6 +290,22 @@ public class SelfCheckTest {
         }
     }
 
+    /** 核对共用资料表的完整顺序，选卡、图鉴和编辑器按该顺序显示，避免各处维护不同名单 */
+    private static void checkPlantOrder() {
+        String[] expected = {
+            "Peashooter", "SunFlower", "TwinSunflower", "CherryBomb", "Jalapeno",
+            "WallNut", "PotatoMine", "Torchwood", "SnowPea", "Chomper", "RepeaterPea", "PuffShroom",
+            "SunShroom", "HypnoShroom", "ScaredyShroom", "IceShroom", "Squash",
+            "Threepeater", "Spikeweed",
+            "WallNutBowling", "RedWallNutBowling"
+        };
+        check(PlantCatalog.DEFINITIONS.length == expected.length, "植物排序检查名单需要同步更新");
+        for (int index = 0; index < expected.length; index = index + 1) {
+            check(PlantCatalog.nameAt(index).equals(expected[index]),
+                "植物顺序不正确，位置 " + (index + 1) + " 应为 " + expected[index]);
+        }
+    }
+
     /** 检查一次性植物触发后会请求的动画 */
     private static void checkInstantAnimations(PlantDefinition definition, Assets assets) {
         String effect = "";
@@ -319,14 +334,26 @@ public class SelfCheckTest {
 
     /** 检查每个动画都能取到帧，而且第一帧不是完全透明的空图 */
     private static void checkAnimations(Assets assets) {
+        boolean repeatedFrameChecked = false;
         for (int index = 0; index < ANIMATIONS.length; index = index + 1) {
             String name = ANIMATIONS[index];
             check(assets.count(name) > 0, "缺少动画：" + name);
+            BufferedImage previousImage = null;
+            int[] previousBounds = null;
             for (int frame = 0; frame < assets.count(name); frame = frame + 1) {
-                assets.visibleBounds(name, frame);
+                BufferedImage image = assets.frame(name, frame);
+                int[] bounds = assets.visibleBounds(name, frame);
+                // 为保留原始帧时长而重复使用同一图片时，也应共用边界结果，避免重复扫描像素
+                if (image == previousImage) {
+                    check(bounds == previousBounds, "同一动画图片没有复用可见边界：" + name);
+                    repeatedFrameChecked = true;
+                }
+                previousImage = image;
+                previousBounds = bounds;
             }
             check(hasOpaquePixel(assets.sprite(name, 0, 1.0)), "动画第一帧是空白的：" + name);
         }
+        check(repeatedFrameChecked, "动画检查没有覆盖重复图片的边界缓存");
     }
 
     /** 判断图片里是否至少有一个看得见的像素 */
@@ -571,13 +598,22 @@ public class SelfCheckTest {
         state.time = TEST_TIME;
         Plant wallNut = new Plant("WallNut", Layout.columnCenter(TEST_COLUMN),
             Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, state.time, false);
-        WallNutActions actions = new WallNutActions(assets, state);
+        state.plants.add(wallNut);
+        PlantActions actions = new PlantActions(assets, state);
+        wallNut.health = Layout.WALL_NUT_FIRST_CRACK_HEALTH + 1;
+        actions.updateAll();
+        check(wallNut.animation.equals("WallNut"), "坚果尚未到受伤节点就出现裂纹");
         wallNut.health = Layout.WALL_NUT_FIRST_CRACK_HEALTH;
-        actions.update(wallNut);
+        actions.updateAll();
         check(wallNut.animation.equals("WallNut_cracked1"), "坚果第一层裂纹没有出现");
         wallNut.health = Layout.WALL_NUT_SECOND_CRACK_HEALTH;
-        actions.update(wallNut);
+        actions.updateAll();
         check(wallNut.animation.equals("WallNut_cracked2"), "坚果第二层裂纹没有出现");
+        // 同一受伤状态不能每帧重启动画，否则坚果会一直停在裂纹图的第一帧
+        long animationStart = wallNut.animationStart;
+        state.time = state.time + Layout.FIXED_STEP_MS;
+        actions.updateAll();
+        check(wallNut.animationStart == animationStart, "坚果重复更新时重启了裂纹动画");
     }
 
     /** 检查火炬树桩把普通豌豆转为火豌豆，并防止重复转换 */
@@ -1238,7 +1274,7 @@ public class SelfCheckTest {
         game.click(centerX, centerY);
     }
 
-    /** 传送带关卡：推进一秒应该自动出一张卡 */
+    /** 按配置的补卡间隔推进传送带关卡，确认实际生成卡片 */
     private static void checkConveyorLevel(Assets assets, Path project) throws Exception {
         int level = findLevelWithBar(assets, Layout.BAR_CONVEYOR);
         if (level < 0) {
@@ -1369,7 +1405,9 @@ public class SelfCheckTest {
         JsonArray wave = map.getAsJsonArray("zombie_list");
         long earliest = Long.MAX_VALUE;
         for (int index = 0; index < wave.size(); index = index + 1) {
-            long spawnTime = wave.get(index).getAsJsonObject().get("time").getAsLong();
+            JsonElement element = wave.get(index);
+            JsonObject spawn = element.getAsJsonObject();
+            long spawnTime = spawn.get("time").getAsLong();
             if (spawnTime < earliest) {
                 earliest = spawnTime;
             }
@@ -1638,7 +1676,7 @@ public class SelfCheckTest {
         }
     }
 
-    /** 遇到缺失素材时立即说明具体是哪一项 */
+    /** 参数 condition 是检查结果，message 是失败说明；不满足条件时立即终止本次自检 */
     private static void check(boolean condition, String message) {
         if (!condition) {
             throw new AssertionError(message);

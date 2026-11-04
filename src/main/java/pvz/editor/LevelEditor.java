@@ -176,7 +176,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 勾上后，下次试玩会显示碰撞箱和战斗状态 */
     private final JCheckBox developerModeBox = new JCheckBox("开发者模式");
 
-    /** 僵尸列表里当前选中的品种；在空格子上 Ctrl + 左键，或往上滚滚轮，就把它放下去 */
+    /** 僵尸列表里当前选中的品种；在空格子上 Ctrl + 右键或往上滚滚轮时放入它 */
     private String selectedKind = LevelDesign.ZOMBIE_KINDS[0];
 
     /**
@@ -1016,7 +1016,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /**
      * 判断某一关是否可以直接保存
      *
-     * 只有当关卡编号在现有关卡范围内（即文件已存在，或者是紧接着最后一关的下一关）时才能直接保存
+     * 编号不超过当前最大编号的下一号时可直接保存，中间缺号也允许补建
      * 判范围时是去翻 levels 目录，数出来最后一关是第几号，所以关卡数量变了这里也不用改
      *
      * 参数：number 是关卡编号
@@ -1035,7 +1035,7 @@ public class LevelEditor extends JFrame implements EditorDragController {
                 maxExisting = existing;
             }
         } catch (IllegalStateException exception) {
-            // 保留目录暂时不可读时仍能另存工作内容的行为，实际写入失败会由保存流程提示
+            // 目录暂时不可读时仍允许尝试保存，实际写入失败由保存流程提示
             return true;
         }
         // 允许编辑现有关卡和紧接着的下一关

@@ -42,8 +42,8 @@ public class Assets {
     /** 缓存缩放后的帧，避免每次绘制都重新缩放 */
     private final Map<String, BufferedImage> scaledImages = new HashMap<String, BufferedImage>();
 
-    /** 缓存每帧图上真正看得见的范围，避免每帧都重新扫描像素 */
-    private final Map<String, int[]> visibleBoundsCache = new HashMap<String, int[]>();
+    /** 按图片缓存可见范围，延长停留时间的重复帧共用同一结果，避免重复扫描相同像素 */
+    private final Map<BufferedImage, int[]> visibleBoundsCache = new HashMap<BufferedImage, int[]>();
 
     /** 缓存每段动画所有帧可见范围的并集 */
     private final Map<String, int[]> animationBoundsCache = new HashMap<String, int[]>();
@@ -141,9 +141,9 @@ public class Assets {
         sequence("Background", files);
     }
 
-    /** 植物、阳光以及植物相关的特效 */
     // TODO【03-植物素材】：新增植物时在这里登记基础动画和实际使用的状态动画，名称与植物资料一致
     // 卡片放入 Cards 目录后由 loadCards 读取，普通植物还需在图鉴介绍表中补齐名称和说明
+    /** 统一登记植物、阳光和植物效果，让战斗与图鉴通过相同动画名读取素材 */
     private void loadPlants() throws IOException {
         animation("Sun", "Screen/Sun.gif");
 
@@ -157,7 +157,7 @@ public class Assets {
         animation("WallNut", "Plants/WallNut/1.gif");
         animation("WallNut_cracked1", "Plants/WallNut/Wallnut_cracked1.gif");
         animation("WallNut_cracked2", "Plants/WallNut/Wallnut_cracked2.gif");
-        // 保龄球用单张的坚果图，滚动时由绘制代码按距离旋转
+        // 保龄球用坚果图片，滚动时由绘制代码按经过的时间计算旋转角度
         animation("WallNutBowling", "Plants/WallNut/0.gif");
         animation("RedWallNutBowling", "Plants/WallNut/boom.gif");
         animation("RedWallNutBowlingExplode", "Screen/Boom.png");
@@ -205,9 +205,9 @@ public class Assets {
         animation("Torchwood", "Plants/Torchwood/Torchwood.gif");
     }
 
-    /** 僵尸的走路、啃食、掉头、死亡等动画 */
     // TODO【13-僵尸素材】：新增僵尸时登记行走、攻击、死亡、爆炸和实际使用的特殊状态动画
     // 普通状态按内部名加 Attack、LostHead 等后缀查找，特殊命名先在 ZombieDefinition 配置
+    /** 统一登记僵尸各状态动画，特殊品种也复用相同的动画查询接口 */
     private void loadZombies() throws IOException {
         animation("Zombie", "Zombies/Zombie/Zombie.gif");
         animation("ZombieAttack", "Zombies/Zombie/ZombieAttack.gif");
@@ -319,9 +319,9 @@ public class Assets {
         return gargantuarReleaseDelay;
     }
 
-    /** 豌豆、冰豆、蘑菇孢子以及它们打中后的效果 */
     // TODO【06-子弹素材】：新增子弹时在这里登记素材，再由 ShooterActions.bulletNameFor 返回动画名
     // 单个图片文件使用 animation，多张顺序图片使用 sequence 并传入路径数组
+    /** 登记子弹与命中特效，读取后清除蘑菇孢子图片边缘残留的底色 */
     private void loadBullets() throws IOException {
         animation("PeaNormal", "bullets/PeaNormal/PeaNormal_0.png");
         animation("PeaIce", "bullets/PeaIce/PeaIce_0.png");
@@ -682,13 +682,12 @@ public class Assets {
     public int[] visibleBounds(String name, int index) {
         List<BufferedImage> animation = animationFrames(name);
         int frameIndex = wrap(index, animation.size());
-        String cacheKey = name + ":" + frameIndex;
-        int[] cached = visibleBoundsCache.get(cacheKey);
+        BufferedImage image = animation.get(frameIndex);
+        int[] cached = visibleBoundsCache.get(image);
         if (cached != null) {
             return cached;
         }
 
-        BufferedImage image = animation.get(frameIndex);
         int width = image.getWidth();
         int height = image.getHeight();
         int left = width;
@@ -726,7 +725,7 @@ public class Assets {
         }
 
         int[] result = new int[] {left, top, right, bottom};
-        visibleBoundsCache.put(cacheKey, result);
+        visibleBoundsCache.put(image, result);
         return result;
     }
 

@@ -47,7 +47,7 @@ public class CheckListPanel extends JPanel {
     public CheckListPanel(String[] labels) {
         setLayout(new BorderLayout());
 
-        // 复选框竖着排；Box 上下的胶水把它们顶到顶部，项少时不会散开
+        // 复选框纵向排列，弹性空白吸收多余高度，保持各项之间的间距稳定
         JPanel column = new JPanel();
         column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
         column.setBackground(Color.WHITE);
@@ -81,7 +81,7 @@ public class CheckListPanel extends JPanel {
     public void setChecked(List<Integer> chosen) {
         for (int index = 0; index < boxes.size(); index = index + 1) {
             boolean on = chosen.contains(Integer.valueOf(index));
-            // 赋值会触发监听器，用标志挡住，免得又被当成用户在点
+            // 回填期间关闭对外通知，避免程序同步状态被误当成用户修改
             if (boxes.get(index).isSelected() != on) {
                 boolean keep = notifyOnChange;
                 notifyOnChange = false;

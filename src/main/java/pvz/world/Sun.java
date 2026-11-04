@@ -128,7 +128,7 @@ public class Sun extends Sprite {
         double totalDistX = goalX - collectStartX;
         double totalDistY = goalY - collectStartY;
         double totalDist = Math.sqrt(totalDistX * totalDistX + totalDistY * totalDistY);
-        // SUN_COLLECT_SPEED 是"每一步走多少像素"，乘固定步长才换算成"每毫秒走多少"
+        // SUN_COLLECT_SPEED 是每个固定小步的距离，除以固定步长得到每毫秒移动距离
         double durationMs = totalDist / Layout.SUN_COLLECT_SPEED * Layout.FIXED_STEP_MS;
 
         // 和卡片飞入卡槽用同一条曲线：前 80% 匀速，后 20% 缓出停住

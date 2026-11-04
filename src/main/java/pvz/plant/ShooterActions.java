@@ -8,7 +8,7 @@ import pvz.world.Layout;
 import pvz.zombie.Zombie;
 
 /**
- * ShooterActions 负责这一类植物每一帧的行为
+ * 管理射手的索敌、射击间隔和子弹生成
  *
  * 参数通过构造函数传入，处理结果直接写回这一局的游戏状态
  */
@@ -19,7 +19,7 @@ public class ShooterActions {
     private final GameState state;
 
     /**
-     * 创建ShooterActions
+     * 创建射手行为入口，让多种射手共用素材和本局数据
      *
      * 参数：assets 提供素材；gameState 是当前游戏的数据
      */
