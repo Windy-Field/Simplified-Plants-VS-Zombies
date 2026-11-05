@@ -28,7 +28,8 @@ public class LevelSelection {
     private static final Rectangle BACK = new Rectangle(20, 534, 120, 44);
     private static final Rectangle PREVIOUS = new Rectangle(194, 534, 110, 44);
     private static final Rectangle NEXT = new Rectangle(496, 534, 110, 44);
-    private static final Rectangle START = new Rectangle(660, 534, 120, 44);
+    /** 右下角原开始按钮改为编辑器入口，进入关卡使用双击封面或回车 */
+    private static final Rectangle EDITOR = new Rectangle(660, 534, 120, 44);
     private static final Color INK = new Color(51, 36, 21);
     private static final Color TITLE = new Color(255, 239, 163);
     private static final Color SELECTED = new Color(43, 105, 35);
@@ -77,7 +78,7 @@ public class LevelSelection {
         return new Rectangle(left, top, TILE_WIDTH, TILE_HEIGHT);
     }
 
-    /** 参数 horizontal、vertical 是点击坐标；返回 start、back 或空字符串，由 Game 执行操作 */
+    /** 参数 horizontal、vertical 是点击坐标；返回 start、edit、back 或空字符串，由 Game 执行操作 */
     public String click(int horizontal, int vertical) {
         return click(horizontal, vertical, 1);
     }
@@ -87,8 +88,8 @@ public class LevelSelection {
         if (BACK.contains(horizontal, vertical)) {
             return "back";
         }
-        if (START.contains(horizontal, vertical) && selectedLevel() >= 0) {
-            return "start";
+        if (EDITOR.contains(horizontal, vertical) && selectedLevel() >= 0) {
+            return "edit";
         }
         if (PREVIOUS.contains(horizontal, vertical)) {
             changePage(-1);
@@ -165,7 +166,7 @@ public class LevelSelection {
         drawButton(painter, BACK, "返回", true);
         drawButton(painter, PREVIOUS, "上一页", page > 0);
         drawButton(painter, NEXT, "下一页", end < levels.size());
-        drawButton(painter, START, "开始", selectedLevel() >= 0);
+        drawButton(painter, EDITOR, "关卡编辑器", selectedLevel() >= 0);
         painter.setColor(INK);
         painter.setFont(new Font("SansSerif", Font.BOLD, 17));
         int pageCount = Math.max(1, (levels.size() + PAGE_SIZE - 1) / PAGE_SIZE);

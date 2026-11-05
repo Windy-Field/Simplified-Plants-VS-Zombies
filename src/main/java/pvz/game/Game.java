@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -13,11 +14,15 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import javax.swing.JPanel;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import pvz.editor.LevelEditor;
 import pvz.level.Level;
 import pvz.level.LevelLoader;
 import pvz.plant.Card;
@@ -67,6 +72,12 @@ public class Game extends JPanel {
     /** 图鉴单独管理浏览与动画，不把展示状态混入植物和僵尸的战斗对象 */
     private final Almanac almanac;
 
+    /** 保存从当前游戏打开的编辑器，重复点击时恢复原窗口，避免未保存的关卡散落在多个窗口中 */
+    private LevelEditor editorWindow;
+
+    /** 编辑器试玩返回时恢复这局游戏的选关页；普通游戏和独立编辑器试玩没有上级游戏 */
+    private final Game selectionOwner;
+
     /** 负责场上每一株植物每一帧的行为 */
     private final PlantActions plantActions;
 
@@ -92,7 +103,15 @@ public class Game extends JPanel {
      */
     public Game(Assets assets, int firstLevel, boolean runTimer,
             boolean showDeveloperInfo) {
+        this(assets, firstLevel, runTimer, showDeveloperInfo, null, null);
+    }
+
+    /** 参数与普通构造方法相同，sourceEditor 是试玩来源，selectionOwner 是需返回的原游戏 */
+    public Game(Assets assets, int firstLevel, boolean runTimer,
+            boolean showDeveloperInfo, LevelEditor sourceEditor, Game selectionOwner) {
         this.assets = assets;
+        editorWindow = sourceEditor;
+        this.selectionOwner = selectionOwner;
         renderer = new GameRenderer(assets);
         developerMode = showDeveloperInfo;
         levelLoader = new LevelLoader(assets);
@@ -592,7 +611,7 @@ public class Game extends JPanel {
         }
     }
 
-    /** 参数 x、y 是菜单点击位置；进入图鉴或启动冒险模式的选关流程 */
+    /** 参数 x、y 是菜单点击位置；分派图鉴和冒险模式入口 */
     private void clickMenu(int x, int y) {
         Rectangle book = new Rectangle(Layout.ALMANAC_BUTTON_LEFT, Layout.ALMANAC_BUTTON_TOP,
             Layout.ALMANAC_BUTTON_WIDTH, Layout.ALMANAC_BUTTON_HEIGHT);
@@ -615,6 +634,34 @@ public class Game extends JPanel {
         }
     }
 
+    /** 参数 level 是选关页选中的编号；交给事件线程打开，排队期间切换选择也不会改变本次目标 */
+    private void openEditor(int level) {
+        SwingUtilities.invokeLater(new OpenEditorTask(level));
+    }
+
+    /** 在事件线程中创建或恢复同一个编辑器，连续点击也不会重复创建窗口 */
+    private class OpenEditorTask implements Runnable {
+        private final int level;
+
+        /** 参数 level 是点击编辑按钮时选中的关卡，保存下来避免使用上一局的编号 */
+        OpenEditorTask(int level) {
+            this.level = level;
+        }
+
+        /** 创建时载入选中的关卡，已打开时仅恢复窗口，保留编辑器中尚未保存的内容 */
+        public void run() {
+            if (editorWindow == null || !editorWindow.isDisplayable()) {
+                Path levelDirectory = assets.levelPath(0).getParent();
+                Path assetRoot = levelDirectory.getParent();
+                editorWindow = LevelEditor.createWindow(assets, assetRoot, level, Game.this);
+            }
+            editorWindow.setState(JFrame.NORMAL);
+            editorWindow.setVisible(true);
+            editorWindow.toFront();
+            editorWindow.requestFocus();
+        }
+    }
+
     /** 进入选关时重新读取封面，编辑器保存过的关卡无需重启游戏就能展示 */
     private void openLevelSelection() {
         levelSelection.open(state.levelNumber);
@@ -624,6 +671,27 @@ public class Game extends JPanel {
 
     /** 放弃当前战斗后回到选关，清空对象和动画状态，重选当前关卡时从头开始 */
     private void returnToLevelSelection() {
+        if (selectionOwner != null) {
+            // 试玩只借用一个窗口，返回时停止试玩并恢复原游戏，避免试玩变成第二个选关入口
+            stop();
+            Window preview = SwingUtilities.getWindowAncestor(this);
+            if (preview != null) {
+                preview.dispose();
+            }
+            selectionOwner.state.levelNumber = state.levelNumber;
+            selectionOwner.returnToLevelSelection();
+            Window original = SwingUtilities.getWindowAncestor(selectionOwner);
+            if (original instanceof JFrame) {
+                JFrame frame = (JFrame) original;
+                frame.setState(JFrame.NORMAL);
+            }
+            if (original != null) {
+                original.setVisible(true);
+                original.toFront();
+            }
+            selectionOwner.requestFocusInWindow();
+            return;
+        }
         state.clearField();
         state.introZombies.clear();
         state.introChooser = false;
@@ -634,10 +702,15 @@ public class Game extends JPanel {
         repaint();
     }
 
-    /** 参数 action 来自选关输入；只有开始时才载入关卡，浏览封面不会启动战斗 */
+    /** 参数 action 来自选关输入；编辑使用当前选择，只有开始时才载入战斗 */
     private void applySelectionAction(String action) {
         if (action.equals("back")) {
             state.screen = GameScreen.MENU;
+        } else if (action.equals("edit")) {
+            int level = levelSelection.selectedLevel();
+            if (level >= 0) {
+                openEditor(level);
+            }
         } else if (action.equals("start")) {
             int level = levelSelection.selectedLevel();
             if (level >= 0) {

@@ -105,6 +105,13 @@ public class LevelEditor extends JFrame implements EditorDragController {
     /** 提供图片素材，试玩时也要交给游戏 */
     private final Assets assets;
 
+    /** 从游戏内打开时记住原选关游戏，独立启动编辑器时为 null */
+    private Game selectionGame;
+
+    /** 同一编辑器只保留一个试玩窗口和一局试玩，重复试玩时停止旧计时器并替换内容 */
+    private JFrame previewWindow;
+    private Game previewGame;
+
     /** assets 目录，关卡文件就在它下面的 levels 里 */
     private final Path assetRoot;
 
@@ -125,6 +132,9 @@ public class LevelEditor extends JFrame implements EditorDragController {
 
     /** 底部状态栏右侧的时钟，动态显示当前北京时间 */
     private final JLabel clockLabel = new JLabel(" ");
+
+    /** 关闭编辑器时需要停止时钟，因此保存计时器，避免反复打开后旧窗口一直被后台任务引用 */
+    private final Timer clockTimer = new Timer(CLOCK_REFRESH_INTERVAL, new ClockListener());
 
     /** 截图和说明分别显示，切换关卡时可以一起刷新且不保留旧图 */
     private final JLabel screenshotPreview = new JLabel("自动生成", JLabel.CENTER);
@@ -240,7 +250,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
         bannedList = new CheckListPanel(chooserPlantChoices());
         requiredList = new CheckListPanel(chooserPlantChoices());
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // 游戏内打开时只关闭编辑器窗口；独立启动入口再显式设置退出整个程序
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
         add(buildToolbar(), BorderLayout.NORTH);
         add(buildPaletteSide(), BorderLayout.WEST);
@@ -610,8 +621,19 @@ public class LevelEditor extends JFrame implements EditorDragController {
      */
     private void startClock() {
         updateClock();
-        Timer clockTimer = new Timer(CLOCK_REFRESH_INTERVAL, new ClockListener());
         clockTimer.start();
+    }
+
+    /** 关闭窗口时停止状态栏时钟，再释放窗口资源，避免游戏仍在运行时遗留后台刷新 */
+    public void dispose() {
+        if (previewGame != null) {
+            previewGame.stop();
+        }
+        if (previewWindow != null) {
+            previewWindow.dispose();
+        }
+        clockTimer.stop();
+        super.dispose();
     }
 
     /** 把状态栏上的时间换成此刻的北京时间 */
@@ -1133,30 +1155,35 @@ public class LevelEditor extends JFrame implements EditorDragController {
         }
     }
 
-    /** 先存盘，再开一个窗口直接跑这一关，方便边改边试 */
+    /** 先存盘，再复用本编辑器的试玩窗口，避免每次试玩都留下另一局游戏 */
     private void playCurrentLevel() {
         if (!saveLevelByNumber()) {
             return;
         }
+        startPreview();
+    }
+
+    /** 用已保存关卡替换旧试玩，来源信息让返回操作恢复原选关页；不在这里再次写入文件 */
+    private void startPreview() {
+        if (previewGame != null) {
+            previewGame.stop();
+        }
         boolean developerMode = developerModeBox.isSelected();
-        final Game game = new Game(assets, levelNumber(), true, developerMode);
-        JFrame window = new JFrame("试玩：第 " + (levelNumber() + 1) + " 关");
-        // 试玩窗口关掉只是收起这一局，编辑器还要继续用，所以不能设成退出程序
-        window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        window.setContentPane(game);
-        window.pack();
-        window.setResizable(false);
-        window.setLocationRelativeTo(this);
-
-        // 光把窗口关掉，这一局还会在背地里接着跑，所以要亲手把它停下来
-        // 不然试玩几次之后，就有好几局同时占着处理器
-        window.addWindowListener(new StopPreviewListener(game));
-
-        window.setVisible(true);
-
+        previewGame = new Game(assets, levelNumber(), true, developerMode, this, selectionGame);
+        if (previewWindow == null || !previewWindow.isDisplayable()) {
+            previewWindow = new JFrame();
+            previewWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            previewWindow.setResizable(false);
+            previewWindow.addWindowListener(new StopPreviewListener());
+        }
+        previewWindow.setTitle("试玩：第 " + (levelNumber() + 1) + " 关");
+        previewWindow.setContentPane(previewGame);
+        previewWindow.pack();
+        previewWindow.setLocationRelativeTo(this);
+        previewWindow.setVisible(true);
         // 直接载入关卡，跳过主菜单那一步
-        game.loadLevel();
-        game.requestFocusInWindow();
+        previewGame.loadLevel();
+        previewGame.requestFocusInWindow();
     }
 
     /**
@@ -1169,18 +1196,33 @@ public class LevelEditor extends JFrame implements EditorDragController {
         SwingUtilities.invokeLater(new OpenEditorTask(assets, root, levelNumber));
     }
 
-    /** 试玩窗口关闭时停止它的计时器，避免不可见的游戏继续运行 */
-    private static class StopPreviewListener extends WindowAdapter {
-        private final Game game;
+    /** 参数 assets、root、levelNumber 是素材、素材目录和关卡号；在事件线程创建可独立关闭的窗口 */
+    public static LevelEditor createWindow(Assets assets, Path root, int levelNumber) {
+        return createWindow(assets, root, levelNumber, null);
+    }
 
-        /** 参数 game 是窗口所属的试玩，仅停止这局而不影响编辑器 */
-        StopPreviewListener(Game game) {
-            this.game = game;
-        }
+    /** 参数 selectionGame 是原选关游戏，独立启动时传 null；共用创建流程以保留试玩返回目标 */
+    public static LevelEditor createWindow(Assets assets, Path root, int levelNumber,
+            Game selectionGame) {
+        useSystemLookAndFeel();
+        int number = Math.max(0, Math.min(MAX_LEVEL_NUMBER, levelNumber));
+        LevelEditor editor = new LevelEditor(assets, root, number);
+        editor.selectionGame = selectionGame;
+        return editor;
+    }
 
-        /** 参数 event 是关闭通知，在窗口销毁后释放持续更新的任务 */
+    /** 试玩窗口关闭时停止当前试玩，旧窗口延迟送达的通知不能影响新窗口 */
+    private class StopPreviewListener extends WindowAdapter {
+        /** 参数 event 指定被关闭的窗口，只清理仍属于它的试玩与引用 */
         public void windowClosed(WindowEvent event) {
-            game.stop();
+            if (event.getWindow() != previewWindow) {
+                return;
+            }
+            if (previewGame != null) {
+                previewGame.stop();
+            }
+            previewGame = null;
+            previewWindow = null;
         }
     }
 
@@ -1199,8 +1241,8 @@ public class LevelEditor extends JFrame implements EditorDragController {
 
         /** 先设置系统外观再创建控件，避免窗口打开后样式不一致 */
         public void run() {
-            useSystemLookAndFeel();
-            LevelEditor editor = new LevelEditor(assets, root, level);
+            LevelEditor editor = createWindow(assets, root, level);
+            editor.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             editor.setVisible(true);
         }
     }
