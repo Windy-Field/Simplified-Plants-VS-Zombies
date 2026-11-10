@@ -232,6 +232,58 @@ function Copy-Assets {
 }
 
 <#
+    清除素材复制过程中可能带入的 AI 助手说明和提示词
+    参数 directory 是发行包目录，只在本次生成的目录中删除匹配文件
+#>
+function Remove-AssistantDocuments {
+    param([string] $Directory)
+
+    $patterns = @(
+        '^AGENTS(?:\..*)?\.md$',
+        '^CLAUDE(?:\..*)?\.md$',
+        '^CODEX(?:\..*)?\.md$',
+        '^GEMINI(?:\..*)?\.md$',
+        '^COPILOT(?:\..*)?\.md$',
+        '^copilot-instructions\.md$',
+        '^\.cursorrules$',
+        '^\.windsurfrules$',
+        '^\.aider.*$',
+        '^design\.md$',
+        '^design[-_].*\.md$',
+        '^.*[-_]design\.md$',
+        '^design_system.*\.md$',
+        '^(?:AI|ai)(?:[-_].*)?\.md$',
+        '^.*[-_](?:AI|ai)\.md$',
+        '^prompts?(?:[-_].*)?\.md$',
+        '^instructions(?:[-_].*)?\.md$'
+    )
+    $files = Get-ChildItem -LiteralPath $Directory -Recurse -File -Force
+    foreach ($file in $files) {
+        foreach ($pattern in $patterns) {
+            if ($file.Name -match $pattern) {
+                Remove-Item -LiteralPath $file.FullName -Force
+                break
+            }
+        }
+    }
+
+    $directoryNames = @('.cursor', '.claude', '.codex', '.agents', '.windsurf')
+    $directories = Get-ChildItem -LiteralPath $Directory -Recurse -Directory -Force
+    $matches = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($entry in $directories) {
+        if ($directoryNames -contains $entry.Name -or $entry.Name.StartsWith('.aider')) {
+            $matches.Add($entry.FullName)
+        }
+    }
+    for ($index = $matches.Count - 1; $index -ge 0; $index = $index - 1) {
+        $directoryPath = $matches[$index]
+        if (Test-Path -LiteralPath $directoryPath) {
+            Remove-Item -LiteralPath $directoryPath -Recurse -Force
+        }
+    }
+}
+
+<#
     把发行目录压成一个 zip，方便发给朋友
     参数 state 是保存路径的字典
 #>
@@ -281,6 +333,7 @@ Copy-Item -Path $result.Library -Destination (Join-Path $result.Target 'gson-2.1
 $libraryLicense = Join-Path $result.Root 'lib\GSON-LICENSE'
 Copy-Item -LiteralPath $libraryLicense -Destination (Join-Path $result.Target 'GSON-LICENSE')
 Copy-Assets -state $result
+Remove-AssistantDocuments -Directory $result.Target
 New-Launchers -state $result
 New-Readme -state $result
 

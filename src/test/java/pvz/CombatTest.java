@@ -17,10 +17,13 @@ import pvz.game.LevelSystem;
 import pvz.plant.CloseAttackActions;
 import pvz.plant.InstantPlantActions;
 import pvz.plant.Plant;
+import pvz.plant.PlantActions;
 import pvz.world.Assets;
 import pvz.world.Bullet;
 import pvz.world.Layout;
 import pvz.zombie.Zombie;
+import pvz.zombie.ZombieCatalog;
+import pvz.zombie.ZombieDefinition;
 import pvz.zombie.ZombieEffects;
 import pvz.zombie.ZombieSpawn;
 
@@ -36,6 +39,7 @@ public class CombatTest {
     public static void run(Assets assets, Path project) throws Exception {
         checkCombatValues(assets);
         checkExplosion(assets);
+        checkPotatoMineApproach(assets);
         checkGargantuarSmash(assets);
         checkGargantuarSmashOpponent(assets);
         checkGargantuarThrow(assets, false);
@@ -156,6 +160,39 @@ public class CombatTest {
             long duration = (long) assets.count(zombie.animation) * zombie.frameInterval;
             ZombieEffects.updateDeath(zombie, assets, state, state.time + duration);
             check(!zombie.alive, "爆炸动画结束后未清理僵尸：" + name);
+        }
+    }
+
+    /** 参数 assets 提供真实素材；让每种僵尸从右侧踩上已出土的雷，检查触发者确实受到攻击 */
+    private static void checkPotatoMineApproach(Assets assets) {
+        for (ZombieDefinition definition : ZombieCatalog.DEFINITIONS) {
+            GameState state = new GameState();
+            state.time = Layout.POTATO_MINE_ARM_TIME + 1;
+            Plant mine = new Plant("PotatoMine", Layout.columnCenter(TEST_COLUMN),
+                Layout.rowBottom(TEST_ROW), TEST_ROW, TEST_COLUMN, assets, 0, false);
+            state.plants.add(mine);
+            state.occupied[TEST_ROW][TEST_COLUMN] = true;
+            PlantActions plants = new PlantActions(assets, state);
+            plants.updateAll();
+            Rectangle mineBody = mine.collisionBox(assets, state.time);
+            Zombie zombie = new Zombie(definition.name, TEST_ROW, Layout.rowBottom(TEST_ROW), assets);
+            Rectangle zombieBody = zombie.collisionBox(assets, state.time);
+            zombie.x = zombie.x + mineBody.getMaxX() + 8 - zombieBody.getMinX();
+            state.zombies.add(zombie);
+            CombatSystem combat = new CombatSystem(state, assets);
+            long endTime = state.time + 5000;
+            while (mine.health > 0 && state.time < endTime) {
+                state.time = state.time + Layout.FIXED_STEP_MS;
+                plants.updateAll();
+                combat.updateAll();
+            }
+            check(mine.health == 0, "僵尸踩上已出土的土豆雷却未引爆：" + definition.name);
+            if (zombie.isGargantuar()) {
+                check(zombie.health == definition.maxHealth - Layout.GARGANTUAR_INSTANT_DAMAGE,
+                    "踩雷的巨人没有受到一次爆炸伤害：" + definition.name);
+            } else {
+                check(zombie.dying, "土豆雷爆炸却没有击倒踩雷的僵尸：" + definition.name);
+            }
         }
     }
 

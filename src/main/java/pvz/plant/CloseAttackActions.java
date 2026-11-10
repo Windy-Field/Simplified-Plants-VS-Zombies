@@ -269,9 +269,10 @@ public class CloseAttackActions {
         String name = plant.name;
 
         if (name.equals("PotatoMine") && !plant.animation.equals("PotatoMineInit")) {
+            // 先按引爆前的位置结算，踩雷者必须命中，不能因换图或身体宽度被范围检查漏掉
+            blast(plant, zombie, 0, 55);
             plant.change("PotatoMineExplode", assets, state.time);
             plant.health = 0;
-            blast(plant, 0, 55);
             return true;
         }
         if (name.equals("Squash") && !plant.triggered) {
@@ -297,7 +298,7 @@ public class CloseAttackActions {
             plant.triggered = true;
             plant.stateStart = state.time;
             plant.change("RedWallNutBowlingExplode", assets, state.time);
-            blast(plant, 1, 120);
+            blast(plant, zombie, 1, 120);
         }
         return false;
     }
@@ -379,18 +380,22 @@ public class CloseAttackActions {
     /**
      * 对范围内的敌方僵尸执行一次性攻击，巨人按约定扣血，其他目标进入死亡流程
      *
-     * 参数：plant 是爆炸的植物；rowRange 是上下波及几行；xRange 是左右波及多少像素
+     * 参数：plant 是爆炸的植物，trigger 是接触并触发爆炸的僵尸，必须受到本次攻击
+     * rowRange 是上下波及几行；xRange 是其他目标中心距爆炸中心的最大像素数
      */
-    private void blast(Plant plant, int rowRange, int xRange) {
+    private void blast(Plant plant, Zombie trigger, int rowRange, int xRange) {
         Rectangle plantBody = plant.bounds(assets, state.time);
         for (Zombie zombie : state.zombies) {
+            if (!zombie.alive || zombie.dying || zombie.hypno || zombie.airborne) {
+                continue;
+            }
             if (Math.abs(zombie.row - plant.row) > rowRange) {
                 continue;
             }
-            // 巨人画布两侧留白很多，范围必须按身体中心算，不能比较图片左沿
-            Rectangle zombieBody = zombie.bounds(assets, state.time);
+            // 使用与接触判定一致的躯干位置，避免透明留白或伸出的手臂改变爆炸范围
+            Rectangle zombieBody = zombie.collisionBox(assets, state.time);
             double distance = Math.abs(zombieBody.getCenterX() - plantBody.getCenterX());
-            if (distance > xRange) {
+            if (zombie != trigger && distance > xRange) {
                 continue;
             }
             ZombieEffects.hitInstant(zombie, assets, state, state.time, true);
